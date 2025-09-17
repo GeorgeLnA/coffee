@@ -50,6 +50,14 @@ export default function Index() {
               Де кожна чашка розповідає історію пристрасті, точності та досконалості
             </p>
             
+            {/* CTA Button - Bold */}
+            <button className="group px-12 py-6 bg-coffee-accent text-[#1f0a03] font-black text-xl rounded-full hover:bg-white hover:text-[#1f0a03] transition-all duration-300 shadow-2xl hover:shadow-coffee-accent/50">
+              <span className="flex items-center space-x-4">
+                <span>ЗАМОВИТИ КАВУ</span>
+                <ArrowRight className="w-6 h-6 group-hover:translate-x-2 transition-transform" />
+              </span>
+            </button>
+            
           </div>
         </div>
 
