@@ -24,7 +24,7 @@ export default function Index() {
       <Header />
 
       {/* Hero Section - Bold & Immersive */}
-      <section className="relative h-[75vh] overflow-hidden">
+      <section className="relative h-[90vh] md:h-[75vh] overflow-hidden">
         <video 
           src="/Slowmotion_splash_shot_202509171540.mp4" 
           autoPlay 
@@ -45,10 +45,6 @@ export default function Index() {
               THE COFFEE <span className="text-white">MANIFEST</span>
             </h1>
             
-            {/* Subtitle - Bold & Elegant */}
-            <p className="text-xl md:text-2xl text-white/90 font-bold mb-12 max-w-2xl mx-auto leading-relaxed">
-              Де кожна чашка розповідає історію пристрасті, точності та досконалості
-            </p>
             
             {/* CTA Button - Bold */}
             <button className="group px-12 py-6 bg-coffee-accent text-[#1f0a03] font-black text-xl rounded-full hover:bg-white hover:text-[#1f0a03] transition-all duration-300 shadow-2xl hover:shadow-coffee-accent/50">
