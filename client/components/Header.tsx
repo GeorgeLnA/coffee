@@ -142,16 +142,13 @@ export default function Header() {
               </div>
             </div>
             
-            {/* Bottom half - transparent overlay */}
-            <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setIsMobileMenuOpen(false)}>
-              {/* Close button in top right */}
-              <button 
-                className="absolute top-6 right-6 w-12 h-12 bg-coffee-accent rounded-full flex items-center justify-center hover:bg-white hover:scale-110 transition-all duration-300 z-50"
-                onClick={() => setIsMobileMenuOpen(false)}
-              >
-                <X className="w-6 h-6 text-[#1f0a03]" />
-              </button>
-            </div>
+            {/* Close button in top right */}
+            <button 
+              className="absolute top-6 right-6 w-12 h-12 bg-coffee-accent rounded-full flex items-center justify-center hover:bg-white hover:scale-110 transition-all duration-300 z-50"
+              onClick={() => setIsMobileMenuOpen(false)}
+            >
+              <X className="w-6 h-6 text-[#1f0a03]" />
+            </button>
           </div>
         )}
       </header>

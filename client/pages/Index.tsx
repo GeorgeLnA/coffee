@@ -313,8 +313,8 @@ export default function Index() {
                 
                 
                 {/* Floating Elements */}
-                <div className="absolute -top-6 -right-6 w-24 h-24 bg-coffee-accent rounded-full flex items-center justify-center shadow-2xl">
-                  <Coffee className="w-12 h-12 text-[#1f0a03]" />
+                <div className="absolute -top-6 -right-6 w-16 h-16 bg-coffee-accent rounded-full flex items-center justify-center shadow-2xl">
+                  <Coffee className="w-8 h-8 text-[#1f0a03]" />
                 </div>
                 
                 
