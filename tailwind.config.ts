@@ -47,16 +47,23 @@ export default {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
-        // Coffee shop specific colors
-        'coffee-brown': {
-          DEFAULT: "var(--coffee-brown)",
-          dark: "var(--coffee-brown-dark)",
-          light: "var(--coffee-brown-light)",
+        // Coffee shop specific colors - Dynamic
+        'coffee-green': {
+          DEFAULT: "var(--coffee-green)",
+          dark: "var(--coffee-green-dark)",
+          light: "var(--coffee-green-light)",
         },
         'coffee-yellow': "hsl(var(--coffee-yellow))",
-        'coffee-beige': "hsl(var(--coffee-beige))",
-        'coffee-gray': "hsl(var(--coffee-gray))",
+        'coffee-beige': "var(--coffee-beige)",
+        'coffee-gray': "var(--coffee-gray)",
         'coffee-accent': "var(--coffee-accent)",
+        'coffee-background': "var(--coffee-background)",
+            'coffee-text': {
+              primary: "var(--coffee-text-primary)",
+              secondary: "var(--coffee-text-secondary)",
+              accent: "var(--coffee-text-accent)",
+              description: "var(--coffee-text-description)",
+            },
       },
       borderRadius: {
         lg: "var(--radius)",

@@ -41,14 +41,18 @@
 
     --radius: 0.5rem;
 
-    /* Coffee shop specific colors */
-    --coffee-brown: #1f0a03;
-    --coffee-brown-dark: #0d0502;
-    --coffee-brown-light: #2a0f05;
+    /* Coffee shop specific colors - Dynamic */
+    --coffee-green: #1f0a03;
+    --coffee-green-dark: #0d0502;
+    --coffee-green-light: #2a0f05;
     --coffee-yellow: 54 64% 59%; /* #E2DD42 */
-    --coffee-beige: 47 17% 89%; /* #E9EEEB */
-    --coffee-gray: 0 0% 53%; /* #878787 */
+    --coffee-beige: #ffffff;
+    --coffee-gray: #878787;
     --coffee-accent: #d59e53; /* Golden accent for small details */
+    --coffee-background: #ffffff; /* Background color */
+    --coffee-text-primary: #1f0a03; /* Text colors for visibility */
+    --coffee-text-secondary: #d59e53;
+    --coffee-text-accent: #ffffff;
   }
 
   .dark {
@@ -80,14 +84,18 @@
     --input: 156 80% 20%;
     --ring: 212.7 26.8% 83.9%;
 
-    /* Dark mode coffee colors */
-    --coffee-brown: #1f0a03;
-    --coffee-brown-dark: #0d0502;
-    --coffee-brown-light: #2a0f05;
+    /* Dark mode coffee colors - Dynamic */
+    --coffee-green: #1f0a03;
+    --coffee-green-dark: #0d0502;
+    --coffee-green-light: #2a0f05;
     --coffee-yellow: 54 64% 59%;
-    --coffee-beige: 156 30% 25%;
-    --coffee-gray: 0 0% 65%;
+    --coffee-beige: #ffffff;
+    --coffee-gray: #878787;
     --coffee-accent: #d59e53; /* Golden accent for small details */
+    --coffee-background: #ffffff; /* Background color */
+    --coffee-text-primary: #1f0a03; /* Text colors for visibility */
+    --coffee-text-secondary: #d59e53;
+    --coffee-text-accent: #ffffff;
   }
 }
 
