@@ -16,7 +16,7 @@ const colorSets: ColorSet[] = [
     id: "default",
     name: "Default",
     primary: "#1f0a03",
-    secondary: "#d59e53", 
+    secondary: "#fcf4e4", 
     accent: "#ffffff",
     background: "#ffffff"
   },
@@ -25,48 +25,48 @@ const colorSets: ColorSet[] = [
     name: "Set 1 – Earthy & Green",
     primary: "#3B2F2F",
     secondary: "#6B8E23",
-    accent: "#EDE6DB",
-    background: "#F5F5DC"
+    accent: "#fcf4e4",
+    background: "#fcf4e4"
   },
   {
     id: "set2", 
     name: "Set 2 – Blue / Golden / Brown",
-    primary: "#0F1B2E",
+    primary: "#3b0b0b",
     secondary: "#C69749",
     accent: "#4E342E",
-    background: "#F8F6F0"
+    background: "#fcf4e4"
   },
   {
     id: "set3",
     name: "Set 3 – Modern Neutral", 
     primary: "#2D2D2D",
     secondary: "#B0B0B0",
-    accent: "#F4F4F4",
-    background: "#FAFAFA"
+    accent: "#fcf4e4",
+    background: "#fcf4e4"
   },
       {
         id: "set4",
         name: "Set 4 – Warm & Inviting",
         primary: "#6F4E37",
         secondary: "#C19A6B",
-        accent: "#FFF3E3",
-        background: "#FFF8F0"
+        accent: "#fcf4e4",
+        background: "#fcf4e4"
       },
       {
         id: "set5",
         name: "Set 5 – Deep Forest",
         primary: "#2D5016",
         secondary: "#8FBC8F",
-        accent: "#F0F8F0",
-        background: "#F5F5F5"
+        accent: "#fcf4e4",
+        background: "#fcf4e4"
       },
       {
         id: "set6",
         name: "Set 6 – Sunset Orange",
         primary: "#8B4513",
         secondary: "#FF8C00",
-        accent: "#FFF8DC",
-        background: "#FFFAF0"
+        accent: "#fcf4e4",
+        background: "#fcf4e4"
       },
       {
         id: "set7",
@@ -74,13 +74,13 @@ const colorSets: ColorSet[] = [
         primary: "#191970",
         secondary: "#87CEEB",
         accent: "#F0F8FF",
-        background: "#FAFAFA"
+        background: "#fcf4e4"
       },
       {
         id: "custom",
         name: "Custom Colors",
         primary: "#1f0a03",
-        secondary: "#d59e53",
+        secondary: "#fcf4e4",
         accent: "#ffffff",
         background: "#ffffff",
         isCustom: true
@@ -95,7 +95,7 @@ export default function ColorThemePanel() {
   const [selectedVideo, setSelectedVideo] = useState("default");
   const [customColors, setCustomColors] = useState({
     primary: "#1f0a03",
-    secondary: "#d59e53",
+    secondary: "#fcf4e4",
     accent: "#ffffff",
     background: "#ffffff"
   });
@@ -260,7 +260,7 @@ export default function ColorThemePanel() {
       {/* Toggle Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="fixed top-1/2 right-4 transform -translate-y-1/2 z-50 bg-coffee-accent text-[#1f0a03] p-3 rounded-full shadow-2xl hover:scale-110 transition-all duration-300"
+        className="fixed top-1/2 right-4 transform -translate-y-1/2 z-50 bg-white/10 text-white p-3 hover:bg-white hover:text-[#3b0b0b] hover:scale-110 transition-all duration-300"
       >
         <Palette className="w-6 h-6" />
       </button>
@@ -274,17 +274,17 @@ export default function ColorThemePanel() {
               <h3 className="text-xl font-black text-gray-800">Theme Panel</h3>
                 <button
                   onClick={() => setIsOpen(false)}
-                  className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                  className="p-2 hover:bg-gray-100  transition-colors"
                 >
                   <X className="w-5 h-5" />
                 </button>
             </div>
 
             {/* Tabs */}
-            <div className="flex space-x-1 mb-6 bg-gray-100 rounded-lg p-1">
+            <div className="flex space-x-1 mb-6 bg-gray-100  p-1">
               <button
                 onClick={() => setActiveTab("colors")}
-                className={`flex-1 px-4 py-2 rounded-md text-sm font-bold transition-all duration-300 ${
+                className={`flex-1 px-4 py-2  text-sm font-bold transition-all duration-300 ${
                   activeTab === "colors"
                     ? 'bg-white text-gray-800 shadow-sm'
                     : 'text-gray-600 hover:text-gray-800'
@@ -294,7 +294,7 @@ export default function ColorThemePanel() {
               </button>
               <button
                 onClick={() => setActiveTab("videos")}
-                className={`flex-1 px-4 py-2 rounded-md text-sm font-bold transition-all duration-300 ${
+                className={`flex-1 px-4 py-2  text-sm font-bold transition-all duration-300 ${
                   activeTab === "videos"
                     ? 'bg-white text-gray-800 shadow-sm'
                     : 'text-gray-600 hover:text-gray-800'
@@ -311,7 +311,7 @@ export default function ColorThemePanel() {
                 {colorSets.map((set) => (
                 <div
                   key={set.id}
-                  className={`p-4 rounded-2xl border-2 cursor-pointer transition-all duration-300 ${
+                  className={`p-4  border-2 cursor-pointer transition-all duration-300 ${
                     activeSet === set.id
                       ? 'border-coffee-accent bg-coffee-accent/10'
                       : 'border-gray-200 hover:border-gray-300'
@@ -327,7 +327,7 @@ export default function ColorThemePanel() {
                           e.stopPropagation();
                           toggleFlip(set.id);
                         }}
-                        className={`p-2 rounded-full transition-all duration-300 ${
+                        className={`p-2  transition-all duration-300 ${
                           flippedSets[set.id]
                             ? 'bg-coffee-accent text-coffee-green'
                             : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
@@ -400,22 +400,22 @@ export default function ColorThemePanel() {
                     /* Regular Color Preview */
                     <div className="flex space-x-2 mb-3">
                       <div
-                        className="w-8 h-8 rounded-full border-2 border-white shadow-lg"
+                        className="w-8 h-8  border-2 border-white shadow-lg"
                         style={{ backgroundColor: flippedSets[set.id] ? set.background : set.primary }}
                         title={flippedSets[set.id] ? "Primary (Flipped)" : "Primary"}
                       />
                       <div
-                        className="w-8 h-8 rounded-full border-2 border-white shadow-lg"
+                        className="w-8 h-8  border-2 border-white shadow-lg"
                         style={{ backgroundColor: flippedSets[set.id] ? set.accent : set.secondary }}
                         title={flippedSets[set.id] ? "Secondary (Flipped)" : "Secondary"}
                       />
                       <div
-                        className="w-8 h-8 rounded-full border-2 border-white shadow-lg"
+                        className="w-8 h-8  border-2 border-white shadow-lg"
                         style={{ backgroundColor: flippedSets[set.id] ? set.secondary : set.accent }}
                         title={flippedSets[set.id] ? "Accent (Flipped)" : "Accent"}
                       />
                       <div
-                        className="w-8 h-8 rounded-full border-2 border-white shadow-lg"
+                        className="w-8 h-8  border-2 border-white shadow-lg"
                         style={{ backgroundColor: flippedSets[set.id] ? set.primary : set.background }}
                         title={flippedSets[set.id] ? "Background (Flipped)" : "Background"}
                       />
@@ -440,7 +440,7 @@ export default function ColorThemePanel() {
                 {videoOptions.map((video) => (
                   <div
                     key={video.id}
-                    className={`p-4 rounded-2xl border-2 cursor-pointer transition-all duration-300 ${
+                    className={`p-4  border-2 cursor-pointer transition-all duration-300 ${
                       selectedVideo === video.id
                         ? 'border-coffee-accent bg-coffee-accent/10'
                         : 'border-gray-200 hover:border-gray-300'
@@ -450,7 +450,7 @@ export default function ColorThemePanel() {
                     <div className="flex items-center justify-between mb-3">
                       <h4 className="font-bold text-gray-800">{video.name}</h4>
                       {selectedVideo === video.id && (
-                        <div className="px-3 py-1 rounded-full text-sm font-bold bg-coffee-green text-white">
+                        <div className="px-3 py-1  text-sm font-bold bg-coffee-green text-white">
                           Active
                         </div>
                       )}

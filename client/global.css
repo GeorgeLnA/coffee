@@ -9,7 +9,26 @@
   /**
    * Coffee Shop Theme - IDEALIST COFFEE CO.
    * Colors based on the Figma design with HSL format for consistency.
-  */
+   */
+  
+  /* Coolvetica Font */
+  @font-face {
+    font-family: 'Coolvetica';
+    src: url('/Coolvetica Rg.otf') format('opentype');
+    font-weight: normal;
+    font-style: normal;
+    font-display: swap;
+  }
+
+  /* Dosis Font */
+  @font-face {
+    font-family: 'Dosis';
+    src: url('/Dosis-Light.ttf') format('truetype');
+    font-weight: 300;
+    font-style: normal;
+    font-display: swap;
+  }
+  
   :root {
     --background: 0 0% 100%;
     --foreground: 156 100% 13%;
@@ -45,10 +64,10 @@
     --coffee-green: #1f0a03;
     --coffee-green-dark: #0d0502;
     --coffee-green-light: #2a0f05;
-    --coffee-yellow: 54 64% 59%; /* #E2DD42 */
+    --coffee-yellow: 45 100% 96%; /* #fcf4e4 */
     --coffee-beige: #ffffff;
     --coffee-gray: #878787;
-    --coffee-accent: #d59e53; /* Golden accent for small details */
+    --coffee-accent: #fcf4e4; /* Cream accent for small details */
     --coffee-background: #ffffff; /* Background color */
     --coffee-text-primary: #1f0a03; /* Text colors for visibility */
     --coffee-text-secondary: #d59e53;
@@ -88,10 +107,10 @@
     --coffee-green: #1f0a03;
     --coffee-green-dark: #0d0502;
     --coffee-green-light: #2a0f05;
-    --coffee-yellow: 54 64% 59%;
+    --coffee-yellow: 45 100% 96%; /* #fcf4e4 */
     --coffee-beige: #ffffff;
     --coffee-gray: #878787;
-    --coffee-accent: #d59e53; /* Golden accent for small details */
+    --coffee-accent: #fcf4e4; /* Cream accent for small details */
     --coffee-background: #ffffff; /* Background color */
     --coffee-text-primary: #1f0a03; /* Text colors for visibility */
     --coffee-text-secondary: #d59e53;
@@ -123,5 +142,10 @@
 
   .coffee-nav-link {
     @apply font-inter font-medium text-white hover:text-gray-300 transition-colors;
+  }
+  
+  /* Coolvetica utility class */
+  .coolvetica {
+    font-family: 'Coolvetica', sans-serif;
   }
 }

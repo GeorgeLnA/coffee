@@ -94,6 +94,8 @@ export default {
       },
       fontFamily: {
         'inter': ['Inter', '-apple-system', 'Roboto', 'Helvetica', 'sans-serif'],
+        'coolvetica': ['Coolvetica', 'sans-serif'],
+        'dosis': ['Dosis', 'sans-serif'],
       },
     },
   },

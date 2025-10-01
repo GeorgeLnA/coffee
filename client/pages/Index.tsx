@@ -1,13 +1,17 @@
 import { ChevronRight, MapPin, ArrowRight, Coffee, Heart } from "lucide-react";
+import { Link } from "react-router-dom";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
 import FloatingContact from "../components/FloatingContact";
-import ColorThemePanel from "../components/ColorThemePanel";
+// import ColorThemePanel from "../components/ColorThemePanel";
 import { Button } from "../components/ui/button";
 import { useRef } from "react";
+import CoffeeBeanAnimation from "../components/CoffeeBeanAnimation";
+import { useLanguage } from "../contexts/LanguageContext";
 
 export default function Index() {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const { t } = useLanguage();
 
   const handlePlayPause = () => {
     if (videoRef.current) {
@@ -25,9 +29,9 @@ export default function Index() {
       <Header />
 
           {/* Hero Section - Bold & Immersive */}
-          <section className="relative h-screen overflow-hidden">
+          <section className="fixed top-0 left-0 w-full h-screen overflow-hidden z-0">
             <video 
-              src="/Slowmotion_splash_shot_202509171540.mp4" 
+              src="/Coffee_beans_fly_202510011757_183lh.mp4" 
               autoPlay 
               muted 
               loop 
@@ -35,234 +39,194 @@ export default function Index() {
               className="w-full h-full object-cover scale-105"
             />
         
-        {/* Hero Overlay - Bold Gradient */}
-        <div className="absolute inset-0 bg-gradient-to-br from-black/40 via-transparent to-black/60"></div>
-        
-        {/* Hero Content - Bold & Centered */}
-        <div className="absolute inset-0 flex items-center justify-center">
-          <div className="text-center max-w-4xl mx-auto px-6">
-            {/* Main Title - Bold & Animated */}
-            <h1 className="text-5xl md:text-7xl font-black text-coffee-beige mb-8 leading-tight">
-              THE COFFEE <span className="text-coffee-beige">MANIFEST</span>
-            </h1>
+            {/* Hero Overlay - Bold Gradient */}
+            <div className="absolute inset-0 bg-gradient-to-br from-black/40 via-transparent to-black/60"></div>
             
-            
-            {/* CTA Button - Bold */}
-            <button className="group px-12 py-6 bg-coffee-accent text-coffee-green font-black text-xl rounded-full hover:bg-coffee-beige hover:text-coffee-green transition-all duration-300 shadow-2xl hover:shadow-coffee-accent/50">
-              <span className="flex items-center space-x-4">
-                <span>ЗАМОВИТИ КАВУ</span>
-                <ArrowRight className="w-6 h-6 group-hover:translate-x-2 transition-transform" />
-              </span>
-            </button>
-            
-          </div>
-        </div>
+            {/* Hero Content - Bold & Centered */}
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="text-center max-w-4xl mx-auto px-6">
+                {/* Main Title - Bold & Animated */}
+                 <h1 className="text-8xl md:text-9xl lg:text-[12rem] font-black text-coffee-beige mb-8 leading-tight font-dosis tracking-wider mix-blend-overlay">
+                   <span className="block">THE</span>
+                   <span className="block">COFFEE</span>
+                   <span className="block">MANIFEST</span>
+                 </h1>
+                 
+                 
+                {/* CTA Button - Clean */}
+                <Link to="/coffee" className="group inline-block px-12 py-6 bg-transparent border-2 border-white text-white font-black text-xl hover:bg-[#fcf4e4] hover:text-[#3b0b0b] transition-all duration-300">
+                  <span className="flex items-center space-x-4">
+                    <span>{t('hero.cta')}</span>
+                    <ArrowRight className="w-6 h-6 group-hover:translate-x-2 transition-transform" />
+                  </span>
+                </Link>
+                
+              </div>
+            </div>
+          </section>
 
-
-      </section>
+      {/* Minimalistic Coffee Bean Disintegration Animation (Canvas) - Hidden for now */}
+      {/* <CoffeeBeanAnimation /> */}
 
       {/* We Create Something Unique - Dynamic Background */}
-      <section className="py-32 bg-coffee-background relative overflow-hidden">
+      <section className="py-16 md:py-32 relative overflow-hidden z-10" style={{ backgroundColor: '#3b0b0b', marginTop: '100vh' }}>
         {/* Background Elements */}
-        <div className="absolute top-20 left-20 w-32 h-32 bg-coffee-accent rounded-full blur-3xl opacity-10"></div>
-        <div className="absolute bottom-20 right-20 w-24 h-24 bg-coffee-green rounded-full blur-3xl opacity-10"></div>
+        <div className="absolute top-20 left-20 w-32 h-32 bg-coffee-accent  blur-3xl opacity-10"></div>
+        <div className="absolute bottom-20 right-20 w-24 h-24 bg-coffee-green  blur-3xl opacity-10"></div>
         
-        <div className="max-w-7xl mx-auto px-6 lg:px-8 relative z-10">
+        <div className="max-w-8xl mx-auto px-6 lg:px-8 relative z-10">
           {/* Section Header - Bold & Centered */}
           <div className="text-center mb-20">
-            <h2 className="text-5xl md:text-7xl font-black text-coffee-green mb-8 leading-tight">
-              <span className="text-coffee-accent">ХІТИ ЦЬОГО СЕЗОНУ</span>
-            </h2>
-            <p className="text-xl text-coffee-text-primary font-bold max-w-3xl mx-auto">
-              Найпопулярніші кавові сорти цього сезону
-            </p>
-            <div className="w-24 h-1 bg-coffee-accent mx-auto rounded-full mt-8"></div>
+             <h2 className="text-5xl md:text-7xl font-black mb-8 leading-tight font-coolvetica tracking-wider">
+               <span style={{ color: '#fcf4e4' }}>{t('season.title')}</span>
+             </h2>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-7xl mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12 max-w-8xl mx-auto">
             {/* Coffee for Home - Colombia Supremo */}
-            <div className="group relative bg-coffee-background rounded-3xl overflow-hidden hover:scale-105 transition-all duration-500 shadow-2xl border border-gray-100">
-              {/* Image */}
-              <div className="relative h-64 overflow-hidden">
-                    <img
-                      src="/250-g_Original.PNG"
-                      alt="Colombia Supremo Coffee"
-                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
-                    />
-                
-                {/* Product Badge */}
-                <div className="absolute top-4 left-4">
-                  <span className="px-4 py-2 bg-coffee-accent text-coffee-green font-black text-sm rounded-full">
-                    КАВА ДЛЯ ДОМУ
-                  </span>
+            <Link to="/coffee" className="group block">
+              <div className="relative aspect-[4/5] bg-gray-100 overflow-hidden mb-6">
+                <div className="absolute inset-0 ">
+                  <img
+                    src="/250-g_Original.PNG"
+                    alt="Colombia Supremo Coffee"
+                    className="w-full h-full object-cover group-hover:opacity-0 transition-opacity duration-700"
+                  />
+                  <img
+                    src="/woocommerce-placeholder_Original.PNG"
+                    alt="Colombia Supremo Coffee"
+                    className="w-full h-full object-cover absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700"
+                  />
                 </div>
               </div>
-              
-              {/* Content */}
-              <div className="p-8">
-                <h3 className="text-3xl font-black text-coffee-green mb-4">
-                  COLOMBIA SUPREMO
+              <div>
+                <h3 className="text-4xl font-black font-coolvetica tracking-wider uppercase mb-4" style={{ color: '#fcf4e4' }}>
+                  {t('season.colombia.title')}
                 </h3>
-                    <p className="text-coffee-text-description font-bold leading-relaxed text-lg mb-6">
-                      Преміум кавові зерна одного походження з Колумбії. Ідеально підходить для домашнього заварювання з нотами сливи, абрикосу та шоколаду.
-                    </p>
-                
-                <div className="flex items-center text-coffee-accent font-black group-hover:translate-x-2 transition-transform text-xl">
-                  <span>КУПИТИ КАВУ ДЛЯ ДОМУ</span>
-                  <ChevronRight className="w-8 h-8 ml-3" />
+                <div className="font-medium text-lg" style={{ color: '#fcf4e4' }}>
+                  {t('season.colombia.desc')}
                 </div>
               </div>
-            </div>
+            </Link>
 
             {/* Coffee for Office - Ethiopia Guji Organic */}
-            <div className="group relative bg-coffee-background rounded-3xl overflow-hidden hover:scale-105 transition-all duration-500 shadow-2xl border border-gray-100">
-              {/* Image */}
-              <div className="relative h-64 overflow-hidden">
-                    <img
-                      src="/250-g_Original.PNG"
-                      alt="Ethiopia Guji Organic Coffee"
-                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
-                    />
-                
-                {/* Product Badge */}
-                <div className="absolute top-4 left-4">
-                  <span className="px-4 py-2 bg-coffee-accent text-coffee-green font-black text-sm rounded-full">
-                    КАВА ДЛЯ ОФІСУ
-                  </span>
+            <Link to="/coffee" className="group block">
+              <div className="relative aspect-[4/5] bg-gray-100 overflow-hidden mb-6">
+                <div className="absolute inset-0 ">
+                  <img
+                    src="/250-g_Original.PNG"
+                    alt="Ethiopia Guji Organic Coffee"
+                    className="w-full h-full object-cover group-hover:opacity-0 transition-opacity duration-700"
+                  />
+                  <img
+                    src="/woocommerce-placeholder_Original.PNG"
+                    alt="Ethiopia Guji Organic Coffee"
+                    className="w-full h-full object-cover absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700"
+                  />
                 </div>
               </div>
-              
-              {/* Content */}
-              <div className="p-8">
-                <h3 className="text-3xl font-black text-coffee-green mb-4">
-                  ETHIOPIA GUJI ORGANIC
+              <div>
+                <h3 className="text-4xl font-black font-coolvetica tracking-wider uppercase mb-4" style={{ color: '#fcf4e4' }}>
+                  {t('season.ethiopia.title')}
                 </h3>
-                    <p className="text-coffee-text-description font-bold leading-relaxed text-lg mb-6">
-                      Органічна кавова суміш, ідеальна для офісних приміщень. Багаті смаки чорної смородини, чорниці, інжиру та гречаного меду.
-                    </p>
-                
-                <div className="flex items-center text-coffee-accent font-black group-hover:translate-x-2 transition-transform text-xl">
-                  <span>ДОСЛІДИТИ ОФІСНІ РІШЕННЯ</span>
-                  <ChevronRight className="w-8 h-8 ml-3" />
+                <div className="font-medium text-lg" style={{ color: '#fcf4e4' }}>
+                  {t('season.ethiopia.desc')}
                 </div>
               </div>
-            </div>
+            </Link>
 
             {/* Coffee for Business - Brazil Santos */}
-            <div className="group relative bg-coffee-background rounded-3xl overflow-hidden hover:scale-105 transition-all duration-500 shadow-2xl border border-gray-100">
-              {/* Image */}
-              <div className="relative h-64 overflow-hidden">
-                    <img
-                      src="/250-g_Original.PNG"
-                      alt="Brazil Santos Coffee"
-                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
-                    />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent"></div>
-
-                {/* Product Badge */}
-                <div className="absolute top-4 left-4">
-                  <span className="px-4 py-2 bg-coffee-accent text-coffee-green font-black text-sm rounded-full">
-                    БІЗНЕС КАВА
-                  </span>
+            <Link to="/coffee" className="group block">
+              <div className="relative aspect-[4/5] bg-gray-100 overflow-hidden mb-6">
+                <div className="absolute inset-0 ">
+                  <img
+                    src="/250-g_Original.PNG"
+                    alt="Brazil Santos Coffee"
+                    className="w-full h-full object-cover group-hover:opacity-0 transition-opacity duration-700"
+                  />
+                  <img
+                    src="/woocommerce-placeholder_Original.PNG"
+                    alt="Brazil Santos Coffee"
+                    className="w-full h-full object-cover absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700"
+                  />
                 </div>
               </div>
-              
-              {/* Content */}
-              <div className="p-8">
-                <h3 className="text-3xl font-black text-coffee-green mb-4">
-                  BRAZIL SANTOS
+              <div>
+                <h3 className="text-4xl font-black font-coolvetica tracking-wider uppercase mb-4" style={{ color: '#fcf4e4' }}>
+                  {t('season.brazil.title')}
                 </h3>
-                    <p className="text-coffee-text-description font-bold leading-relaxed text-lg mb-6">
-                      Класична бразильська кава з м'яким смаком та низькою кислотністю. Ідеальна для великих офісів та ресторанів.
-                    </p>
-                
-                <div className="flex items-center text-coffee-accent font-black group-hover:translate-x-2 transition-transform text-xl">
-                  <span>БІЗНЕС РІШЕННЯ</span>
-                  <ChevronRight className="w-8 h-8 ml-3" />
+                <div className="font-medium text-lg" style={{ color: '#fcf4e4' }}>
+                  {t('season.brazil.desc')}
                 </div>
               </div>
-            </div>
+            </Link>
           </div>
 
           {/* Bottom CTA - Bold */}
           <div className="text-center mt-16">
-            <button className="group px-16 py-6 bg-coffee-accent text-coffee-green font-black text-2xl rounded-full hover:bg-coffee-green hover:text-coffee-text-primary transition-all duration-300 shadow-2xl hover:shadow-coffee-accent/50">
-              <span className="flex items-center space-x-4">
-                <span>ДІЗНАТИСЯ БІЛЬШЕ</span>
-                <ArrowRight className="w-6 h-6 group-hover:translate-x-2 transition-transform" />
+            <button className="group px-12 py-4 bg-transparent border-2 font-black text-lg hover:bg-[#fcf4e4] transition-all duration-300" style={{ borderColor: '#fcf4e4', color: '#fcf4e4' }}>
+              <span className="flex items-center space-x-3 group-hover:text-[#3b0b0b]">
+                <span>{t('season.learnMore')}</span>
+                <ArrowRight className="w-5 h-5 group-hover:translate-x-2 transition-transform" />
               </span>
             </button>
           </div>
         </div>
       </section>
 
-      {/* Video Section - Bold with Text */}
-      <section className="py-32 bg-coffee-green relative overflow-hidden">
-        {/* Background Elements */}
-        <div className="absolute top-20 right-20 w-32 h-32 bg-coffee-accent rounded-full blur-3xl opacity-20"></div>
-        <div className="absolute bottom-20 left-20 w-24 h-24 bg-coffee-accent rounded-full blur-3xl opacity-20"></div>
-
-        <div className="max-w-7xl mx-auto px-6 lg:px-8 relative z-10">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+      {/* Video Section - Clean & Minimalistic */}
+      <section className="py-32 relative overflow-hidden" style={{ backgroundColor: '#3b0b0b' }}>
+        <div className="max-w-8xl mx-auto px-6 lg:px-8 relative z-10">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-20 items-center">
             {/* Video Side */}
             <div className="relative">
-              <div className="relative rounded-3xl overflow-hidden shadow-2xl">
+              <div className="relative overflow-hidden">
                  <video 
                    ref={videoRef}
-                   src="/Stylish_overhead_shot_202509251934_iuiif.mp4" 
+                   src="/Macro_shot_of_202509171627_znyzw.mp4" 
                    autoPlay 
                    muted 
                    loop 
                    playsInline
                    className="w-full h-[600px] object-cover"
+                   style={{ transform: 'scale(1.15)' }}
                  />
-                
-                {/* Overlay */}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent"></div>
-              </div>
-              
-              {/* Floating Elements */}
-              <div className="absolute -top-6 -right-6 w-16 h-16 bg-coffee-accent rounded-full flex items-center justify-center shadow-2xl">
-                <Coffee className="w-8 h-8 text-coffee-green" />
               </div>
             </div>
 
-            {/* Text Side - Bold */}
+            {/* Text Side - Clean */}
             <div className="space-y-8">
               <div>
-                <h2 className="text-5xl lg:text-7xl font-black text-coffee-text-primary mb-6 leading-tight">
-                  СТВОРЕНО
-                  <br />
-                  <span className="text-coffee-accent">ДОСКОНАЛІСТЬ</span>
-                </h2>
-                <div className="w-24 h-1 bg-coffee-accent rounded-full"></div>
+                 <h2 className="text-5xl lg:text-7xl font-black mb-8 leading-tight font-coolvetica tracking-wider">
+                   <span style={{ color: '#fcf4e4' }}>{t('video.title1')}</span>
+                   <br />
+                   <span style={{ color: '#fcf4e4' }}>{t('video.title2')}</span>
+                 </h2>
               </div>
               
-              <p className="text-xl text-coffee-text-primary font-medium leading-relaxed">
-                Кожна чашка розповідає історію пристрасті, точності та досконалості. 
-                Від моменту вибору найкращих зерен до фінального наливання 
-                ми забезпечуємо, що кожна деталь створена з турботою.
+              <p className="text-xl text-white font-medium leading-relaxed">
+                {t('video.desc')}
               </p>
               
-              <div className="space-y-4">
+              <div className="space-y-6">
                 <div className="flex items-center space-x-4">
-                  <div className="w-2 h-2 bg-coffee-accent rounded-full"></div>
-                  <span className="text-coffee-text-primary font-bold text-lg">Преміум якість зерен</span>
+                  <div className="w-2 h-2" style={{ backgroundColor: '#fcf4e4' }}></div>
+                  <span className="text-white font-bold text-lg">{t('video.feature1')}</span>
                 </div>
                 <div className="flex items-center space-x-4">
-                  <div className="w-2 h-2 bg-coffee-accent rounded-full"></div>
-                  <span className="text-coffee-text-primary font-bold text-lg">Експертний процес обсмажування</span>
+                  <div className="w-2 h-2" style={{ backgroundColor: '#fcf4e4' }}></div>
+                  <span className="text-white font-bold text-lg">{t('video.feature2')}</span>
                 </div>
                 <div className="flex items-center space-x-4">
-                  <div className="w-2 h-2 bg-coffee-accent rounded-full"></div>
-                  <span className="text-coffee-text-primary font-bold text-lg">Досконалі техніки заварювання</span>
+                  <div className="w-2 h-2" style={{ backgroundColor: '#fcf4e4' }}></div>
+                  <span className="text-white font-bold text-lg">{t('video.feature3')}</span>
                 </div>
               </div>
               
-              <button className="group px-12 py-6 bg-coffee-accent text-coffee-green font-black text-xl rounded-full hover:bg-white hover:text-coffee-green transition-all duration-300 shadow-2xl hover:shadow-coffee-accent/50">
-                <span className="flex items-center space-x-4">
-                  <span>ПОСПОСТЕРІГАЙТЕ НАШ ПРОЦЕС</span>
-                  <ArrowRight className="w-6 h-6 group-hover:translate-x-2 transition-transform" />
+              <button className="group px-12 py-4 bg-transparent border-2 font-black text-lg hover:bg-[#fcf4e4] transition-all duration-300" style={{ borderColor: '#fcf4e4', color: '#fcf4e4' }}>
+                <span className="flex items-center space-x-3 group-hover:text-[#3b0b0b]">
+                  <span>{t('video.watch')}</span>
+                  <ArrowRight className="w-5 h-5 group-hover:translate-x-2 transition-transform" />
                 </span>
               </button>
             </div>
@@ -270,122 +234,72 @@ export default function Index() {
         </div>
       </section>
 
-          {/* About Section - Bold & Inspiring */}
-          <section className="py-32 bg-coffee-background relative overflow-hidden">
-        {/* Background Pattern */}
-        <div className="absolute inset-0 opacity-5">
-          <div className="absolute top-20 right-20 w-64 h-64 bg-coffee-accent rounded-full blur-3xl"></div>
-          <div className="absolute bottom-20 left-20 w-96 h-96 bg-coffee-green/10 rounded-full blur-3xl"></div>
-        </div>
-
-        <div className="max-w-7xl mx-auto px-6 lg:px-8 relative z-10">
+          {/* About Section - Clean & Minimalistic */}
+          <section className="py-32 relative overflow-hidden" style={{ backgroundColor: '#fcf4e4' }}>
+        <div className="max-w-8xl mx-auto px-6 lg:px-8 relative z-10">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-20 items-center">
             
-            {/* Content Side - Bold */}
+            {/* Content Side - Clean */}
             <div className="order-2 lg:order-1">
-              <div className="mb-8">
-                <div className="inline-block bg-coffee-accent px-6 py-3 rounded-full mb-8">
-                  <span className="text-coffee-green font-black text-sm uppercase tracking-wider">Про нас</span>
+              <div className="mb-12">
+                <div className="inline-block px-6 py-3 mb-8" style={{ backgroundColor: '#3b0b0b' }}>
+                  <span className="text-white font-black text-sm uppercase tracking-wider">{t('about.badge')}</span>
                 </div>
                 
-                <h2 className="text-4xl md:text-6xl font-black text-coffee-green mb-8 leading-tight">
-                  THE COFFEE
-                  <span className="block text-coffee-accent">MANIFEST</span>
-                </h2>
+                 <h2 className="text-4xl md:text-6xl font-black mb-8 leading-tight font-coolvetica tracking-wider">
+                   <span style={{ color: '#3b0b0b' }}>{t('about.title')}</span>
+                 </h2>
                 
-                    <p className="text-xl text-coffee-text-description font-bold leading-relaxed mb-8">
-                      Ми не просто українська мережа кав'ярень третьої хвилі. Ми повноцінна кавова компанія, яка швидко та пристрасно розвивається.
+                    <p className="text-xl text-gray-700 font-medium leading-relaxed mb-8">
+                      {t('about.desc1')}
                     </p>
 
-                    <p className="text-lg text-coffee-text-description font-bold leading-relaxed mb-12">
-                      Ми не просто продаємо каву — ми ретельно відбираємо зелені кавові зерна, обсмажуємо їх на високоякісному обладнанні та докладаємо всіх зусиль, щоб ви могли насолоджуватися розкошшю ароматного гарячого напою в чашці вдома, в офісі або в нашому закладі.
+                    <p className="text-lg text-gray-700 font-medium leading-relaxed mb-12">
+                      {t('about.desc2')}
                     </p>
               </div>
 
-              {/* Stats - Bold */}
-              <div className="grid grid-cols-2 gap-8 mb-12">
-                <div className="text-center">
-                  <div className="text-4xl font-black text-coffee-accent mb-2">50+</div>
-                  <div className="text-coffee-text-description font-bold">Сортів кави</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-4xl font-black text-coffee-accent mb-2">1000+</div>
-                  <div className="text-coffee-text-description font-bold">Задоволених клієнтів</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-4xl font-black text-coffee-accent mb-2">5</div>
-                  <div className="text-coffee-text-description font-bold">Років досвіду</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-4xl font-black text-coffee-accent mb-2">24/7</div>
-                  <div className="text-coffee-text-description font-bold">Свіже обсмажування</div>
-                </div>
-              </div>
 
-              {/* CTA Button - Bold */}
-              <button className="group px-12 py-6 bg-coffee-green text-coffee-text-primary font-black text-xl rounded-full hover:bg-coffee-accent hover:text-coffee-green transition-all duration-300 shadow-2xl">
-                <span className="flex items-center space-x-4">
-                  <span>ДІЗНАТИСЯ БІЛЬШЕ</span>
-                  <ArrowRight className="w-6 h-6 group-hover:translate-x-2 transition-transform" />
+              {/* CTA Button - Clean */}
+              <button className="group px-12 py-4 bg-transparent border-2 font-black text-lg hover:bg-[#3b0b0b] transition-all duration-300" style={{ borderColor: '#3b0b0b', color: '#3b0b0b' }}>
+                <span className="flex items-center space-x-3">
+                  <span className="group-hover:text-[#fcf4e4]">{t('about.learnMore')}</span>
+                  <ArrowRight className="w-5 h-5 group-hover:translate-x-2 transition-transform group-hover:text-[#fcf4e4]" />
                 </span>
               </button>
             </div>
 
-            {/* Image Side - Bold */}
+            {/* Image Side - Clean */}
             <div className="order-1 lg:order-2 relative">
-              <div className="relative group">
+              <div className="relative">
                 {/* Main Image */}
                 <img 
                   src="/photo_2023-11-03_07-29-18.jpg" 
                   alt="THE COFFEE MANIFEST Team" 
-                  className="w-full h-[700px] object-cover rounded-3xl shadow-2xl group-hover:scale-105 transition-transform duration-500"
+                  className="w-full h-[600px] object-cover"
                   style={{ objectPosition: '35% center' }}
                 />
                 
-                
-                {/* Floating Elements */}
-                <div className="absolute -top-6 -right-6 w-16 h-16 bg-coffee-accent rounded-full flex items-center justify-center shadow-2xl">
-                  <Coffee className="w-8 h-8 text-coffee-green" />
-                </div>
-                
-                
-                {/* Image Caption */}
-                <div className="absolute bottom-8 left-8 right-8">
-                  <div className="bg-white/90 backdrop-blur-sm rounded-2xl p-6">
-                    <h3 className="text-xl font-black text-coffee-green mb-2">Наша історія</h3>
-                    <p className="text-coffee-text-primary font-bold">
-                      Познайомтеся з пристрасною командою THE COFFEE MANIFEST
-                    </p>
-                  </div>
-                </div>
               </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Our Cafes - New Layout */}
-      <section className="py-32 bg-coffee-green relative overflow-hidden">
-        {/* Background Elements */}
-        <div className="absolute top-20 right-20 w-40 h-40 bg-coffee-accent rounded-full blur-3xl opacity-20"></div>
-        <div className="absolute bottom-20 left-20 w-32 h-32 bg-coffee-accent rounded-full blur-3xl opacity-20"></div>
-
-        <div className="max-w-7xl mx-auto px-6 lg:px-8 relative z-10">
-          {/* Header - Bold */}
+      {/* Our Cafes - Clean & Minimalistic */}
+      <section className="py-32 relative overflow-hidden" style={{ backgroundColor: '#3b0b0b' }}>
+        <div className="max-w-8xl mx-auto px-6 lg:px-8 relative z-10">
+          {/* Header - Clean */}
           <div className="text-center mb-20">
-            <h2 className="text-5xl lg:text-7xl font-black text-coffee-text-primary mb-6 leading-tight">
-              НАШІ
-              <span className="text-coffee-accent"> КАВ'ЯРНІ</span>
-            </h2>
-            <p className="text-xl text-coffee-text-primary font-bold mb-8">
-              Знайдіть нас по всьому Києву
-            </p>
-            <div className="w-24 h-1 bg-coffee-accent mx-auto rounded-full"></div>
+             <h2 className="text-5xl lg:text-7xl font-black mb-8 leading-tight font-coolvetica tracking-wider">
+               <span style={{ color: '#fcf4e4' }}>{t('cafes.title1')}</span>
+               <span className="block" style={{ color: '#fcf4e4' }}>{t('cafes.title2')}</span>
+             </h2>
           </div>
 
-          {/* Map - Full Width */}
-          <div className="mb-16">
-            <div className="h-[400px] relative overflow-hidden rounded-3xl shadow-2xl">
+          {/* Map - Clean */}
+          <div className="mb-20">
+            <div className="h-[400px] relative overflow-hidden">
               <iframe
                 src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2540.5!2d30.5234!3d50.4501!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x40d4ce4b8b8b8b8b%3A0x8b8b8b8b8b8b8b8b!2sKyiv%2C%20Ukraine!5e0!3m2!1sen!2sua!4v1234567890123!5m2!1sen!2sua"
                 width="100%"
@@ -394,38 +308,36 @@ export default function Index() {
                 allowFullScreen
                 loading="lazy"
                 referrerPolicy="no-referrer-when-downgrade"
-                className="rounded-3xl"
                 title="THE COFFEE MANIFEST Locations Map"
               />
-              
             </div>
           </div>
 
-          {/* Cafe List - Grid Layout */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
+          {/* Cafe List - Clean Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-16">
             {[
-              { name: "Cafe (Golden Gate)", address: "Yaroslaviv Val, 15, Kyiv", active: true, hours: "7:00 - 22:00" },
-              { name: "Cafe (CHICAGO Central House)", address: "St. Antonovycha, 44, Kyiv", active: false, hours: "8:00 - 23:00" },
-              { name: "Cafe (BTC Maidan Plaza)", address: "Maidan Nezalezhnosti, 2, Kyiv", active: false, hours: "7:30 - 21:30" },
+              { name: t('cafes.cafe1.name'), address: t('cafes.cafe1.address'), active: true, hours: t('cafes.cafe1.hours') },
+              { name: t('cafes.cafe2.name'), address: t('cafes.cafe2.address'), active: false, hours: t('cafes.cafe2.hours') },
+              { name: t('cafes.cafe3.name'), address: t('cafes.cafe3.address'), active: false, hours: t('cafes.cafe3.hours') },
             ].map((cafe, index) => (
-              <div key={index} className="group relative bg-white/10 backdrop-blur-md rounded-2xl p-6 border border-white/20 hover:bg-white/20 transition-all duration-300 hover:scale-105">
+              <div key={index} className="group relative bg-white/10 backdrop-blur-sm p-8 border border-white/20 hover:bg-white/20 transition-all duration-300">
                 {/* Status Indicator */}
-                <div className="flex items-center justify-between mb-4">
-                  <div className={`w-3 h-3 rounded-full ${cafe.active ? 'bg-coffee-accent' : 'bg-gray-400'} group-hover:scale-110 transition-transform`}></div>
-                  <div className="text-sm text-coffee-text-primary font-medium">{cafe.hours}</div>
+                <div className="flex items-center justify-between mb-6">
+                  <div className={`w-3 h-3 ${cafe.active ? 'bg-white' : 'bg-gray-400'}`}></div>
+                  <div className="text-sm text-white font-medium">{cafe.hours}</div>
                 </div>
                 
                 {/* Icon */}
-                <div className="w-12 h-12 bg-coffee-accent rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300">
-                  <MapPin className="w-6 h-6 text-coffee-green" />
+                <div className="w-12 h-12 bg-white/20 flex items-center justify-center mb-6">
+                  <MapPin className="w-6 h-6 text-white" />
                 </div>
                 
                 {/* Content */}
                 <div>
-                  <h3 className="text-lg font-black text-coffee-text-primary mb-2 group-hover:text-coffee-accent transition-colors duration-300">
+                  <h3 className="text-lg font-black text-white mb-2 font-coolvetica tracking-wider">
                     {cafe.name}
                   </h3>
-                  <p className="text-coffee-text-primary font-medium group-hover:text-coffee-text-primary transition-colors duration-300">
+                  <p className="text-white/80 font-medium">
                     {cafe.address}
                   </p>
                 </div>
@@ -435,71 +347,62 @@ export default function Index() {
 
           {/* All Cafes Button */}
           <div className="text-center">
-            <button className="group px-16 py-6 bg-coffee-accent text-coffee-green font-black text-2xl rounded-full hover:bg-white hover:text-coffee-green transition-all duration-300 shadow-2xl hover:shadow-coffee-accent/50">
-              <span className="flex items-center space-x-4">
-                <span>ПЕРЕГЛЯНУТИ ВСІ КАВ'ЯРНІ</span>
-                <MapPin className="w-6 h-6 group-hover:translate-x-2 transition-transform" />
+            <button className="group px-12 py-4 bg-transparent border-2 font-black text-lg hover:bg-[#fcf4e4] transition-all duration-300" style={{ borderColor: '#fcf4e4', color: '#fcf4e4' }}>
+              <span className="flex items-center space-x-3 group-hover:text-[#3b0b0b]">
+                <span>{t('cafes.viewAll')}</span>
+                <MapPin className="w-5 h-5 group-hover:translate-x-2 transition-transform" />
               </span>
             </button>
           </div>
         </div>
       </section>
 
-          {/* News Section - Bold */}
-          <section className="py-32 bg-coffee-background relative overflow-hidden">
-        {/* Background Elements */}
-        <div className="absolute top-20 right-20 w-32 h-32 bg-coffee-accent rounded-full blur-3xl opacity-10"></div>
-        <div className="absolute bottom-20 left-20 w-24 h-24 bg-coffee-green rounded-full blur-3xl opacity-10"></div>
-
-        <div className="max-w-7xl mx-auto px-6 lg:px-8 relative z-10">
-          {/* Header - Bold */}
+          {/* News Section - Clean & Minimalistic */}
+          <section className="py-32 relative overflow-hidden" style={{ backgroundColor: '#fcf4e4' }}>
+        <div className="max-w-8xl mx-auto px-6 lg:px-8 relative z-10">
+          {/* Header - Clean */}
           <div className="text-center mb-20">
-            <h2 className="text-5xl lg:text-7xl font-black text-coffee-green mb-6 leading-tight">
-              НОВИНИ З
-              <br />
-              <span className="text-coffee-accent">КАВОВОГО СВІТУ</span>
-            </h2>
-            <p className="text-xl text-coffee-text-description font-bold mb-8">
-              Будьте в курсі останніх кавових трендів та інсайтів
-            </p>
-            <div className="w-24 h-1 bg-coffee-accent mx-auto rounded-full"></div>
+             <h2 className="text-5xl lg:text-7xl font-black mb-8 leading-tight font-coolvetica tracking-wider">
+               <span style={{ color: '#3b0b0b' }}>{t('news.title1')}</span>
+               <br />
+               <span style={{ color: '#3b0b0b' }}>{t('news.title2')}</span>
+             </h2>
           </div>
 
-          {/* Articles Grid - Bold */}
+          {/* Articles Grid - Clean */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-16">
             {[
               {
-                title: "Coffee for the military: how a simple drink…",
-                excerpt: "Coffee has also become a form of support. Through something as everyday as a cup of coffee, every citizen can feel their connection to the collective…",
-                image: "https://api.builder.io/api/v1/image/assets/TEMP/f442a83a29737ee4d1be7db1d482e0f89f83bac7?width=811",
-                category: "Community"
-              },
-              {
-                title: "Batch Brew vs. Pour Over: A Comparison of Method…",
-                excerpt: "In coffee culture, there's an ongoing debate about the best way to bring out the aroma and flavor profile of your favorite brew. To help you choose the…",
-                image: "https://api.builder.io/api/v1/image/assets/TEMP/8b7e355094a1a12ea7d37e5c5743479e75c0eaf5?width=811",
-                category: "Brewing"
-              },
-              {
-                title: "How We Roast Our Coffee",
-                excerpt: "The secret to a great cup of coffee lies in high-quality beans and the skill of roasting them. This is the stage where flavor is born, aromas are unlocke…",
+                title: t('news.article1.title'),
+                excerpt: t('news.article1.excerpt'),
                 image: "https://api.builder.io/api/v1/image/assets/TEMP/48fca8d935a28fbac0cc9a8942725c2a971d05a2?width=811",
-                category: "Process"
+                category: t('news.article1.category')
+              },
+              {
+                title: t('news.article2.title'),
+                excerpt: t('news.article2.excerpt'),
+                image: "https://api.builder.io/api/v1/image/assets/TEMP/8b7e355094a1a12ea7d37e5c5743479e75c0eaf5?width=811",
+                category: t('news.article2.category')
+              },
+              {
+                title: t('news.article3.title'),
+                excerpt: t('news.article3.excerpt'),
+                image: "https://api.builder.io/api/v1/image/assets/TEMP/48fca8d935a28fbac0cc9a8942725c2a971d05a2?width=811",
+                category: t('news.article3.category')
               }
             ].map((article, index) => (
-              <article key={index} className="group relative bg-coffee-background rounded-3xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-500 hover:scale-105 border border-gray-100">
+              <article key={index} className="group relative overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300" style={{ backgroundColor: '#3b0b0b' }}>
                 {/* Image */}
                 <div className="relative overflow-hidden h-64">
                   <img 
                     src={article.image} 
                     alt={article.title} 
-                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                    className="w-full h-full object-cover"
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent"></div>
                   
                   {/* Category Badge */}
                   <div className="absolute top-4 left-4">
-                    <span className="px-4 py-2 bg-coffee-accent text-coffee-green font-black text-sm rounded-full">
+                    <span className="px-4 py-2 text-white font-black text-sm" style={{ backgroundColor: '#3b0b0b' }}>
                       {article.category}
                     </span>
                   </div>
@@ -507,18 +410,18 @@ export default function Index() {
                 
                 {/* Content */}
                 <div className="p-8">
-                  <h3 className="text-2xl font-black text-coffee-green mb-4 leading-tight group-hover:text-coffee-accent transition-colors duration-300">
+                  <h3 className="text-2xl font-black mb-4 leading-tight font-coolvetica tracking-wider" style={{ color: '#fcf4e4' }}>
                     {article.title}
                   </h3>
-                  <p className="text-coffee-text-description font-medium leading-relaxed mb-6 group-hover:text-coffee-text-description transition-colors duration-300">
+                  <p className="font-medium leading-relaxed mb-6" style={{ color: '#fcf4e4' }}>
                     {article.excerpt}
                   </p>
                   
                   {/* Learn More Button */}
-                  <button className="group/btn w-full px-6 py-4 bg-coffee-green text-coffee-text-primary font-black text-lg rounded-2xl hover:bg-coffee-accent hover:text-coffee-green transition-all duration-300 shadow-lg hover:shadow-xl">
+                  <button className="group/btn w-full px-6 py-4 bg-transparent border-2 font-black text-lg hover:bg-[#fcf4e4] transition-all duration-300" style={{ borderColor: '#fcf4e4', color: '#fcf4e4' }}>
                     <span className="flex items-center justify-center space-x-3">
-                      <span>LEARN MORE</span>
-                      <ArrowRight className="w-5 h-5 group-hover/btn:translate-x-1 transition-transform" />
+                      <span className="group-hover/btn:text-[#3b0b0b]">{t('news.learnMore')}</span>
+                      <ArrowRight className="w-5 h-5 group-hover/btn:translate-x-1 transition-transform group-hover/btn:text-[#3b0b0b]" />
                     </span>
                   </button>
                 </div>
@@ -528,10 +431,10 @@ export default function Index() {
 
           {/* All News Button */}
           <div className="text-center">
-            <button className="group px-16 py-6 bg-coffee-accent text-coffee-green font-black text-2xl rounded-full hover:bg-coffee-green hover:text-coffee-text-primary transition-all duration-300 shadow-2xl hover:shadow-coffee-accent/50">
-              <span className="flex items-center space-x-4">
-                <span>ПЕРЕГЛЯНУТИ ВСІ НОВИНИ</span>
-                <ArrowRight className="w-6 h-6 group-hover:translate-x-2 transition-transform" />
+            <button className="group px-12 py-4 bg-transparent border-2 font-black text-lg hover:bg-[#3b0b0b] transition-all duration-300" style={{ borderColor: '#3b0b0b', color: '#3b0b0b' }}>
+              <span className="flex items-center space-x-3">
+                <span className="group-hover:text-[#fcf4e4]">{t('news.viewAll')}</span>
+                <ArrowRight className="w-5 h-5 group-hover:translate-x-2 transition-transform group-hover:text-[#fcf4e4]" />
               </span>
             </button>
           </div>
@@ -545,7 +448,7 @@ export default function Index() {
           <FloatingContact />
 
           {/* Color Theme Panel */}
-          <ColorThemePanel />
+          {/* <ColorThemePanel /> */}
         </div>
       );
     }
