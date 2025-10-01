@@ -1,6 +1,3 @@
-/** @import must precede all other statements */
-@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap");
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -17,7 +14,11 @@
     src: url('/Coolvetica Rg.otf') format('opentype');
     font-weight: normal;
     font-style: normal;
-    font-display: swap;
+    font-display: block;
+    ascent-override: 105%;
+    descent-override: 35%;
+    line-gap-override: 0%;
+    size-adjust: 100%;
   }
 
   /* Dosis Font */
@@ -26,7 +27,11 @@
     src: url('/Dosis-Light.ttf') format('truetype');
     font-weight: 300;
     font-style: normal;
-    font-display: swap;
+    font-display: block;
+    ascent-override: 105%;
+    descent-override: 35%;
+    line-gap-override: 0%;
+    size-adjust: 100%;
   }
   
   :root {
@@ -125,6 +130,18 @@
 
   body {
     @apply bg-background text-foreground font-inter;
+    font-display: block;
+  }
+
+  /* Ensure smooth font loading with better fallbacks */
+  .font-coolvetica {
+    font-family: 'Coolvetica', 'Arial Black', 'Helvetica Neue', sans-serif;
+    font-display: block;
+  }
+
+  .font-dosis {
+    font-family: 'Dosis', 'Arial', 'Helvetica Neue', sans-serif;
+    font-display: block;
   }
 
   /* Typography for coffee shop */

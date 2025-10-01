@@ -46,7 +46,7 @@ export default function Index() {
             <div className="absolute inset-0 flex items-center justify-center">
               <div className="text-center max-w-4xl mx-auto px-6">
                 {/* Main Title - Bold & Animated */}
-                 <h1 className="text-8xl md:text-9xl lg:text-[12rem] font-black text-coffee-beige mb-8 leading-tight font-dosis tracking-wider mix-blend-overlay">
+                 <h1 className="text-7xl md:text-9xl lg:text-[12rem] font-black mb-8 leading-tight font-dosis tracking-wider" style={{ color: '#fcf4e4', mixBlendMode: 'overlay' }}>
                    <span className="block">THE</span>
                    <span className="block">COFFEE</span>
                    <span className="block">MANIFEST</span>
