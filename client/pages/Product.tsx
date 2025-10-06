@@ -296,7 +296,7 @@ export default function Product() {
   const { addItem } = useCart();
   const { toast } = useToast();
   
-  const [selectedWeight, setSelectedWeight] = useState<'250g' | '500g'>('250g');
+  const [selectedWeight, setSelectedWeight] = useState<'250g' | '500g' | '1kg'>('250g');
   const [selectedGrind, setSelectedGrind] = useState<'beans' | 'ground'>('beans');
   const [quantity, setQuantity] = useState(1);
 
@@ -330,7 +330,9 @@ export default function Product() {
   // Calculate price based on weight selection
   const basePrice = product.price;
   const finalPrice = useMemo(() => {
-    const multiplier = selectedWeight === '500g' ? 1.8 : 1; // 500g costs 1.8x more than 250g
+    let multiplier = 1;
+    if (selectedWeight === '500g') multiplier = 2.2; // 500g costs 2.2x more than 250g (gift packaging premium)
+    if (selectedWeight === '1kg') multiplier = 3.2; // 1kg costs 3.2x more than 250g
     return basePrice * multiplier * quantity;
   }, [basePrice, selectedWeight, quantity]);
 
@@ -422,7 +424,12 @@ export default function Product() {
                 </span>
                 {selectedWeight === '500g' && (
                   <span className="text-sm text-gray-500">
-                    (₴{(finalPrice / quantity / 1.8).toFixed(2)} per 250g)
+                    (₴{(finalPrice / quantity / 2.2).toFixed(2)} per 250g)
+                  </span>
+                )}
+                {selectedWeight === '1kg' && (
+                  <span className="text-sm text-gray-500">
+                    (₴{(finalPrice / quantity / 3.2).toFixed(2)} per 250g)
                   </span>
                 )}
               </div>
@@ -537,22 +544,69 @@ export default function Product() {
                 <h3 className="text-lg font-bold mb-3" style={{ color: '#361c0c' }}>
                   {t('product.weight')}
                 </h3>
-                <div className="flex space-x-4">
-                  {(['250g', '500g'] as const).map((weight) => (
-                    <button
-                      key={weight}
-                      onClick={() => setSelectedWeight(weight)}
-                      className={cn(
-                        "px-6 py-3 border-2 font-medium transition-colors",
-                        selectedWeight === weight
-                          ? "border-[#361c0c] text-[#361c0c]"
-                          : "border-gray-300 text-gray-600 hover:border-gray-400"
-                      )}
-                    >
-                      {weight === '250g' ? t('product.weight250g') : t('product.weight500g')}
-                    </button>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  {(['250g', '500g', '1kg'] as const).map((weight) => (
+                    <div key={weight} className="relative">
+                      <button
+                        onClick={() => setSelectedWeight(weight)}
+                        className={cn(
+                          "w-full px-6 py-4 border-2 font-medium transition-all duration-300 relative group",
+                          selectedWeight === weight
+                            ? "border-[#361c0c] text-[#361c0c] bg-[#361c0c]/5"
+                            : "border-gray-300 text-gray-600 hover:border-gray-400 hover:bg-gray-50",
+                          weight === '500g' && "border-yellow-300 bg-gradient-to-br from-yellow-50 to-amber-50 shadow-lg hover:shadow-xl"
+                        )}
+                      >
+                        <div className="text-center">
+                          <div className="text-lg font-bold mb-1">
+                            {weight === '250g' ? t('product.weight250g') : 
+                             weight === '500g' ? t('product.weight500g') : 
+                             t('product.weight1kg')}
+                          </div>
+                          
+                          {/* Price per weight */}
+                          <div className="text-sm text-gray-500 mb-2">
+                            ₴{(basePrice * (weight === '500g' ? 2.2 : weight === '1kg' ? 3.2 : 1)).toFixed(2)}
+                          </div>
+                          
+                          {/* Gift packaging indicator for 500g */}
+                          {weight === '500g' && (
+                            <div className="inline-flex items-center space-x-1 text-xs font-bold text-amber-700 bg-amber-100 px-2 py-1 rounded-full">
+                              <div className="w-3 h-3 bg-amber-600 rounded-sm"></div>
+                              <span>{t('product.giftPackaging')}</span>
+                            </div>
+                          )}
+                        </div>
+                        
+                        {/* Elegant selection indicator */}
+                        {selectedWeight === weight && (
+                          <div className="absolute top-2 right-2">
+                            <div className="w-6 h-6 bg-[#361c0c] rounded-full flex items-center justify-center">
+                              <div className="w-2 h-2 bg-white rounded-full"></div>
+                            </div>
+                          </div>
+                        )}
+                      </button>
+                    </div>
                   ))}
                 </div>
+                
+                {/* Elegant gift packaging description for 500g */}
+                {selectedWeight === '500g' && (
+                  <div className="mt-6 p-6 bg-gradient-to-r from-amber-50 to-yellow-50 border border-amber-200 rounded-xl shadow-sm">
+                    <div className="flex items-start space-x-4">
+                      <div className="flex-shrink-0">
+                        <div className="w-12 h-12 bg-gradient-to-br from-amber-400 to-yellow-500 rounded-full flex items-center justify-center shadow-lg">
+                          <div className="w-6 h-6 bg-white rounded-sm shadow-sm"></div>
+                        </div>
+                      </div>
+                      <div className="flex-1">
+                        <h4 className="text-lg font-bold text-amber-800 mb-2">{t('product.giftPackagingTitle')}</h4>
+                        <p className="text-amber-700 leading-relaxed">{t('product.giftPackagingDesc')}</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Grind Selection */}

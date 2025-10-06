@@ -140,6 +140,10 @@ const translations = {
     'product.bodyMedium': 'Середня',
     'product.bodyFull': 'Повна',
     'product.characteristics': 'Характеристики кави',
+    'product.weight1kg': '1кг',
+    'product.giftPackaging': 'ПОДАРУНКОВА УПАКОВКА',
+    'product.giftPackagingTitle': 'Подарункова упаковка',
+    'product.giftPackagingDesc': 'Елегантна подарункова упаковка з преміум дизайном, золотою стрічкою та персоналізованою карткою. Ідеально для особливих моментів та важливих людей у вашому житті.',
     
     // Origins
     'origin.colombia': 'Колумбія',
@@ -429,6 +433,10 @@ const translations = {
     'product.bodyMedium': 'Средняя',
     'product.bodyFull': 'Полная',
     'product.characteristics': 'Характеристики кофе',
+    'product.weight1kg': '1кг',
+    'product.giftPackaging': 'ПОДАРОЧНАЯ УПАКОВКА',
+    'product.giftPackagingTitle': 'Подарочная упаковка',
+    'product.giftPackagingDesc': 'Элегантная подарочная упаковка с премиум дизайном, золотой лентой и персонализированной карточкой. Идеально для особых моментов и важных людей в вашей жизни.',
     
     // Origins
     'origin.colombia': 'Колумбия',
