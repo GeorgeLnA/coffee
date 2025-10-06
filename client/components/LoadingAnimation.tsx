@@ -1,10 +1,12 @@
 import { useState, useEffect, useRef } from "react";
+import { useLoading } from "../contexts/LoadingContext";
 
 export default function LoadingAnimation() {
   const [isVisible, setIsVisible] = useState(true);
   const [progress, setProgress] = useState(0);
   const [isExiting, setIsExiting] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const { setLoading } = useLoading();
 
   useEffect(() => {
     // Simulate loading progress - longer duration to let bean animation finish
@@ -18,6 +20,7 @@ export default function LoadingAnimation() {
                    // Hide completely after slide-up animation
                    setTimeout(() => {
                      setIsVisible(false);
+                     setLoading(false); // Signal that loading is complete
                    }, 2000); // Extended to let dots keep animating during slide-up
                  }, 2400); // Wait 2.4 seconds after loading completes to let bean animation finish
           return 100;

@@ -18,6 +18,7 @@ import NotFound from "./pages/NotFound";
 import Basket from "./pages/Basket";
 import { LanguageProvider } from "./contexts/LanguageContext";
 import { CartProvider } from "./contexts/CartContext";
+import { LoadingProvider } from "./contexts/LoadingContext";
 import LoadingAnimation from "./components/LoadingAnimation";
 import ScrollToTop from "./components/ScrollToTop";
 
@@ -28,25 +29,27 @@ const App = () => (
     <TooltipProvider>
       <LanguageProvider>
         <CartProvider>
-          <LoadingAnimation />
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
-            <ScrollToTop />
-            <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/coffee" element={<Coffee />} />
-            <Route path="/product/:id" element={<Product />} />
-            <Route path="/news" element={<News />} />
-            <Route path="/water" element={<Water />} />
-            <Route path="/water/:id" element={<WaterProduct />} />
-            <Route path="/contact" element={<Contact />} />
-            <Route path="/office" element={<Office />} />
-              <Route path="/basket" element={<Basket />} />
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-            <Route path="*" element={<NotFound />} />
-            </Routes>
-          </BrowserRouter>
+          <LoadingProvider>
+            <LoadingAnimation />
+            <Toaster />
+            <Sonner />
+            <BrowserRouter>
+              <ScrollToTop />
+              <Routes>
+              <Route path="/" element={<Index />} />
+              <Route path="/coffee" element={<Coffee />} />
+              <Route path="/product/:id" element={<Product />} />
+              <Route path="/news" element={<News />} />
+              <Route path="/water" element={<Water />} />
+              <Route path="/water/:id" element={<WaterProduct />} />
+              <Route path="/contact" element={<Contact />} />
+              <Route path="/office" element={<Office />} />
+                <Route path="/basket" element={<Basket />} />
+              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+              <Route path="*" element={<NotFound />} />
+              </Routes>
+            </BrowserRouter>
+          </LoadingProvider>
         </CartProvider>
       </LanguageProvider>
     </TooltipProvider>

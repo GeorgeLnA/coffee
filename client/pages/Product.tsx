@@ -572,7 +572,6 @@ export default function Product() {
                           {/* Gift packaging indicator for 500g */}
                           {weight === '500g' && (
                             <div className="inline-flex items-center space-x-1 text-xs font-bold text-amber-700 bg-amber-100 px-2 py-1 rounded-full">
-                              <div className="w-3 h-3 bg-amber-600 rounded-sm"></div>
                               <span>{t('product.giftPackaging')}</span>
                             </div>
                           )}
@@ -594,17 +593,8 @@ export default function Product() {
                 {/* Elegant gift packaging description for 500g */}
                 {selectedWeight === '500g' && (
                   <div className="mt-6 p-6 bg-gradient-to-r from-amber-50 to-yellow-50 border border-amber-200 rounded-xl shadow-sm">
-                    <div className="flex items-start space-x-4">
-                      <div className="flex-shrink-0">
-                        <div className="w-12 h-12 bg-gradient-to-br from-amber-400 to-yellow-500 rounded-full flex items-center justify-center shadow-lg">
-                          <div className="w-6 h-6 bg-white rounded-sm shadow-sm"></div>
-                        </div>
-                      </div>
-                      <div className="flex-1">
-                        <h4 className="text-lg font-bold text-amber-800 mb-2">{t('product.giftPackagingTitle')}</h4>
-                        <p className="text-amber-700 leading-relaxed">{t('product.giftPackagingDesc')}</p>
-                      </div>
-                    </div>
+                    <h4 className="text-lg font-bold text-amber-800 mb-2">{t('product.giftPackagingTitle')}</h4>
+                    <p className="text-amber-700 leading-relaxed">{t('product.giftPackagingDesc')}</p>
                   </div>
                 )}
               </div>

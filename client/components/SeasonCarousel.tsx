@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { useLoading } from "../contexts/LoadingContext";
 
 export type SeasonItem = {
   id: string;
@@ -18,8 +19,17 @@ type SeasonCarouselProps = {
 
 export default function SeasonCarousel({ items, intervalMs = 3000 }: SeasonCarouselProps) {
   const [currentSlide, setCurrentSlide] = useState(0);
-  const [isAutoPlaying, setIsAutoPlaying] = useState(true);
+  const [isAutoPlaying, setIsAutoPlaying] = useState(false); // Start as false, will be set to true after loading
   const timerRef = useRef<number | null>(null);
+  const resumeTimerRef = useRef<number | null>(null);
+  const { isLoading } = useLoading();
+
+  // Start auto-playing when loading finishes
+  useEffect(() => {
+    if (!isLoading && items.length >= 2) {
+      setIsAutoPlaying(true);
+    }
+  }, [isLoading, items.length]);
 
   // Auto-play carousel
   useEffect(() => {
@@ -34,19 +44,36 @@ export default function SeasonCarousel({ items, intervalMs = 3000 }: SeasonCarou
     };
   }, [isAutoPlaying, items.length, intervalMs]);
 
+  // Cleanup timers on unmount
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) window.clearInterval(timerRef.current);
+      if (resumeTimerRef.current) window.clearTimeout(resumeTimerRef.current);
+    };
+  }, []);
+
+  // Resume auto-play after user interaction
+  const resumeAutoPlay = () => {
+    setIsAutoPlaying(false);
+    if (resumeTimerRef.current) clearTimeout(resumeTimerRef.current);
+    resumeTimerRef.current = window.setTimeout(() => {
+      setIsAutoPlaying(true);
+    }, 2000); // Resume after 2 seconds
+  };
+
   const nextSlide = () => {
     setCurrentSlide((prev) => (prev + 1) % items.length);
-    setIsAutoPlaying(false);
+    resumeAutoPlay();
   };
 
   const prevSlide = () => {
     setCurrentSlide((prev) => (prev - 1 + items.length) % items.length);
-    setIsAutoPlaying(false);
+    resumeAutoPlay();
   };
 
   const goToSlide = (index: number) => {
     setCurrentSlide(index);
-    setIsAutoPlaying(false);
+    resumeAutoPlay();
   };
 
   if (items.length === 0) return null;

@@ -6,11 +6,13 @@ import FloatingContact from "../components/FloatingContact";
 import { useLanguage } from "../contexts/LanguageContext";
 import { useCart } from "../contexts/CartContext";
 import AddToCartModal from "../components/AddToCartModal";
+import { useToast } from "../hooks/use-toast";
 import { useState } from "react";
 
 export default function WaterProduct() {
   const { t } = useLanguage();
   const { addItem, items, updateQuantity, removeItem } = useCart();
+  const { toast } = useToast();
   const [selectedSize, setSelectedSize] = useState<'5L' | '20L'>('5L');
   const [quantity, setQuantity] = useState(1);
   const [modalOpen, setModalOpen] = useState(false);
@@ -25,21 +27,6 @@ export default function WaterProduct() {
     localStorage.setItem('manifest_cart_modal_seen', 'true');
   };
 
-  const getCartItemForProduct = () => {
-    return items.find(item => item.productId === `water-${selectedSize}`);
-  };
-
-  const handleQuantityChange = (change: number) => {
-    const cartItem = getCartItemForProduct();
-    if (cartItem) {
-      const newQuantity = cartItem.quantity + change;
-      if (newQuantity <= 0) {
-        removeItem(cartItem.id);
-      } else {
-        updateQuantity(cartItem.id, newQuantity);
-      }
-    }
-  };
 
   const waterProduct = {
     name: t('water.productName'),
@@ -82,6 +69,13 @@ export default function WaterProduct() {
       quantity,
       variant: selectedSize,
       type: 'water',
+    });
+    
+    // Show toast notification
+    toast({
+      title: t('water.addedToCart'),
+      description: `${itemName} ${t('water.addedToCartDesc')}`,
+      duration: 3000,
     });
     
     // Only show modal if user hasn't seen it before
@@ -159,13 +153,13 @@ export default function WaterProduct() {
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-4">
-                          <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${
+                          <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
                             selectedSize === size.size 
                               ? 'border-[#fcf4e4] bg-[#fcf4e4]' 
                               : 'border-white/40'
                           }`}>
                             {selectedSize === size.size && (
-                              <div className="w-2 h-2 rounded-full" style={{ backgroundColor: '#361c0c' }}></div>
+                              <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: '#361c0c' }}></div>
                             )}
                           </div>
                           <div>
@@ -190,78 +184,48 @@ export default function WaterProduct() {
                       </div>
                     </div>
                   ))}
-                </div>
-              </div>
+                 </div>
+               </div>
 
-              {/* Quantity */}
-              <div>
-                <h3 className="text-2xl font-black mb-6" style={{ color: '#fcf4e4' }}>
-                  {t('water.quantity')}
-                </h3>
-                <div className="flex items-center space-x-4">
-                  <button 
-                    onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                    className="w-12 h-12 rounded-full border-2 border-[#fcf4e4] flex items-center justify-center hover:bg-[#fcf4e4] hover:text-[#361c0c] transition-all duration-300"
-                    style={{ color: '#fcf4e4' }}
-                  >
-                    <Minus className="w-5 h-5" />
-                  </button>
-                  <span className="text-2xl font-black px-6" style={{ color: '#fcf4e4' }}>
-                    {quantity}
-                  </span>
-                  <button 
-                    onClick={() => setQuantity(quantity + 1)}
-                    className="w-12 h-12 rounded-full border-2 border-[#fcf4e4] flex items-center justify-center hover:bg-[#fcf4e4] hover:text-[#361c0c] transition-all duration-300"
-                    style={{ color: '#fcf4e4' }}
-                  >
-                    <Plus className="w-5 h-5" />
-                  </button>
-                </div>
-              </div>
+               {/* Quantity */}
+               <div>
+                 <h3 className="text-2xl font-black mb-6" style={{ color: '#fcf4e4' }}>
+                   {t('water.quantity')}
+                 </h3>
+                 <div className="flex items-center space-x-4">
+                   <button 
+                     onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                     className="w-10 h-10 rounded-full border-2 border-[#fcf4e4] flex items-center justify-center hover:bg-[#fcf4e4] hover:text-[#361c0c] transition-all duration-300 flex-shrink-0"
+                     style={{ color: '#fcf4e4' }}
+                   >
+                     <Minus className="w-4 h-4" />
+                   </button>
+                   <span className="text-2xl font-black px-6" style={{ color: '#fcf4e4' }}>
+                     {quantity}
+                   </span>
+                   <button 
+                     onClick={() => setQuantity(quantity + 1)}
+                     className="w-10 h-10 rounded-full border-2 border-[#fcf4e4] flex items-center justify-center hover:bg-[#fcf4e4] hover:text-[#361c0c] transition-all duration-300 flex-shrink-0"
+                     style={{ color: '#fcf4e4' }}
+                   >
+                     <Plus className="w-4 h-4" />
+                   </button>
+                 </div>
+               </div>
 
-
-              {/* Order Button */}
-              <div className="pt-8">
-                {(() => {
-                  const cartItem = getCartItemForProduct();
-                  const isInCart = cartItem && cartItem.quantity > 0;
-                  
-                  if (isInCart) {
-                    return (
-                      <div className="flex items-center justify-center space-x-4">
-                        <button
-                          onClick={() => handleQuantityChange(-1)}
-                          className="w-12 h-12 flex items-center justify-center border-2 border-[#fcf4e4] text-[#fcf4e4] hover:bg-[#fcf4e4] hover:text-[#361c0c] transition-all duration-300"
-                        >
-                          <Minus className="w-6 h-6" />
-                        </button>
-                        <div className="w-16 text-center font-black text-2xl" style={{ color: '#fcf4e4' }}>
-                          {cartItem!.quantity}
-                        </div>
-                        <button
-                          onClick={() => handleQuantityChange(1)}
-                          className="w-12 h-12 flex items-center justify-center border-2 border-[#fcf4e4] text-[#fcf4e4] hover:bg-[#fcf4e4] hover:text-[#361c0c] transition-all duration-300"
-                        >
-                          <Plus className="w-6 h-6" />
-                        </button>
-                      </div>
-                    );
-                  } else {
-                    return (
-                      <button 
-                        onClick={handleOrder}
-                        className="w-full px-8 py-6 bg-transparent border-2 font-black text-xl hover:bg-[#fcf4e4] transition-all duration-300 group/btn"
-                        style={{ borderColor: '#fcf4e4', color: '#fcf4e4' }}
-                      >
-                        <span className="flex items-center justify-center space-x-3 group-hover/btn:text-[#361c0c]">
-                          <span>{t('water.addToBasket')}</span>
-                          <ArrowRight className="w-6 h-6 group-hover/btn:translate-x-1 transition-transform" />
-                        </span>
-                      </button>
-                    );
-                  }
-                })()}
-              </div>
+               {/* Order Button */}
+               <div className="pt-8">
+                 <button 
+                   onClick={handleOrder}
+                   className="w-full px-8 py-6 bg-transparent border-2 font-black text-xl hover:bg-[#fcf4e4] transition-all duration-300 group/btn"
+                   style={{ borderColor: '#fcf4e4', color: '#fcf4e4' }}
+                 >
+                   <span className="flex items-center justify-center space-x-3 group-hover/btn:text-[#361c0c]">
+                     <span>{t('water.addToBasket')}</span>
+                     <ArrowRight className="w-6 h-6 group-hover/btn:translate-x-1 transition-transform" />
+                   </span>
+                 </button>
+               </div>
 
               {/* Contact Info */}
               <div className="pt-8 border-t border-white/20">

@@ -295,6 +295,8 @@ const translations = {
     'water.needHelp': 'Потрібна допомога?',
     'water.callUs': 'Зателефонувати',
     'water.emailUs': 'Написати',
+    'water.addedToCart': 'Додано в кошик',
+    'water.addedToCartDesc': 'успішно додано до кошика',
 
     // Cart Modal
     'cart.addedToBasket': 'Додано в кошик',
@@ -588,6 +590,8 @@ const translations = {
     'water.needHelp': 'Нужна помощь?',
     'water.callUs': 'Позвонить',
     'water.emailUs': 'Написать',
+    'water.addedToCart': 'Добавлено в корзину',
+    'water.addedToCartDesc': 'успешно добавлено в корзину',
 
     // Cart Modal
     'cart.addedToBasket': 'Добавлено в корзину',

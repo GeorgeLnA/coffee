@@ -1,12 +1,16 @@
-import { ArrowRight, Droplets, CheckCircle, Star } from "lucide-react";
+import { ArrowRight, Droplets, CheckCircle, Star, Plus, Minus, ShoppingCart } from "lucide-react";
 import { Link } from "react-router-dom";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
 import FloatingContact from "../components/FloatingContact";
 import { useLanguage } from "../contexts/LanguageContext";
+import { useCart } from "../contexts/CartContext";
+import { useToast } from "../hooks/use-toast";
 
 export default function Water() {
   const { t } = useLanguage();
+  const { addItem, items, updateQuantity, removeItem } = useCart();
+  const { toast } = useToast();
 
   const waterProducts = [
     {
@@ -85,8 +89,13 @@ export default function Water() {
            </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 max-w-6xl mx-auto items-stretch">
-            {waterProducts.map((product) => (
-              <div key={product.id} className="group relative overflow-hidden shadow-2xl hover:shadow-3xl transition-all duration-500 flex flex-col" style={{ backgroundColor: '#fcf4e4' }}>
+           {waterProducts.map((product) => (
+             <Link 
+               key={product.id}
+               to={`/water/${product.id}`}
+               className="group relative overflow-hidden shadow-2xl hover:shadow-3xl transition-all duration-500 flex flex-col"
+               style={{ backgroundColor: '#fcf4e4' }}
+             >
                 {/* Popular Badge */}
                 {product.popular && (
                   <div className="absolute top-6 right-6 z-10">
@@ -137,15 +146,82 @@ export default function Water() {
                      </ul>
                    </div>
 
-                   {/* Order Button */}
-                   <Link to={`/water/${product.id}`} className="block w-full px-8 py-4 bg-transparent border-2 font-black text-lg hover:bg-[#361c0c] transition-all duration-300 group/btn mt-auto text-center" style={{ borderColor: '#361c0c', color: '#361c0c' }}>
-                     <span className="flex items-center justify-center space-x-3">
-                       <span className="group-hover/btn:text-[#fcf4e4]">{t('water.addToBasket')}</span>
-                       <ArrowRight className="w-5 h-5 group-hover/btn:translate-x-1 transition-transform group-hover/btn:text-[#fcf4e4]" />
-                     </span>
-                   </Link>
+                  {/* Inline Cart Controls */}
+                  {(() => {
+                    const productId = product.volume === '5L' ? 'water-5L' : 'water-20L';
+                    const cartItem = items.find(it => it.productId === productId);
+                    const isInCart = cartItem && cartItem.quantity > 0;
+
+                    const handleCardQuantityChange = (e: React.MouseEvent, change: number) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      if (!cartItem) return;
+                      const newQuantity = cartItem.quantity + change;
+                      if (newQuantity <= 0) {
+                        removeItem(cartItem.id);
+                      } else {
+                        updateQuantity(cartItem.id, newQuantity);
+                      }
+                    };
+
+                    const handleAddFromCard = (e: React.MouseEvent) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      const numericPrice = parseFloat(String(product.price).replace(/[^0-9.]/g, ''));
+                      addItem({
+                        productId,
+                        name: `${product.name}`,
+                        image: product.image,
+                        price: isNaN(numericPrice) ? 0 : numericPrice,
+                        quantity: 1,
+                        variant: product.volume,
+                        type: 'water',
+                      });
+                      toast({
+                        title: t('water.addedToCart'),
+                        description: `${product.name} ${t('water.addedToCartDesc')}`,
+                        duration: 2000,
+                      });
+                    };
+
+                    if (isInCart) {
+                      return (
+                        <div className="mt-auto pt-4 flex items-center justify-center space-x-3">
+                          <button
+                            onClick={(e) => handleCardQuantityChange(e, -1)}
+                            className="w-10 h-10 flex items-center justify-center border-2 border-[#361c0c] text-[#361c0c] hover:bg-[#361c0c] hover:text-white transition-all duration-300"
+                          >
+                            <Minus className="w-4 h-4" />
+                          </button>
+                          <div className="w-12 text-center font-black text-lg" style={{ color: '#361c0c' }}>
+                            {cartItem!.quantity}
+                          </div>
+                          <button
+                            onClick={(e) => handleCardQuantityChange(e, 1)}
+                            className="w-10 h-10 flex items-center justify-center border-2 border-[#361c0c] text-[#361c0c] hover:bg-[#361c0c] hover:text-white transition-all duration-300"
+                          >
+                            <Plus className="w-4 h-4" />
+                          </button>
+                        </div>
+                      );
+                    }
+
+                    return (
+                      <button 
+                        onClick={handleAddFromCard}
+                        className="mt-auto block w-full px-8 py-4 bg-transparent border-2 font-black text-lg hover:bg-[#361c0c] transition-all duration-300 group/btn text-center"
+                        style={{ borderColor: '#361c0c', color: '#361c0c' }}
+                      >
+                        <span className="flex items-center justify-center space-x-3">
+                          <ShoppingCart className="w-5 h-5" />
+                          <span className="group-hover/btn:text-[#fcf4e4]">{t('water.addToBasket')}</span>
+                          <ArrowRight className="w-5 h-5 group-hover/btn:translate-x-1 transition-transform group-hover/btn:text-[#fcf4e4]" />
+                        </span>
+                      </button>
+                    );
+                  })()}
                  </div>
-              </div>
+             </Link>
             ))}
           </div>
          </div>

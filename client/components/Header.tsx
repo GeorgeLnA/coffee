@@ -9,7 +9,6 @@ export default function Header() {
   const [isSecondHeaderVisible, setIsSecondHeaderVisible] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const [isMobileDropdownOpen, setIsMobileDropdownOpen] = useState(false);
   const { language, setLanguage, t } = useLanguage();
   const location = useLocation();
   const { items, totalQuantity } = useCart();
@@ -228,27 +227,20 @@ export default function Header() {
                 <Link to="/contact" className="block text-white font-bold text-2xl hover:text-white/80 transition-colors">
                   {t('nav.contacts')}
                 </Link>
-                
-                {/* More Button */}
-                <button 
-                  className="flex items-center space-x-2 text-white font-bold text-2xl hover:text-white/80 transition-colors"
-                  onClick={() => setIsMobileDropdownOpen(!isMobileDropdownOpen)}
-                >
-                  <span>{isMobileDropdownOpen ? t('mobile.less') : t('mobile.more')}</span>
-                  <ChevronDown className={`w-6 h-6 transition-transform duration-300 ${isMobileDropdownOpen ? 'rotate-180' : ''}`} />
-                </button>
               </nav>
                 
                 <div className="pt-8 border-t border-white/20">
                   {/* Basket Button */}
                   <div className="mb-6">
-                    <button className="relative w-full flex items-center justify-center space-x-2 py-4 font-bold hover:bg-[#fcf4e4] hover:text-[#361c0c] transition-all duration-300" style={{ backgroundColor: '#fcf4e4' + '20', color: '#fcf4e4' }}>
+                    <Link to="/basket" className="relative w-full flex items-center justify-center space-x-2 py-4 font-bold hover:bg-[#fcf4e4] hover:text-[#361c0c] transition-all duration-300" style={{ backgroundColor: '#fcf4e4' + '20', color: '#fcf4e4' }}>
                       <ShoppingCart className="w-5 h-5" />
                       <span>{t('mobile.cart')}</span>
-                      <div className="absolute -top-1 -right-1 w-5 h-5 flex items-center justify-center" style={{ backgroundColor: '#fcf4e4' }}>
-                        <span className="font-bold text-xs" style={{ color: '#361c0c' }}>3</span>
-                      </div>
-                    </button>
+                      {totalQuantity > 0 && (
+                        <div className="absolute -top-1 -right-1 w-5 h-5 flex items-center justify-center" style={{ backgroundColor: '#fcf4e4' }}>
+                          <span className="font-bold text-xs" style={{ color: '#361c0c' }}>{totalQuantity}</span>
+                        </div>
+                      )}
+                    </Link>
                   </div>
                   
                 </div>

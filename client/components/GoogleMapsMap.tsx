@@ -41,7 +41,7 @@ const GoogleMapsMap: React.FC<GoogleMapsMapProps> = ({
       }
 
       const script = document.createElement("script");
-      script.src = `https://maps.googleapis.com/maps/api/js?key=AIzaSyB41DRUbKWJHPxaFjMAwdrzWzbVKartNGg&callback=initMap`;
+      script.src = `https://maps.googleapis.com/maps/api/js?key=${import.meta.env.VITE_GOOGLE_MAPS_API_KEY || 'AIzaSyCwh78UurHpW0STWeEqCsD00SJqhzvB05c'}&callback=initMap`;
       script.async = true;
       script.defer = true;
       
