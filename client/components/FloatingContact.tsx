@@ -39,7 +39,7 @@ export default function FloatingContact() {
           className="w-16 h-16 bg-white/10 flex items-center justify-center cursor-pointer hover:bg-white hover:scale-110 transition-all duration-300 group"
           onClick={() => setIsOpen(!isOpen)}
         >
-          <MessageCircle className="w-8 h-8 text-white group-hover:text-[#3b0b0b] transition-colors" />
+          <MessageCircle className="w-8 h-8 text-white group-hover:text-[#361c0c] transition-colors" />
         </div>
       </div>
     </div>

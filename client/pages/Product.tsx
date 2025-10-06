@@ -7,6 +7,8 @@ import { CoffeeProduct } from "@shared/api";
 import { Button } from "../components/ui/button";
 import { cn } from "../lib/utils";
 import { useLanguage } from "../contexts/LanguageContext";
+import { useCart } from "../contexts/CartContext";
+import { useToast } from "../hooks/use-toast";
 
 // Helper function to get translated description
 const getCoffeeDescription = (coffeeId: string, language: string) => {
@@ -291,6 +293,8 @@ export default function Product() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { t, language } = useLanguage();
+  const { addItem } = useCart();
+  const { toast } = useToast();
   
   const [selectedWeight, setSelectedWeight] = useState<'250g' | '500g'>('250g');
   const [selectedGrind, setSelectedGrind] = useState<'beans' | 'ground'>('beans');
@@ -310,10 +314,10 @@ export default function Product() {
         <Header />
         <div className="pt-20 px-6 py-16">
           <div className="max-w-4xl mx-auto text-center">
-            <h1 className="text-4xl font-black mb-8" style={{ color: '#3b0b0b' }}>
+            <h1 className="text-4xl font-black mb-8" style={{ color: '#361c0c' }}>
               Product not found
             </h1>
-            <Link to="/coffee" className="inline-block px-8 py-4 bg-[#3b0b0b] text-white font-bold hover:bg-[#2a0808] transition-colors">
+            <Link to="/coffee" className="inline-block px-8 py-4 bg-[#361c0c] text-white font-bold hover:bg-[#2a0808] transition-colors">
               Back to Coffee
             </Link>
           </div>
@@ -350,7 +354,7 @@ export default function Product() {
             <Button
               onClick={() => navigate('/coffee')}
               variant="ghost"
-              className="flex items-center space-x-2 text-[#3b0b0b] hover:text-[#2a0808]"
+              className="flex items-center space-x-2 text-[#361c0c] hover:text-[#2a0808]"
             >
               <ArrowLeft className="w-4 h-4" />
               <span>{t('product.backToCoffee')}</span>
@@ -378,7 +382,7 @@ export default function Product() {
                     className={cn(
                       "aspect-square overflow-hidden rounded-lg border-2 transition-colors",
                       selectedImage === index 
-                        ? "border-[#3b0b0b]" 
+                        ? "border-[#361c0c]" 
                         : "border-gray-200 hover:border-gray-300"
                     )}
                   >
@@ -403,7 +407,7 @@ export default function Product() {
 
               {/* Product Name */}
               <div>
-                <h1 className="text-4xl font-black font-coolvetica tracking-wider mb-2" style={{ color: '#3b0b0b' }}>
+                <h1 className="text-4xl font-black font-coolvetica tracking-wider mb-2" style={{ color: '#361c0c' }}>
                   {product.name}
                 </h1>
                 <p className="text-lg text-gray-600">
@@ -413,7 +417,7 @@ export default function Product() {
 
               {/* Price */}
               <div className="flex items-center space-x-4">
-                <span className="text-4xl font-black" style={{ color: '#3b0b0b' }}>
+                <span className="text-4xl font-black" style={{ color: '#361c0c' }}>
                   ₴{finalPrice.toFixed(2)}
                 </span>
                 {selectedWeight === '500g' && (
@@ -425,7 +429,7 @@ export default function Product() {
 
               {/* Description */}
               <div>
-                <h3 className="text-lg font-bold mb-3" style={{ color: '#3b0b0b' }}>
+                <h3 className="text-lg font-bold mb-3" style={{ color: '#361c0c' }}>
                   {t('product.description')}
                 </h3>
                 <p className="text-gray-600 leading-relaxed">
@@ -435,7 +439,7 @@ export default function Product() {
 
               {/* Flavor Notes */}
               <div>
-                <h3 className="text-lg font-bold mb-3" style={{ color: '#3b0b0b' }}>
+                <h3 className="text-lg font-bold mb-3" style={{ color: '#361c0c' }}>
                   {t('product.flavorNotes')}
                 </h3>
                 <div className="flex flex-wrap gap-2">
@@ -443,7 +447,7 @@ export default function Product() {
                     <span
                       key={note}
                       className="px-3 py-1 text-sm font-medium rounded-full"
-                      style={{ backgroundColor: '#fcf4e4', color: '#3b0b0b' }}
+                      style={{ backgroundColor: '#fcf4e4', color: '#361c0c' }}
                     >
                       {translateFlavorNote(note, language)}
                     </span>
@@ -453,7 +457,7 @@ export default function Product() {
 
               {/* Coffee Characteristics */}
               <div>
-                <h3 className="text-lg font-bold mb-4" style={{ color: '#3b0b0b' }}>
+                <h3 className="text-lg font-bold mb-4" style={{ color: '#361c0c' }}>
                   {t('product.characteristics')}
                 </h3>
                 
@@ -530,7 +534,7 @@ export default function Product() {
 
               {/* Weight Selection */}
               <div>
-                <h3 className="text-lg font-bold mb-3" style={{ color: '#3b0b0b' }}>
+                <h3 className="text-lg font-bold mb-3" style={{ color: '#361c0c' }}>
                   {t('product.weight')}
                 </h3>
                 <div className="flex space-x-4">
@@ -541,7 +545,7 @@ export default function Product() {
                       className={cn(
                         "px-6 py-3 border-2 font-medium transition-colors",
                         selectedWeight === weight
-                          ? "border-[#3b0b0b] text-[#3b0b0b]"
+                          ? "border-[#361c0c] text-[#361c0c]"
                           : "border-gray-300 text-gray-600 hover:border-gray-400"
                       )}
                     >
@@ -553,7 +557,7 @@ export default function Product() {
 
               {/* Grind Selection */}
               <div>
-                <h3 className="text-lg font-bold mb-3" style={{ color: '#3b0b0b' }}>
+                <h3 className="text-lg font-bold mb-3" style={{ color: '#361c0c' }}>
                   {t('product.grindType')}
                 </h3>
                 <div className="flex space-x-4">
@@ -564,7 +568,7 @@ export default function Product() {
                       className={cn(
                         "px-6 py-3 border-2 font-medium transition-colors",
                         selectedGrind === grind
-                          ? "border-[#3b0b0b] text-[#3b0b0b]"
+                          ? "border-[#361c0c] text-[#361c0c]"
                           : "border-gray-300 text-gray-600 hover:border-gray-400"
                       )}
                     >
@@ -576,7 +580,7 @@ export default function Product() {
 
               {/* Quantity */}
               <div>
-                <h3 className="text-lg font-bold mb-3" style={{ color: '#3b0b0b' }}>
+                <h3 className="text-lg font-bold mb-3" style={{ color: '#361c0c' }}>
                   {t('product.quantity')}
                 </h3>
                 <div className="flex items-center space-x-4">
@@ -599,7 +603,27 @@ export default function Product() {
               {/* Add to Cart Button */}
               <Button
                 disabled={!product.inStock}
-                className="w-full px-8 py-4 bg-[#3b0b0b] text-white font-black text-lg hover:bg-[#2a0808] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                onClick={() => {
+                  if (product.inStock) {
+                    addItem({
+                      productId: product.id,
+                      name: product.name,
+                      image: product.image,
+                      price: finalPrice / quantity, // unit price
+                      quantity: quantity,
+                      variant: `${selectedWeight} ${selectedGrind === 'beans' ? t('product.grindBeans') : t('product.grindGround')}`,
+                      type: 'coffee'
+                    });
+                    
+                    // Show toast notification
+                    toast({
+                      title: t('coffee.addedToCart'),
+                      description: `${product.name} ${t('coffee.addedToCartDesc')}`,
+                      duration: 3000,
+                    });
+                  }
+                }}
+                className="w-full px-8 py-4 bg-[#361c0c] text-white font-black text-lg hover:bg-[#2a0808] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <ShoppingCart className="w-5 h-5 mr-2" />
                 {product.inStock ? t('coffee.addToCart') : t('coffee.outOfStock')}

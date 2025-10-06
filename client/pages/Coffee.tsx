@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { Link } from "react-router-dom";
-import { Search, Filter, X, Heart, ShoppingCart, Star, MapPin, Coffee as CoffeeIcon, ArrowUpDown } from "lucide-react";
+import { Search, Filter, X, Heart, ShoppingCart, Star, MapPin, Coffee as CoffeeIcon, ArrowUpDown, Plus, Minus } from "lucide-react";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
 import { CoffeeProduct, CoffeeFilters } from "@shared/api";
@@ -11,6 +11,9 @@ import { Slider } from "../components/ui/slider";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select";
 import { cn } from "../lib/utils";
 import { useLanguage } from "../contexts/LanguageContext";
+import { useCart } from "../contexts/CartContext";
+import AddToCartModal from "../components/AddToCartModal";
+import { useToast } from "../hooks/use-toast";
 
 // Helper function to get translated description
 const getCoffeeDescription = (coffeeId: string, language: string) => {
@@ -296,6 +299,35 @@ const roasts = ["light", "medium", "dark"];
 
 export default function Coffee() {
   const { t, language } = useLanguage();
+  const { addItem, items, updateQuantity, removeItem } = useCart();
+  const { toast } = useToast();
+  const [modalOpen, setModalOpen] = useState(false);
+  const [addedItem, setAddedItem] = useState<{name: string, image?: string, quantity: number} | null>(null);
+
+  // Check if user has seen the modal before
+  const hasSeenModal = () => {
+    return localStorage.getItem('manifest_cart_modal_seen') === 'true';
+  };
+
+  const markModalAsSeen = () => {
+    localStorage.setItem('manifest_cart_modal_seen', 'true');
+  };
+
+  const getCartItemForProduct = (productId: string) => {
+    return items.find(item => item.productId === productId);
+  };
+
+  const handleQuantityChange = (productId: string, change: number) => {
+    const cartItem = getCartItemForProduct(productId);
+    if (cartItem) {
+      const newQuantity = cartItem.quantity + change;
+      if (newQuantity <= 0) {
+        removeItem(cartItem.id);
+      } else {
+        updateQuantity(cartItem.id, newQuantity);
+      }
+    }
+  };
   const [filters, setFilters] = useState<CoffeeFilters>({
     search: "",
     origins: [],
@@ -394,7 +426,7 @@ export default function Coffee() {
                 onClick={() => setShowFilters(!showFilters)}
                 variant="outline"
                 className="w-full justify-between"
-                style={{ borderColor: '#3b0b0b', color: '#3b0b0b' }}
+                style={{ borderColor: '#361c0c', color: '#361c0c' }}
               >
                 <span className="flex items-center space-x-2">
                   <Filter className="w-5 h-5" />
@@ -412,7 +444,7 @@ export default function Coffee() {
               )}>
                 <div className="bg-white p-6 rounded-lg shadow-lg sticky top-24">
                   <div className="flex items-center justify-between mb-6">
-                    <h3 className="text-xl font-black font-coolvetica tracking-wider" style={{ color: '#3b0b0b' }}>
+                    <h3 className="text-xl font-black font-coolvetica tracking-wider" style={{ color: '#361c0c' }}>
                       {t('coffee.filters')}
                     </h3>
                     <Button
@@ -427,7 +459,7 @@ export default function Coffee() {
 
                   {/* Search */}
                   <div className="mb-6">
-                    <label className="block text-sm font-medium mb-2" style={{ color: '#3b0b0b' }}>
+                    <label className="block text-sm font-medium mb-2" style={{ color: '#361c0c' }}>
                       {t('coffee.search')}
                     </label>
                     <div className="relative">
@@ -437,14 +469,14 @@ export default function Coffee() {
                         value={filters.search}
                         onChange={(e) => handleFilterChange("search", e.target.value)}
                         className="pl-10"
-                        style={{ borderColor: '#3b0b0b' }}
+                        style={{ borderColor: '#361c0c' }}
                       />
                     </div>
                   </div>
 
                   {/* Price Range */}
                   <div className="mb-6">
-                    <label className="block text-sm font-medium mb-2" style={{ color: '#3b0b0b' }}>
+                    <label className="block text-sm font-medium mb-2" style={{ color: '#361c0c' }}>
                       {t('coffee.priceRange')}: ₴{filters.priceRange[0]} - ₴{filters.priceRange[1]}
                     </label>
                     <Slider
@@ -459,7 +491,7 @@ export default function Coffee() {
 
                   {/* Origins */}
                   <div className="mb-6">
-                    <label className="block text-sm font-medium mb-3" style={{ color: '#3b0b0b' }}>
+                    <label className="block text-sm font-medium mb-3" style={{ color: '#361c0c' }}>
                       {t('coffee.origins')}
                     </label>
                     <div className="space-y-2">
@@ -486,7 +518,7 @@ export default function Coffee() {
 
                   {/* Roasts */}
                   <div className="mb-6">
-                    <label className="block text-sm font-medium mb-3" style={{ color: '#3b0b0b' }}>
+                    <label className="block text-sm font-medium mb-3" style={{ color: '#361c0c' }}>
                       {t('coffee.roastLevel')}
                     </label>
                     <div className="space-y-2">
@@ -513,7 +545,7 @@ export default function Coffee() {
 
                   {/* Stock Filter */}
                   <div className="mb-6">
-                    <label className="block text-sm font-medium mb-3" style={{ color: '#3b0b0b' }}>
+                    <label className="block text-sm font-medium mb-3" style={{ color: '#361c0c' }}>
                       {t('coffee.availability')}
                     </label>
                     <div className="space-y-2">
@@ -538,7 +570,7 @@ export default function Coffee() {
               <div className="flex-1">
                 {/* Results Header */}
                 <div className="flex items-center justify-between mb-8">
-                  <p className="text-lg font-medium" style={{ color: '#3b0b0b' }}>
+                  <p className="text-lg font-medium" style={{ color: '#361c0c' }}>
                     {filteredCoffees.length} {t('coffee.found')}
                   </p>
                   
@@ -565,7 +597,11 @@ export default function Coffee() {
                 {/* Coffee Grid */}
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
                   {filteredCoffees.map((coffee) => (
-                    <Link key={coffee.id} to={`/product/${coffee.id}`} className="group bg-white rounded-lg shadow-lg overflow-hidden hover:shadow-xl transition-all duration-300 flex flex-col">
+                    <Link 
+                      key={coffee.id} 
+                      to={`/product/${coffee.id}`}
+                      className="group bg-white rounded-lg shadow-lg overflow-hidden hover:shadow-xl transition-all duration-300 flex flex-col"
+                    >
                       {/* Image */}
                       <div className="relative aspect-[4/5] overflow-hidden">
                         <img
@@ -586,7 +622,7 @@ export default function Coffee() {
                         {/* Coffee Metrics Label */}
                         <div className="absolute top-4 right-4 bg-white/95 backdrop-blur-sm rounded-lg p-3 shadow-lg">
                           <div className="text-center">
-                            <div className="text-xs font-black uppercase tracking-wider mb-2" style={{ color: '#3b0b0b' }}>
+                            <div className="text-xs font-black uppercase tracking-wider mb-2" style={{ color: '#361c0c' }}>
                               {coffee.origin.toUpperCase()}
                             </div>
                             
@@ -672,7 +708,7 @@ export default function Coffee() {
                           </span>
                         </div>
 
-                        <h3 className="text-xl font-black font-coolvetica tracking-wider mb-2" style={{ color: '#3b0b0b' }}>
+                        <h3 className="text-xl font-black font-coolvetica tracking-wider mb-2" style={{ color: '#361c0c' }}>
                           {coffee.name}
                         </h3>
 
@@ -686,7 +722,7 @@ export default function Coffee() {
                             <span
                               key={note}
                               className="px-2 py-1 text-xs font-medium rounded-full"
-                              style={{ backgroundColor: '#fcf4e4', color: '#3b0b0b' }}
+                              style={{ backgroundColor: '#fcf4e4', color: '#361c0c' }}
                             >
                               {translateFlavorNote(note, language)}
                             </span>
@@ -696,19 +732,87 @@ export default function Coffee() {
                         {/* Price and Add to Cart */}
                         <div className="flex flex-col space-y-4 mt-auto">
                           <div className="text-center">
-                            <span className="text-2xl font-black" style={{ color: '#3b0b0b' }}>
+                            <span className="text-2xl font-black" style={{ color: '#361c0c' }}>
                               ₴{coffee.price}
                             </span>
                             <span className="text-sm text-gray-500 ml-1">/ {coffee.weight}g</span>
                           </div>
                           
-                          <Button
-                            disabled={!coffee.inStock}
-                            className="w-full px-6 py-3 bg-transparent border-2 font-black text-sm text-[#3b0b0b] border-[#3b0b0b] hover:bg-[#3b0b0b] hover:text-white transition-all duration-300"
-                          >
-                            <ShoppingCart className="w-4 h-4 mr-2" />
-                            {coffee.inStock ? t('coffee.addToCart') : t('coffee.outOfStock')}
-                          </Button>
+                          {(() => {
+                            const cartItem = getCartItemForProduct(coffee.id);
+                            const isInCart = cartItem && cartItem.quantity > 0;
+                            
+                            if (isInCart) {
+                              return (
+                                <div className="flex items-center justify-center space-x-2">
+                                  <button
+                                    onClick={(e) => {
+                                      e.preventDefault();
+                                      e.stopPropagation();
+                                      handleQuantityChange(coffee.id, -1);
+                                    }}
+                                    className="w-8 h-8 flex items-center justify-center border-2 border-[#361c0c] text-[#361c0c] hover:bg-[#361c0c] hover:text-white transition-all duration-300"
+                                  >
+                                    <Minus className="w-4 h-4" />
+                                  </button>
+                                  <div className="w-12 text-center font-black text-lg" style={{ color: '#361c0c' }}>
+                                    {cartItem!.quantity}
+                                  </div>
+                                  <button
+                                    onClick={(e) => {
+                                      e.preventDefault();
+                                      e.stopPropagation();
+                                      handleQuantityChange(coffee.id, 1);
+                                    }}
+                                    className="w-8 h-8 flex items-center justify-center border-2 border-[#361c0c] text-[#361c0c] hover:bg-[#361c0c] hover:text-white transition-all duration-300"
+                                  >
+                                    <Plus className="w-4 h-4" />
+                                  </button>
+                                </div>
+                              );
+                            } else {
+                              return (
+                                <Button
+                                  disabled={!coffee.inStock}
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    addItem({
+                                      productId: coffee.id,
+                                      name: coffee.name,
+                                      image: coffee.image,
+                                      price: coffee.price,
+                                      quantity: 1,
+                                      variant: `${coffee.weight}g`,
+                                      type: 'coffee'
+                                    });
+                                    
+                                    // Show toast notification
+                                    toast({
+                                      title: t('coffee.addedToCart'),
+                                      description: `${coffee.name} ${t('coffee.addedToCartDesc')}`,
+                                      duration: 3000,
+                                    });
+                                    
+                                    // Only show modal if user hasn't seen it before
+                                    if (!hasSeenModal()) {
+                                      setAddedItem({
+                                        name: coffee.name,
+                                        image: coffee.image,
+                                        quantity: 1
+                                      });
+                                      setModalOpen(true);
+                                      markModalAsSeen();
+                                    }
+                                  }}
+                                  className="w-full px-6 py-3 bg-transparent border-2 font-black text-sm text-[#361c0c] border-[#361c0c] hover:bg-[#361c0c] hover:text-white transition-all duration-300"
+                                >
+                                  <ShoppingCart className="w-4 h-4 mr-2" />
+                                  {coffee.inStock ? t('coffee.addToCart') : t('coffee.outOfStock')}
+                                </Button>
+                              );
+                            }
+                          })()}
                         </div>
                       </div>
                     </Link>
@@ -719,7 +823,7 @@ export default function Coffee() {
                 {filteredCoffees.length === 0 && (
                   <div className="text-center py-16">
                     <CoffeeIcon className="w-16 h-16 mx-auto mb-4 text-gray-400" />
-                    <h3 className="text-xl font-black mb-2" style={{ color: '#3b0b0b' }}>
+                    <h3 className="text-xl font-black mb-2" style={{ color: '#361c0c' }}>
                       {t('coffee.noCoffeeFound')}
                     </h3>
                     <p className="text-gray-600 mb-6">
@@ -728,7 +832,7 @@ export default function Coffee() {
                     <Button
                       onClick={clearFilters}
                       variant="outline"
-                      style={{ borderColor: '#3b0b0b', color: '#3b0b0b' }}
+                      style={{ borderColor: '#361c0c', color: '#361c0c' }}
                     >
                       {t('coffee.clearAll')}
                     </Button>
@@ -741,6 +845,18 @@ export default function Coffee() {
       </div>
 
       <Footer />
+      
+      {/* Add to Cart Modal */}
+      {addedItem && (
+        <AddToCartModal
+          isOpen={modalOpen}
+          onClose={() => setModalOpen(false)}
+          onContinueShopping={() => setModalOpen(false)}
+          itemName={addedItem.name}
+          itemImage={addedItem.image}
+          quantity={addedItem.quantity}
+        />
+      )}
     </div>
   );
 }

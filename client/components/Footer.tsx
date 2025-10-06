@@ -1,10 +1,11 @@
 import { Facebook, Instagram, MessageCircle, Mail, Phone, MapPin, Clock, ArrowRight, Coffee, Heart } from "lucide-react";
+import { Link } from "react-router-dom";
 import { useLanguage } from "../contexts/LanguageContext";
 
 export default function Footer() {
   const { t } = useLanguage();
   return (
-    <footer className="relative overflow-hidden" style={{ backgroundColor: '#3b0b0b' }}>
+    <footer className="relative overflow-hidden" style={{ backgroundColor: '#361c0c' }}>
       <div className="max-w-8xl mx-auto px-6 lg:px-8 relative z-10">
         {/* Main Footer Content */}
         <div className="py-20">
@@ -41,30 +42,26 @@ export default function Footer() {
             <div className="md:col-span-1">
               <h4 className="text-xl font-black mb-8" style={{ color: '#fcf4e4' }}>{t('footer.quickLinks')}</h4>
               <nav className="space-y-4">
-                <a href="#blog" className="group flex items-center text-white font-medium hover:text-white/80 transition-all duration-300">
+                <Link to="/coffee" className="group flex items-center text-white font-medium hover:text-white/80 transition-all duration-300">
                   <ArrowRight className="w-4 h-4 mr-3 group-hover:translate-x-1 transition-transform" />
-                  {t('footer.blog')}
-                </a>
-                <a href="#contacts" className="group flex items-center text-white font-medium hover:text-white/80 transition-all duration-300">
+                  {t('nav.coffee')}
+                </Link>
+                <Link to="/water" className="group flex items-center text-white font-medium hover:text-white/80 transition-all duration-300">
                   <ArrowRight className="w-4 h-4 mr-3 group-hover:translate-x-1 transition-transform" />
-                  {t('footer.contacts')}
-                </a>
-                <a href="#about" className="group flex items-center text-white font-medium hover:text-white/80 transition-all duration-300">
+                  {t('nav.water')}
+                </Link>
+                <Link to="/office" className="group flex items-center text-white font-medium hover:text-white/80 transition-all duration-300">
                   <ArrowRight className="w-4 h-4 mr-3 group-hover:translate-x-1 transition-transform" />
-                  {t('footer.about')}
-                </a>
-                <a href="#delivery" className="group flex items-center text-white font-medium hover:text-white/80 transition-all duration-300">
+                  {t('nav.office')}
+                </Link>
+                <Link to="/news" className="group flex items-center text-white font-medium hover:text-white/80 transition-all duration-300">
                   <ArrowRight className="w-4 h-4 mr-3 group-hover:translate-x-1 transition-transform" />
-                  {t('footer.delivery')}
-                </a>
-                <a href="#vacancies" className="group flex items-center text-white font-medium hover:text-white/80 transition-all duration-300">
+                  {t('nav.news')}
+                </Link>
+                <Link to="/contact" className="group flex items-center text-white font-medium hover:text-white/80 transition-all duration-300">
                   <ArrowRight className="w-4 h-4 mr-3 group-hover:translate-x-1 transition-transform" />
-                  {t('footer.vacancies')}
-                </a>
-                <a href="#faq" className="group flex items-center text-white font-medium hover:text-white/80 transition-all duration-300">
-                  <ArrowRight className="w-4 h-4 mr-3 group-hover:translate-x-1 transition-transform" />
-                  {t('footer.faq')}
-                </a>
+                  {t('nav.contacts')}
+                </Link>
               </nav>
             </div>
 
@@ -88,7 +85,17 @@ export default function Footer() {
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="text-white font-bold text-lg break-all">info@coffeemanifest.com</p>
-                    <p className="text-white/60 text-sm">{t('footer.writeUs')}</p>
+                    <p className="text-white/60 text-sm">{t('footer.generalQuestions')}</p>
+                  </div>
+                </div>
+                
+                <div className="flex items-center space-x-4">
+                  <div className="w-12 h-12 bg-white/10 flex items-center justify-center flex-shrink-0">
+                    <Coffee className="w-5 h-5 text-white" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-white font-bold text-lg break-all">office@coffeemanifest.com</p>
+                    <p className="text-white/60 text-sm">{t('footer.officeMachines')}</p>
                   </div>
                 </div>
                 
@@ -104,30 +111,10 @@ export default function Footer() {
               </div>
             </div>
 
-            {/* Hours & Newsletter - Clean */}
+            {/* News & Newsletter - Clean */}
             <div className="md:col-span-1">
-              <h4 className="text-xl font-black mb-8" style={{ color: '#fcf4e4' }}>{t('footer.hoursUpdates')}</h4>
+              <h4 className="text-xl font-black mb-8" style={{ color: '#fcf4e4' }}>{t('footer.news')}</h4>
               
-              <div className="mb-8">
-                <div className="flex items-center space-x-4 mb-4">
-                  <div className="w-12 h-12 bg-white/10 flex items-center justify-center flex-shrink-0">
-                    <Clock className="w-5 h-5 text-white" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-white font-bold text-lg">Monday - Friday</p>
-                    <p className="text-white/60 text-sm">9:00 AM - 6:00 PM</p>
-                  </div>
-                </div>
-                <div className="flex items-center space-x-4">
-                  <div className="w-12 h-12 bg-white/10 flex items-center justify-center flex-shrink-0">
-                    <Coffee className="w-5 h-5 text-white" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-white font-bold text-lg">Saturday - Sunday</p>
-                    <p className="text-white/60 text-sm">10:00 AM - 8:00 PM</p>
-                  </div>
-                </div>
-              </div>
 
               {/* Newsletter Signup - Clean */}
               <div className="bg-white/5 backdrop-blur-sm p-6">
@@ -139,7 +126,7 @@ export default function Footer() {
                     placeholder={t('footer.emailPlaceholder')} 
                     className="w-full px-4 py-3 bg-white/10 text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-white/30 focus:bg-white/20 transition-all duration-300"
                   />
-                  <button className="w-full px-6 py-3 bg-transparent border-2 border-white text-white font-black hover:bg-white hover:text-[#3b0b0b] transition-all duration-300">
+                  <button className="w-full px-6 py-3 bg-transparent border-2 border-white text-white font-black hover:bg-white hover:text-[#361c0c] transition-all duration-300">
                     <span className="flex items-center justify-center space-x-2">
                       <span>{t('footer.subscribe')}</span>
                       <ArrowRight className="w-4 h-4" />
@@ -153,23 +140,8 @@ export default function Footer() {
 
         {/* Bottom Bar - Clean */}
         <div className="border-t border-white/20 py-8">
-          <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
-            <div className="flex items-center space-x-6 md:space-x-8">
-              <div className="flex items-center space-x-3">
-                <div className="w-8 h-8 bg-white/10 rounded flex items-center justify-center">
-                  <span className="text-white font-black text-sm">V</span>
-                </div>
-                <span className="text-white font-bold text-sm md:text-base">VISA</span>
-              </div>
-              <div className="flex items-center space-x-3">
-                <div className="w-8 h-8 bg-white/10 rounded flex items-center justify-center">
-                  <span className="text-white font-black text-sm">M</span>
-                </div>
-                <span className="text-white font-bold text-sm md:text-base">MASTERCARD</span>
-              </div>
-            </div>
-            
-            <p className="text-white/60 font-bold text-sm md:text-base text-center md:text-right">
+          <div className="text-center">
+            <p className="text-white/60 font-bold text-sm md:text-base">
               © 2024 THE COFFEE MANIFEST. {t('footer.rightsReserved')}.
             </p>
           </div>

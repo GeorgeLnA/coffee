@@ -104,7 +104,7 @@ export default function LoadingAnimation() {
       ctx.fill();
 
       // Center wavy line (burgundy color)
-      ctx.strokeStyle = "#3b0b0b";
+      ctx.strokeStyle = "#361c0c";
       ctx.lineWidth = 3;
       ctx.lineCap = "round";
       ctx.beginPath();
@@ -270,7 +270,7 @@ export default function LoadingAnimation() {
 
   return (
     <div 
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-[#3b0b0b] transition-all duration-[1200ms] ease-[cubic-bezier(0.25,0.46,0.45,0.94)]"
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-[#361c0c] transition-all duration-[1200ms] ease-[cubic-bezier(0.25,0.46,0.45,0.94)]"
       style={{ 
         transform: isExiting ? 'translateY(-100vh)' : 'translateY(0)',
         transition: 'transform 1200ms cubic-bezier(0.25,0.46,0.45,0.94)'

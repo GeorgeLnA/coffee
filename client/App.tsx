@@ -9,8 +9,15 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import Coffee from "./pages/Coffee";
 import Product from "./pages/Product";
+import News from "./pages/News";
+import Water from "./pages/Water";
+import WaterProduct from "./pages/WaterProduct";
+import Contact from "./pages/Contact";
+import Office from "./pages/Office";
 import NotFound from "./pages/NotFound";
+import Basket from "./pages/Basket";
 import { LanguageProvider } from "./contexts/LanguageContext";
+import { CartProvider } from "./contexts/CartContext";
 import LoadingAnimation from "./components/LoadingAnimation";
 import ScrollToTop from "./components/ScrollToTop";
 
@@ -20,19 +27,27 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <LanguageProvider>
-        <LoadingAnimation />
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <ScrollToTop />
-          <Routes>
+        <CartProvider>
+          <LoadingAnimation />
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <ScrollToTop />
+            <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/coffee" element={<Coffee />} />
             <Route path="/product/:id" element={<Product />} />
+            <Route path="/news" element={<News />} />
+            <Route path="/water" element={<Water />} />
+            <Route path="/water/:id" element={<WaterProduct />} />
+            <Route path="/contact" element={<Contact />} />
+            <Route path="/office" element={<Office />} />
+              <Route path="/basket" element={<Basket />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
+            </Routes>
+          </BrowserRouter>
+        </CartProvider>
       </LanguageProvider>
     </TooltipProvider>
   </QueryClientProvider>

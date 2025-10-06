@@ -1,6 +1,7 @@
 import { Search, ShoppingCart, Menu, X, Coffee, Heart, ChevronDown } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
+import { useCart } from "../contexts/CartContext";
 import { useLanguage } from "../contexts/LanguageContext";
 
 export default function Header() {
@@ -11,6 +12,7 @@ export default function Header() {
   const [isMobileDropdownOpen, setIsMobileDropdownOpen] = useState(false);
   const { language, setLanguage, t } = useLanguage();
   const location = useLocation();
+  const { items, totalQuantity } = useCart();
   
   // Check if we're on the main landing page
   const isMainPage = location.pathname === '/';
@@ -31,7 +33,7 @@ export default function Header() {
     <>
       <header 
         className="fixed top-0 left-0 right-0 z-50 transition-all duration-300"
-        style={{ backgroundColor: isMainPage ? (isScrolled ? '#3b0b0b' : 'transparent') : '#3b0b0b' }}
+        style={{ backgroundColor: isMainPage ? (isScrolled ? '#361c0c' : 'transparent') : '#361c0c' }}
       >
         <div className="w-full h-full">
         <div className="w-full px-4 lg:px-8">
@@ -47,18 +49,24 @@ export default function Header() {
                 </span>
                 <div className="absolute -bottom-1 left-0 w-0 h-0.5 group-hover:w-full transition-all duration-300" style={{ backgroundColor: '#fcf4e4' }}></div>
               </Link>
-              <a href="#water" className="group relative">
+              <Link to="/water" className="group relative">
                 <span className="text-white font-medium text-lg tracking-wide hover:text-white/80 transition-all duration-300">
                   {t('nav.water')}
                 </span>
                 <div className="absolute -bottom-1 left-0 w-0 h-0.5 group-hover:w-full transition-all duration-300" style={{ backgroundColor: '#fcf4e4' }}></div>
-              </a>
-              <a href="#drinks" className="group relative">
+              </Link>
+              <Link to="/office" className="group relative">
+                <span className="text-white font-medium text-lg tracking-wide hover:text-white/80 transition-all duration-300">
+                  {t('nav.office')}
+                </span>
+                <div className="absolute -bottom-1 left-0 w-0 h-0.5 group-hover:w-full transition-all duration-300" style={{ backgroundColor: '#fcf4e4' }}></div>
+              </Link>
+              {/* <a href="#drinks" className="group relative">
                 <span className="text-white font-medium text-lg tracking-wide hover:text-white/80 transition-all duration-300">
                   {t('nav.drinks')}
                 </span>
                 <div className="absolute -bottom-1 left-0 w-0 h-0.5 group-hover:w-full transition-all duration-300" style={{ backgroundColor: '#fcf4e4' }}></div>
-              </a>
+              </a> */}
               
               {/* Dropdown Menu */}
               <div className="relative group">
@@ -95,14 +103,14 @@ export default function Header() {
               <div className="flex items-center space-x-1 p-1" style={{ backgroundColor: '#fcf4e4' + '20' }}>
                 <button 
                   className="px-4 py-2 font-bold text-sm transition-all duration-300" 
-                  style={{ color: language === 'ua' ? '#3b0b0b' : '#fcf4e4', backgroundColor: language === 'ua' ? '#fcf4e4' : 'transparent' }}
+                  style={{ color: language === 'ua' ? '#361c0c' : '#fcf4e4', backgroundColor: language === 'ua' ? '#fcf4e4' : 'transparent' }}
                   onClick={() => setLanguage('ua')}
                 >
                   UA
                 </button>
                 <button 
                   className="px-4 py-2 font-bold text-sm transition-all duration-300" 
-                  style={{ color: language === 'ru' ? '#3b0b0b' : '#fcf4e4', backgroundColor: language === 'ru' ? '#fcf4e4' : 'transparent' }}
+                  style={{ color: language === 'ru' ? '#361c0c' : '#fcf4e4', backgroundColor: language === 'ru' ? '#fcf4e4' : 'transparent' }}
                   onClick={() => setLanguage('ru')}
                 >
                   RU
@@ -110,18 +118,49 @@ export default function Header() {
               </div>
 
               {/* Search - Clean Icon */}
-              {/* Sign In - Clean Button */}
-              <a href="#signin" className="px-6 py-3 bg-transparent border-2 border-[#fcf4e4] font-bold text-[#fcf4e4] hover:bg-[#fcf4e4] hover:text-[#3b0b0b] transition-all duration-300">
-                {t('auth.signin')}
-              </a>
 
-              {/* Cart - Clean with Badge */}
-              <button className="relative p-3 transition-all duration-300 group" style={{ backgroundColor: '#fcf4e4' + '20' }}>
-                <ShoppingCart className="w-6 h-6 group-hover:scale-110 transition-transform" style={{ color: '#fcf4e4' }} />
-                <div className="absolute -top-1 -right-1 w-5 h-5 flex items-center justify-center" style={{ backgroundColor: '#fcf4e4' }}>
-                  <span className="font-bold text-xs" style={{ color: '#3b0b0b' }}>3</span>
-                </div>
-              </button>
+              {/* Cart - Badge and hover preview */}
+              <div className="relative group">
+                <Link to="/basket" className="relative p-3 transition-all duration-300 block" style={{ backgroundColor: '#fcf4e4' + '20' }}>
+                  <ShoppingCart className="w-6 h-6 group-hover:scale-110 transition-transform" style={{ color: '#fcf4e4' }} />
+                  {totalQuantity > 0 && (
+                    <div className="absolute -top-1 -right-1 w-5 h-5 flex items-center justify-center" style={{ backgroundColor: '#fcf4e4' }}>
+                      <span className="font-bold text-xs" style={{ color: '#361c0c' }}>{totalQuantity}</span>
+                    </div>
+                  )}
+                </Link>
+                {/* Hover preview */}
+                {items.length > 0 && (
+                  <div className="absolute right-0 top-full mt-2 w-80 bg-white rounded-lg shadow-xl p-4 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+                    <div className="space-y-3 max-h-64 overflow-auto">
+                      {items.slice(0, 5).map((it) => (
+                        <div key={it.id} className="flex items-center gap-3">
+                          {it.image && <img src={it.image} alt={it.name} className="w-12 h-12 object-cover rounded" />}
+                          <div className="flex-1">
+                            <div className="text-sm font-bold" style={{ color: '#361c0c' }}>{it.name}</div>
+                            {it.variant && <div className="text-xs text-gray-500">{it.variant}</div>}
+                            <div className="text-xs text-gray-600">x{it.quantity} • ₴{(it.price * it.quantity).toFixed(2)}</div>
+                          </div>
+                        </div>
+                      ))}
+                      {items.length > 5 && (
+                        <div className="text-xs text-gray-500 text-center py-2">
+                          +{items.length - 5} більше товарів
+                        </div>
+                      )}
+                    </div>
+                    <div className="mt-4 pt-4 border-t border-gray-200">
+                      <div className="flex justify-between items-center mb-3">
+                        <span className="font-bold" style={{ color: '#361c0c' }}>Разом:</span>
+                        <span className="font-black" style={{ color: '#361c0c' }}>₴{items.reduce((sum, item) => sum + (item.price * item.quantity), 0).toFixed(2)}</span>
+                      </div>
+                      <Link to="/basket" className="w-full block text-center py-2 font-black border-2 bg-transparent transition-all duration-300" style={{ borderColor: '#361c0c', color: '#361c0c' }}>
+                        Перейти в кошик
+                      </Link>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Mobile Header Actions */}
@@ -130,14 +169,14 @@ export default function Header() {
               <div className="flex items-center space-x-1 p-1" style={{ backgroundColor: '#fcf4e4' + '20' }}>
                 <button 
                   className="px-3 py-2 font-bold text-sm transition-all duration-300" 
-                  style={{ color: language === 'ua' ? '#3b0b0b' : '#fcf4e4', backgroundColor: language === 'ua' ? '#fcf4e4' : 'transparent' }}
+                  style={{ color: language === 'ua' ? '#361c0c' : '#fcf4e4', backgroundColor: language === 'ua' ? '#fcf4e4' : 'transparent' }}
                   onClick={() => setLanguage('ua')}
                 >
                   UA
                 </button>
                 <button 
                   className="px-3 py-2 font-bold text-sm transition-all duration-300" 
-                  style={{ color: language === 'ru' ? '#3b0b0b' : '#fcf4e4', backgroundColor: language === 'ru' ? '#fcf4e4' : 'transparent' }}
+                  style={{ color: language === 'ru' ? '#361c0c' : '#fcf4e4', backgroundColor: language === 'ru' ? '#fcf4e4' : 'transparent' }}
                   onClick={() => setLanguage('ru')}
                 >
                   RU
@@ -168,39 +207,27 @@ export default function Header() {
             onClick={() => setIsMobileMenuOpen(false)}
           ></div>
           {/* Mobile menu slides from right full screen */}
-          <div className={`fixed top-0 right-0 h-full w-full transform transition-transform duration-[1500ms] ease-[cubic-bezier(0.16,1,0.3,1)] ${isMobileMenuOpen ? 'translate-x-0' : 'translate-x-full'}`} style={{ backgroundColor: '#3b0b0b' }}>
+          <div className={`fixed top-0 right-0 h-full w-full transform transition-transform duration-[1500ms] ease-[cubic-bezier(0.16,1,0.3,1)] ${isMobileMenuOpen ? 'translate-x-0' : 'translate-x-full'}`} style={{ backgroundColor: '#361c0c' }}>
               <div className="px-6 pt-24 pb-8 space-y-8">
               <nav className="space-y-6">
                 <Link to="/coffee" className="block text-white font-bold text-2xl hover:text-white/80 transition-colors">
                   {t('nav.coffee')}
                 </Link>
-                <a href="#water" className="block text-white font-bold text-2xl hover:text-white/80 transition-colors">
+                <Link to="/water" className="block text-white font-bold text-2xl hover:text-white/80 transition-colors">
                   {t('nav.water')}
-                </a>
-                <a href="#drinks" className="block text-white font-bold text-2xl hover:text-white/80 transition-colors">
+                </Link>
+                <Link to="/office" className="block text-white font-bold text-2xl hover:text-white/80 transition-colors">
+                  {t('nav.office')}
+                </Link>
+                {/* <a href="#drinks" className="block text-white font-bold text-2xl hover:text-white/80 transition-colors">
                   {t('nav.drinks')}
-                </a>
-                <a href="#about" className="block text-white font-bold text-2xl hover:text-white/80 transition-colors">
-                  {t('nav.about')}
-                </a>
-                <a href="#contacts" className="block text-white font-bold text-2xl hover:text-white/80 transition-colors">
+                </a> */}
+                <Link to="/news" className="block text-white font-bold text-2xl hover:text-white/80 transition-colors">
+                  {t('nav.news')}
+                </Link>
+                <Link to="/contact" className="block text-white font-bold text-2xl hover:text-white/80 transition-colors">
                   {t('nav.contacts')}
-                </a>
-                
-                {/* Additional Menu Items - Show/Hide */}
-                {isMobileDropdownOpen && (
-                  <>
-                    <a href="#cooperation" className="block text-white font-bold text-2xl hover:text-white/80 transition-colors">
-                      {t('nav.cooperation')}
-                    </a>
-                    <a href="#coffee-machines" className="block text-white font-bold text-2xl hover:text-white/80 transition-colors">
-                      {t('nav.coffee-machines')}
-                    </a>
-                    <a href="#privacy-policy" className="block text-white font-bold text-2xl hover:text-white/80 transition-colors">
-                      {t('nav.privacy-policy')}
-                    </a>
-                  </>
-                )}
+                </Link>
                 
                 {/* More Button */}
                 <button 
@@ -215,19 +242,15 @@ export default function Header() {
                 <div className="pt-8 border-t border-white/20">
                   {/* Basket Button */}
                   <div className="mb-6">
-                    <button className="relative w-full flex items-center justify-center space-x-2 py-4 font-bold hover:bg-[#fcf4e4] hover:text-[#3b0b0b] transition-all duration-300" style={{ backgroundColor: '#fcf4e4' + '20', color: '#fcf4e4' }}>
+                    <button className="relative w-full flex items-center justify-center space-x-2 py-4 font-bold hover:bg-[#fcf4e4] hover:text-[#361c0c] transition-all duration-300" style={{ backgroundColor: '#fcf4e4' + '20', color: '#fcf4e4' }}>
                       <ShoppingCart className="w-5 h-5" />
                       <span>{t('mobile.cart')}</span>
                       <div className="absolute -top-1 -right-1 w-5 h-5 flex items-center justify-center" style={{ backgroundColor: '#fcf4e4' }}>
-                        <span className="font-bold text-xs" style={{ color: '#3b0b0b' }}>3</span>
+                        <span className="font-bold text-xs" style={{ color: '#361c0c' }}>3</span>
                       </div>
                     </button>
                   </div>
                   
-                  {/* Login Button */}
-                  <a href="#signin" className="block w-full text-center py-4 font-bold mb-4 bg-transparent border-2 border-[#fcf4e4] text-[#fcf4e4] hover:bg-[#fcf4e4] hover:text-[#3b0b0b] transition-all duration-300">
-                    {t('auth.signin')}
-                  </a>
                 </div>
               </div>
             </div>
@@ -251,7 +274,7 @@ export default function Header() {
           isDropdownOpen ? 'translate-y-0' : '-translate-y-full'
         }`}
         style={{ 
-          backgroundColor: isMainPage ? (isSecondHeaderVisible ? '#3b0b0b' : 'transparent') : '#3b0b0b', 
+          backgroundColor: isMainPage ? (isSecondHeaderVisible ? '#361c0c' : 'transparent') : '#361c0c', 
           top: '80px' 
         }}
         onMouseEnter={() => setIsDropdownOpen(true)}
@@ -261,57 +284,7 @@ export default function Header() {
           <div className="flex items-center h-20">
             {/* Additional Navigation - Left Aligned */}
             <div className="flex items-center space-x-12">
-              <a href="#about" className="group relative">
-                 <span className={`font-medium text-lg tracking-wide transition-all duration-300 ${
-                   isSecondHeaderVisible || isDropdownOpen ? 'text-white hover:text-white/80' : 'text-transparent'
-                 }`}>
-                  {t('nav.about')}
-                </span>
-                 <div className={`absolute -bottom-1 left-0 w-0 h-0.5 group-hover:w-full transition-all duration-300 ${
-                   isSecondHeaderVisible || isDropdownOpen ? 'bg-[#fcf4e4]' : 'bg-transparent'
-                 }`}></div>
-              </a>
-              <a href="#contacts" className="group relative">
-                 <span className={`font-medium text-lg tracking-wide transition-all duration-300 ${
-                   isSecondHeaderVisible || isDropdownOpen ? 'text-white hover:text-white/80' : 'text-transparent'
-                 }`}>
-                  {t('nav.contacts')}
-                </span>
-                 <div className={`absolute -bottom-1 left-0 w-0 h-0.5 group-hover:w-full transition-all duration-300 ${
-                   isSecondHeaderVisible || isDropdownOpen ? 'bg-[#fcf4e4]' : 'bg-transparent'
-                 }`}></div>
-              </a>
-              <a href="#cooperation" className="group relative">
-                 <span className={`font-medium text-lg tracking-wide transition-all duration-300 ${
-                   isSecondHeaderVisible || isDropdownOpen ? 'text-white hover:text-white/80' : 'text-transparent'
-                 }`}>
-                  {t('nav.cooperation')}
-                </span>
-                 <div className={`absolute -bottom-1 left-0 w-0 h-0.5 group-hover:w-full transition-all duration-300 ${
-                   isSecondHeaderVisible || isDropdownOpen ? 'bg-[#fcf4e4]' : 'bg-transparent'
-                 }`}></div>
-              </a>
-              <a href="#coffee-machines" className="group relative">
-                 <span className={`font-medium text-lg tracking-wide transition-all duration-300 ${
-                   isSecondHeaderVisible || isDropdownOpen ? 'text-white hover:text-white/80' : 'text-transparent'
-                 }`}>
-                  {t('nav.coffee-machines')}
-                </span>
-                 <div className={`absolute -bottom-1 left-0 w-0 h-0.5 group-hover:w-full transition-all duration-300 ${
-                   isSecondHeaderVisible || isDropdownOpen ? 'bg-[#fcf4e4]' : 'bg-transparent'
-                 }`}></div>
-              </a>
-              <a href="#privacy-policy" className="group relative">
-                 <span className={`font-medium text-lg tracking-wide transition-all duration-300 ${
-                   isSecondHeaderVisible || isDropdownOpen ? 'text-white hover:text-white/80' : 'text-transparent'
-                 }`}>
-                  {t('nav.privacy-policy')}
-                </span>
-                 <div className={`absolute -bottom-1 left-0 w-0 h-0.5 group-hover:w-full transition-all duration-300 ${
-                   isSecondHeaderVisible || isDropdownOpen ? 'bg-[#fcf4e4]' : 'bg-transparent'
-                 }`}></div>
-              </a>
-              <a href="#news" className="group relative">
+              <Link to="/news" className="group relative">
                  <span className={`font-medium text-lg tracking-wide transition-all duration-300 ${
                    isSecondHeaderVisible || isDropdownOpen ? 'text-white hover:text-white/80' : 'text-transparent'
                  }`}>
@@ -320,7 +293,17 @@ export default function Header() {
                  <div className={`absolute -bottom-1 left-0 w-0 h-0.5 group-hover:w-full transition-all duration-300 ${
                    isSecondHeaderVisible || isDropdownOpen ? 'bg-[#fcf4e4]' : 'bg-transparent'
                  }`}></div>
-              </a>
+              </Link>
+              <Link to="/contact" className="group relative">
+                 <span className={`font-medium text-lg tracking-wide transition-all duration-300 ${
+                   isSecondHeaderVisible || isDropdownOpen ? 'text-white hover:text-white/80' : 'text-transparent'
+                 }`}>
+                  {t('nav.contacts')}
+                </span>
+                 <div className={`absolute -bottom-1 left-0 w-0 h-0.5 group-hover:w-full transition-all duration-300 ${
+                   isSecondHeaderVisible || isDropdownOpen ? 'bg-[#fcf4e4]' : 'bg-transparent'
+                 }`}></div>
+              </Link>
             </div>
           </div>
         </div>

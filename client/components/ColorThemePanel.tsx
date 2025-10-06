@@ -31,7 +31,7 @@ const colorSets: ColorSet[] = [
   {
     id: "set2", 
     name: "Set 2 – Blue / Golden / Brown",
-    primary: "#3b0b0b",
+    primary: "#361c0c",
     secondary: "#C69749",
     accent: "#4E342E",
     background: "#fcf4e4"
@@ -260,7 +260,7 @@ export default function ColorThemePanel() {
       {/* Toggle Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="fixed top-1/2 right-4 transform -translate-y-1/2 z-50 bg-white/10 text-white p-3 hover:bg-white hover:text-[#3b0b0b] hover:scale-110 transition-all duration-300"
+        className="fixed top-1/2 right-4 transform -translate-y-1/2 z-50 bg-white/10 text-white p-3 hover:bg-white hover:text-[#361c0c] hover:scale-110 transition-all duration-300"
       >
         <Palette className="w-6 h-6" />
       </button>
