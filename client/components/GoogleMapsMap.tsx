@@ -40,8 +40,14 @@ const GoogleMapsMap: React.FC<GoogleMapsMapProps> = ({
         return;
       }
 
+      const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+      if (!apiKey) {
+        console.error('Google Maps API key not found. Please set VITE_GOOGLE_MAPS_API_KEY environment variable.');
+        return;
+      }
+
       const script = document.createElement("script");
-      script.src = `https://maps.googleapis.com/maps/api/js?key=${import.meta.env.VITE_GOOGLE_MAPS_API_KEY || 'AIzaSyCwh78UurHpW0STWeEqCsD00SJqhzvB05c'}&callback=initMap`;
+      script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&callback=initMap`;
       script.async = true;
       script.defer = true;
       
@@ -153,16 +159,31 @@ const GoogleMapsMap: React.FC<GoogleMapsMapProps> = ({
     }
   }, [selectedIndex, isLoaded, tradePoints]);
 
+  const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+
   return (
     <div className="relative w-full h-full">
-      {!isLoaded && (
+      {!apiKey ? (
+        <div className="absolute inset-0 flex items-center justify-center bg-gray-200 z-10">
+          <div className="text-center p-8">
+            <div className="w-16 h-16 bg-gray-300 rounded-full flex items-center justify-center mx-auto mb-4">
+              <svg className="w-8 h-8 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+            </div>
+            <p className="text-gray-600 font-medium">Карта недоступна</p>
+            <p className="text-gray-500 text-sm mt-2">API ключ не налаштовано</p>
+          </div>
+        </div>
+      ) : !isLoaded ? (
         <div className="absolute inset-0 flex items-center justify-center bg-gray-200 z-10">
           <div className="text-center">
             <div className="w-8 h-8 border-4 border-white border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
             <p className="text-gray-600 font-medium">Завантаження карти...</p>
           </div>
         </div>
-      )}
+      ) : null}
       <div ref={mapRef} className="w-full h-full" />
     </div>
   );
