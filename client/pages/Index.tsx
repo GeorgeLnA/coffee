@@ -11,18 +11,14 @@ import CoffeeBeanAnimation from "../components/CoffeeBeanAnimation";
 import { useLanguage } from "../contexts/LanguageContext";
 import SeasonCarousel from "../components/SeasonCarousel";
 import { useHomepageSettings, useFeaturedSlides } from "../hooks/use-supabase";
-import { useFeaturedProducts, useTradePoints, usePosts } from "../hooks/use-directus";
-import { EditableContent } from "../components/EditableContent";
 
 export default function Index() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const { t, language } = useLanguage();
   
-  // Fetch data from Directus CMS
+  // Fetch data from Supabase CMS
   const { data: homepageSettings } = useHomepageSettings();
   const { data: featuredSlides } = useFeaturedSlides();
-  const { data: cmsTradePoints } = useTradePoints();
-  const { data: cmsPosts } = usePosts(3);
   
   // Trade points state
   const [selectedTradePoint, setSelectedTradePoint] = useState(0);
@@ -55,15 +51,8 @@ export default function Index() {
     return currentDay === dayOfWeek && currentHour >= openHour && currentHour < closeHour;
   };
 
-  // Use CMS trade points if available, otherwise fallback to hardcoded
-  const tradePoints = cmsTradePoints?.length ? cmsTradePoints.map(point => ({
-    name: point.name,
-    address: point.address,
-    active: isCurrentlyOpen(point.day_of_week || 6, point.open_hour || 6, point.close_hour || 14),
-    hours: point.hours || '',
-    lat: point.latitude,
-    lng: point.longitude
-  })) : [
+  // Use hardcoded trade points
+  const tradePoints = [
     {
       name: t('cafes.cafe1.name'),
       address: t('cafes.cafe1.address'),
@@ -82,18 +71,8 @@ export default function Index() {
     }
   ];
 
-  // Use CMS posts if available, otherwise fallback to hardcoded news
-  const newsArticles = cmsPosts?.length ? cmsPosts.map(post => ({
-    id: post.id,
-    title: post.title,
-    excerpt: post.excerpt || '',
-    content: post.content || '',
-    image: post.featured_image || "https://api.builder.io/api/v1/image/assets/TEMP/48fca8d935a28fbac0cc9a8942725c2a971d05a2?width=811",
-    category: "News",
-    author: post.author || "THE COFFEE MANIFEST Team",
-    date: new Date(post.date_created).toLocaleDateString('uk-UA', { day: 'numeric', month: 'long', year: 'numeric' }),
-    readTime: "5 хв"
-  })) : [
+  // Use hardcoded news articles
+  const newsArticles = [
     {
       id: 1,
       title: t('news.article1.title'),
@@ -238,33 +217,19 @@ export default function Index() {
             <div className="absolute inset-0 flex items-center justify-center">
               <div className="text-center max-w-4xl mx-auto px-6">
                 {/* Main Title - Bold & Animated */}
-                <EditableContent 
-                  collection="homepage_settings" 
-                  itemId="1"
-                  fields={['hero_title_line1', 'hero_title_line2', 'hero_title_line3']}
-                  mode="modal"
-                >
-                  <h1 className="text-7xl md:text-9xl lg:text-9xl font-black mb-8 leading-tight font-dosis tracking-wider text-white">
-                    <span className="block">{homepageSettings?.hero_title_line1 || "THE"}</span>
-                    <span className="block">{homepageSettings?.hero_title_line2 || "COFFEE"}</span>
-                    <span className="block">{homepageSettings?.hero_title_line3 || "MANIFEST"}</span>
-                  </h1>
-                </EditableContent>
+                <h1 className="text-7xl md:text-9xl lg:text-9xl font-black mb-8 leading-tight font-dosis tracking-wider text-white">
+                  <span className="block">{homepageSettings?.hero_title_line1 || "THE"}</span>
+                  <span className="block">{homepageSettings?.hero_title_line2 || "COFFEE"}</span>
+                  <span className="block">{homepageSettings?.hero_title_line3 || "MANIFEST"}</span>
+                </h1>
                 
                 {/* CTA Button - Clean */}
-                <EditableContent 
-                  collection="homepage_settings" 
-                  itemId="1"
-                  fields="hero_cta_text"
-                  mode="popover"
-                >
-                  <Link to={homepageSettings?.hero_cta_link || "/coffee"} className="group inline-block px-12 py-6 bg-transparent border-2 border-white text-white font-black text-xl hover:bg-[#fcf4e4] hover:text-[#361c0c] transition-all duration-300">
-                    <span className="flex items-center space-x-4">
-                      <span>{homepageSettings?.hero_cta_text || t('hero.cta')}</span>
-                      <ArrowRight className="w-6 h-6 group-hover:translate-x-2 transition-transform" />
-                    </span>
-                  </Link>
-                </EditableContent>
+                <Link to={homepageSettings?.hero_cta_link || "/coffee"} className="group inline-block px-12 py-6 bg-transparent border-2 border-white text-white font-black text-xl hover:bg-[#fcf4e4] hover:text-[#361c0c] transition-all duration-300">
+                  <span className="flex items-center space-x-4">
+                    <span>{homepageSettings?.hero_cta_text || t('hero.cta')}</span>
+                    <ArrowRight className="w-6 h-6 group-hover:translate-x-2 transition-transform" />
+                  </span>
+                </Link>
                 
               </div>
             </div>
@@ -282,16 +247,9 @@ export default function Index() {
         <div className="max-w-8xl mx-auto px-6 lg:px-8 relative z-10">
           {/* Section Header - Bold & Centered */}
           <div className="text-center mb-20">
-            <EditableContent 
-              collection="homepage_settings" 
-              itemId="1"
-              fields="season_title"
-              mode="popover"
-            >
-              <h2 className="text-5xl md:text-7xl font-black mb-8 leading-tight font-coolvetica tracking-wider">
-                <span style={{ color: '#fcf4e4' }}>{homepageSettings?.season_title || t('season.title')}</span>
-              </h2>
-            </EditableContent>
+            <h2 className="text-5xl md:text-7xl font-black mb-8 leading-tight font-coolvetica tracking-wider">
+              <span style={{ color: '#fcf4e4' }}>{homepageSettings?.season_title || t('season.title')}</span>
+            </h2>
           </div>
 
           {/* Desktop Grid - Hidden on mobile (dynamic by number of slides) */}
