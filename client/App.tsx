@@ -20,10 +20,8 @@ import Admin from "./pages/Admin";
 import { LanguageProvider } from "./contexts/LanguageContext";
 import { CartProvider } from "./contexts/CartContext";
 import { LoadingProvider } from "./contexts/LoadingContext";
-import { VisualEditingProvider } from "./contexts/VisualEditingContext";
 import LoadingAnimation from "./components/LoadingAnimation";
 import ScrollToTop from "./components/ScrollToTop";
-import { VisualEditingToolbar } from "./components/VisualEditingToolbar";
 import { AdminButton } from "./components/AdminButton";
 
 const queryClient = new QueryClient();
@@ -32,15 +30,13 @@ function App() {
   return (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
-      <VisualEditingProvider>
-        <LanguageProvider>
-          <CartProvider>
-            <LoadingProvider>
-              <LoadingAnimation />
-              <Toaster />
-              <Sonner />
-              <VisualEditingToolbar />
-              <BrowserRouter>
+      <LanguageProvider>
+        <CartProvider>
+          <LoadingProvider>
+            <LoadingAnimation />
+            <Toaster />
+            <Sonner />
+            <BrowserRouter>
                 <ScrollToTop />
                 <Routes>
                 <Route path="/" element={<Index />} />
@@ -58,10 +54,9 @@ function App() {
                 </Routes>
                 <AdminButton />
               </BrowserRouter>
-            </LoadingProvider>
-          </CartProvider>
-        </LanguageProvider>
-      </VisualEditingProvider>
+          </LoadingProvider>
+        </CartProvider>
+      </LanguageProvider>
     </TooltipProvider>
   </QueryClientProvider>
   );
