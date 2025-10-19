@@ -14,6 +14,7 @@ import { useLanguage } from "../contexts/LanguageContext";
 import { useCart } from "../contexts/CartContext";
 import AddToCartModal from "../components/AddToCartModal";
 import { useToast } from "../hooks/use-toast";
+import { useCoffeeProducts } from "../hooks/use-supabase";
 
 // Helper function to get translated description
 const getCoffeeDescription = (coffeeId: string, language: string) => {
@@ -339,9 +340,12 @@ export default function Coffee() {
   const [showFilters, setShowFilters] = useState(false);
   const [sortBy, setSortBy] = useState<string>("default");
 
+  const { data: supaProducts } = useCoffeeProducts();
+
   // Filter coffee products based on current filters
   const filteredCoffees = useMemo(() => {
-    const filtered = placeholderCoffees.filter((coffee) => {
+    const source = (supaProducts && supaProducts.length) ? supaProducts : placeholderCoffees;
+    const filtered = source.filter((coffee) => {
       // Search filter
       if (filters.search && !coffee.name.toLowerCase().includes(filters.search.toLowerCase()) && 
           !coffee.origin.toLowerCase().includes(filters.search.toLowerCase())) {

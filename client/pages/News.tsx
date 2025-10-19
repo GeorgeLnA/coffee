@@ -3,7 +3,6 @@ import { Link } from "react-router-dom";
 import { useState } from "react";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
-import FloatingContact from "../components/FloatingContact";
 import BlogModal from "../components/BlogModal";
 import { useLanguage } from "../contexts/LanguageContext";
 
@@ -304,9 +303,6 @@ export default function News() {
 
       {/* Footer */}
       <Footer />
-
-      {/* Floating Contact Widget */}
-      <FloatingContact />
 
       {/* Blog Modal */}
       <BlogModal

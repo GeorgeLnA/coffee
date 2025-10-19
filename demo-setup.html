@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🚀 One-Click CMS Demo Setup</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+            color: white;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+        }
+        h1 {
+            font-size: 3em;
+            margin-bottom: 20px;
+            text-align: center;
+            background: linear-gradient(45deg, #FFD700, #FFA500);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .step {
+            background: rgba(255,255,255,0.2);
+            border-radius: 15px;
+            padding: 25px;
+            margin: 20px 0;
+            border-left: 5px solid #FFD700;
+        }
+        .step h2 {
+            margin-top: 0;
+            color: #FFD700;
+            font-size: 1.5em;
+        }
+        .code {
+            background: rgba(0,0,0,0.3);
+            padding: 15px;
+            border-radius: 10px;
+            font-family: 'Courier New', monospace;
+            margin: 10px 0;
+            overflow-x: auto;
+        }
+        a {
+            color: #FFD700;
+            text-decoration: none;
+            font-weight: bold;
+            padding: 10px 20px;
+            background: rgba(255,215,0,0.2);
+            border-radius: 25px;
+            display: inline-block;
+            margin: 5px 0;
+            transition: all 0.3s ease;
+        }
+        a:hover {
+            background: rgba(255,215,0,0.3);
+            transform: translateY(-2px);
+        }
+        .highlight {
+            background: linear-gradient(45deg, #FF6B6B, #FF8E53);
+            color: white;
+            padding: 15px 30px;
+            border-radius: 50px;
+            font-size: 1.2em;
+            text-align: center;
+            margin: 30px 0;
+            box-shadow: 0 10px 20px rgba(255,107,107,0.3);
+        }
+        .urls {
+            background: rgba(0,255,0,0.1);
+            border: 2px solid #00FF00;
+            border-radius: 15px;
+            padding: 20px;
+            margin: 30px 0;
+        }
+        .urls h3 {
+            color: #00FF00;
+            margin-top: 0;
+        }
+        .feature {
+            display: inline-block;
+            background: rgba(255,255,255,0.2);
+            padding: 10px 15px;
+            border-radius: 25px;
+            margin: 5px;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 Super Easy CMS Setup</h1>
+        
+        <div class="highlight">
+            <strong>Set up visual editing in 2 minutes - no complex configuration!</strong>
+        </div>
+
+        <div class="step">
+            <h2>🔧 Step 1: Create Collection (30 seconds)</h2>
+            <p>Go to Directus and create your collection:</p>
+            <a href="http://localhost:8055/admin/settings/data-model" target="_blank">→ Open Directus Data Model</a>
+            <div class="code">
+                1. Click the "+" button<br>
+                2. Collection name: <strong>homepage_settings</strong><br>
+                3. ✅ Turn ON "Singleton"<br>
+                4. Add fields: hero_title_line1, hero_title_line2, hero_title_line3, hero_cta_text, season_title
+            </div>
+        </div>
+
+        <div class="step">
+            <h2>📝 Step 2: Add Content (30 seconds)</h2>
+            <a href="http://localhost:8055/admin/content/homepage_settings" target="_blank">→ Open Homepage Settings</a>
+            <div class="code">
+                hero_title_line1: <strong>THE</strong><br>
+                hero_title_line2: <strong>COFFEE</strong><br>
+                hero_title_line3: <strong>MANIFEST</strong><br>
+                hero_cta_text: <strong>SHOP COFFEE</strong><br>
+                season_title: <strong>WE CREATE SOMETHING UNIQUE</strong>
+            </div>
+        </div>
+
+        <div class="step">
+            <h2>🔑 Step 3: Create Token (30 seconds)</h2>
+            <a href="http://localhost:8055/admin/settings/access-tokens" target="_blank">→ Open Access Tokens</a>
+            <div class="code">
+                Name: <strong>Visual Editor</strong><br>
+                Token: <strong>edit123</strong> (or anything you like)<br>
+                Click Save
+            </div>
+        </div>
+
+        <div class="urls">
+            <h3>🎯 Your Ready-to-Use URLs:</h3>
+            <a href="http://localhost:8081" target="_blank">🌐 Your Website</a><br>
+            <a href="http://localhost:8081/?visual-editing=true&token=edit123" target="_blank">🎨 Visual Editor Mode</a><br>
+            <a href="http://localhost:8055" target="_blank">⚙️ Directus Admin</a>
+        </div>
+
+        <div class="step">
+            <h2>✨ What You Can Do</h2>
+            <p>Once you visit the Visual Editor URL:</p>
+            <div class="code">
+                • See blue "Visual Editing Active" toolbar<br>
+                • Click "THE COFFEE MANIFEST" → Edit all 3 title lines<br>
+                • Click "SHOP COFFEE" button → Quick edit<br>
+                • Click "WE CREATE SOMETHING UNIQUE" → Edit section title<br>
+                • Changes save automatically!
+            </div>
+        </div>
+
+        <div class="step">
+            <h2>🔥 Cool Features</h2>
+            <div class="feature">⚡ Instant Setup</div>
+            <div class="feature">🎨 Visual Editing</div>
+            <div class="feature">📱 Works Like Pizza Demo</div>
+            <div class="feature">🚀 Professional CMS</div>
+            <div class="feature">✨ Live Changes</div>
+            <div class="feature">🎯 Zero Configuration</div>
+        </div>
+
+        <div class="highlight">
+            <strong>That's it! Your visual CMS is ready! 🎉</strong><br>
+            <small>Click the Visual Editor link above and start editing your content live!</small>
+        </div>
+    </div>
+
+    <script>
+        // Add some cool animations
+        document.querySelectorAll('.step').forEach((step, index) => {
+            step.style.opacity = '0';
+            step.style.transform = 'translateY(20px)';
+            setTimeout(() => {
+                step.style.transition = 'all 0.6s ease';
+                step.style.opacity = '1';
+                step.style.transform = 'translateY(0)';
+            }, index * 200);
+        });
+    </script>
+</body>
+</html>
+
+

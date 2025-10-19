@@ -9,6 +9,7 @@ import { cn } from "../lib/utils";
 import { useLanguage } from "../contexts/LanguageContext";
 import { useCart } from "../contexts/CartContext";
 import { useToast } from "../hooks/use-toast";
+import { useCoffeeProduct } from "../hooks/use-supabase";
 
 // Helper function to get translated description
 const getCoffeeDescription = (coffeeId: string, language: string) => {
@@ -297,6 +298,7 @@ export default function Product() {
   const { toast } = useToast();
   
   const [selectedWeight, setSelectedWeight] = useState<'250g' | '500g' | '1kg'>('250g');
+  const [selectedSizeIdx, setSelectedSizeIdx] = useState(0);
   const [selectedGrind, setSelectedGrind] = useState<'beans' | 'ground'>('beans');
   const [quantity, setQuantity] = useState(1);
 
@@ -305,40 +307,45 @@ export default function Product() {
     window.scrollTo(0, 0);
   }, [id]);
 
-  // Find the product by ID
-  const product = placeholderCoffees.find(coffee => coffee.id === id);
+  // Always call hooks unconditionally to keep hooks order stable
+  const { data: productData } = useCoffeeProduct(id || '0');
+  const product = productData || null;
 
-  if (!product) {
-    return (
-      <div className="min-h-screen bg-coffee-background">
-        <Header />
-        <div className="pt-20 px-6 py-16">
-          <div className="max-w-4xl mx-auto text-center">
-            <h1 className="text-4xl font-black mb-8" style={{ color: '#361c0c' }}>
-              Product not found
-            </h1>
-            <Link to="/coffee" className="inline-block px-8 py-4 bg-[#361c0c] text-white font-bold hover:bg-[#2a0808] transition-colors">
-              Back to Coffee
-            </Link>
-          </div>
-        </div>
-        <Footer />
-      </div>
-    );
-  }
+  const notFound = !product;
 
-  // Calculate price based on weight selection
-  const basePrice = product.price;
+  // Sizes from Supabase (if any)
+  const sizesOptions = useMemo(() => {
+    const sizes = (productData && (productData as any).sizes) ? (productData as any).sizes : [];
+    const sorted = [...sizes].sort((a: any, b: any) => (a.sort ?? 0) - (b.sort ?? 0));
+    return sorted.map((s: any) => ({
+      label: s.label_ua || s.label_ru || (s.weight ? `${s.weight}g` : ''),
+      weight: s.weight,
+      price: s.price || 0,
+    }));
+  }, [productData]);
+
+  // Calculate price based on selected size (Supabase) or fallback static weights
+  const basePrice = useMemo(() => {
+    if (sizesOptions.length) {
+      const current = sizesOptions[selectedSizeIdx] || sizesOptions[0];
+      return current?.price || 0;
+    }
+    return product?.price || 0;
+  }, [sizesOptions, selectedSizeIdx, product]);
+
   const finalPrice = useMemo(() => {
+    if (sizesOptions.length) {
+      return (basePrice || 0) * quantity;
+    }
     let multiplier = 1;
-    if (selectedWeight === '500g') multiplier = 2.2; // 500g costs 2.2x more than 250g (gift packaging premium)
-    if (selectedWeight === '1kg') multiplier = 3.2; // 1kg costs 3.2x more than 250g
-    return basePrice * multiplier * quantity;
-  }, [basePrice, selectedWeight, quantity]);
+    if (selectedWeight === '500g') multiplier = 2.2;
+    if (selectedWeight === '1kg') multiplier = 3.2;
+    return (basePrice || 0) * multiplier * quantity;
+  }, [basePrice, selectedWeight, quantity, sizesOptions.length]);
 
   // Additional product images (placeholder - you can add real images)
   const additionalImages = [
-    product.image,
+    product?.image || "/250-g_Original.PNG",
     "/250-g_Original.PNG",
     "/500_Manifestcoffee_Original.PNG",
   ];
@@ -370,7 +377,7 @@ export default function Product() {
               <div className="aspect-[4/5] overflow-hidden rounded-lg">
                 <img
                   src={additionalImages[selectedImage]}
-                  alt={product.name}
+                  alt={product?.name || ''}
                   className="w-full h-full object-cover"
                 />
               </div>
@@ -390,7 +397,7 @@ export default function Product() {
                   >
                     <img
                       src={image}
-                      alt={`${product.name} ${index + 1}`}
+                      alt={`${product?.name || ''} ${index + 1}`}
                       className="w-full h-full object-cover"
                     />
                   </button>
@@ -401,7 +408,7 @@ export default function Product() {
             {/* Product Details */}
             <div className="space-y-8">
               {/* Stock Status */}
-              {!product.inStock && (
+              {!notFound && !product!.inStock && (
                 <div className="inline-block px-4 py-2 bg-red-500 text-white text-sm font-medium rounded">
                   {t('coffee.outOfStock')}
                 </div>
@@ -410,11 +417,13 @@ export default function Product() {
               {/* Product Name */}
               <div>
                 <h1 className="text-4xl font-black font-coolvetica tracking-wider mb-2" style={{ color: '#361c0c' }}>
-                  {product.name}
+                  {product?.name || 'Product not found'}
                 </h1>
-                <p className="text-lg text-gray-600">
-                  {translateOrigin(product.origin, language)} • {product.roast === 'light' ? t('product.roastLight') : product.roast === 'medium' ? t('product.roastMedium') : t('product.roastDark')} {t('coffee.roast')}
-                </p>
+                {!notFound && (
+                  <p className="text-lg text-gray-600">
+                    {translateOrigin(product!.origin, language)} • {product!.roast === 'light' ? t('product.roastLight') : product!.roast === 'medium' ? t('product.roastMedium') : t('product.roastDark')} {t('coffee.roast')}
+                  </p>
+                )}
               </div>
 
               {/* Price */}
@@ -440,7 +449,7 @@ export default function Product() {
                   {t('product.description')}
                 </h3>
                 <p className="text-gray-600 leading-relaxed">
-                  {getCoffeeDescription(product.id, language)}
+                  {!notFound ? getCoffeeDescription(product!.id, language) : ''}
                 </p>
               </div>
 
@@ -450,7 +459,7 @@ export default function Product() {
                   {t('product.flavorNotes')}
                 </h3>
                 <div className="flex flex-wrap gap-2">
-                  {product.flavorNotes.map((note) => (
+                  {!notFound && product!.flavorNotes.map((note) => (
                     <span
                       key={note}
                       className="px-3 py-1 text-sm font-medium rounded-full"
@@ -477,7 +486,7 @@ export default function Product() {
                         <div
                           key={level}
                           className={`w-3 h-3 rounded-full ${
-                            level <= (product.body === 'full' ? 5 : product.body === 'medium' ? 3 : 2)
+                            level <= (product && (product.body === 'full' ? 5 : product.body === 'medium' ? 3 : 2))
                               ? 'bg-orange-500'
                               : 'bg-gray-200'
                           }`}
@@ -494,7 +503,7 @@ export default function Product() {
                         <div
                           key={level}
                           className={`w-3 h-3 rounded-full ${
-                            level <= (product.acidity === 'high' ? 5 : product.acidity === 'medium' ? 3 : 2)
+                            level <= (product && (product.acidity === 'high' ? 5 : product.acidity === 'medium' ? 3 : 2))
                               ? 'bg-orange-500'
                               : 'bg-gray-200'
                           }`}
@@ -511,7 +520,7 @@ export default function Product() {
                         <div
                           key={level}
                           className={`w-3 h-3 rounded-full ${
-                            level <= (product.roast === 'dark' ? 5 : product.roast === 'medium' ? 3 : 2)
+                            level <= (product && (product.roast === 'dark' ? 5 : product.roast === 'medium' ? 3 : 2))
                               ? 'bg-orange-500'
                               : 'bg-gray-200'
                           }`}
@@ -528,7 +537,7 @@ export default function Product() {
                         <div
                           key={level}
                           className={`w-3 h-3 rounded-full ${
-                            level <= (product.body === 'full' ? 5 : product.body === 'medium' ? 3 : 2)
+                            level <= (product && (product.body === 'full' ? 5 : product.body === 'medium' ? 3 : 2))
                               ? 'bg-orange-500'
                               : 'bg-gray-200'
                           }`}
@@ -539,59 +548,83 @@ export default function Product() {
                 </div>
               </div>
 
-              {/* Weight Selection */}
+              {/* Size Selection (from Supabase) or fallback weight selection */}
               <div>
                 <h3 className="text-lg font-bold mb-3" style={{ color: '#361c0c' }}>
                   {t('product.weight')}
                 </h3>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  {(['250g', '500g', '1kg'] as const).map((weight) => (
-                    <div key={weight} className="relative">
-                      <button
-                        onClick={() => setSelectedWeight(weight)}
-                        className={cn(
-                          "w-full px-6 py-4 border-2 font-medium transition-all duration-300 relative group",
-                          selectedWeight === weight
-                            ? "border-[#361c0c] text-[#361c0c] bg-[#361c0c]/5"
-                            : "border-gray-300 text-gray-600 hover:border-gray-400 hover:bg-gray-50",
-                          weight === '500g' && "border-yellow-300 bg-gradient-to-br from-yellow-50 to-amber-50 shadow-lg hover:shadow-xl"
-                        )}
-                      >
-                        <div className="text-center">
-                          <div className="text-lg font-bold mb-1">
-                            {weight === '250g' ? t('product.weight250g') : 
-                             weight === '500g' ? t('product.weight500g') : 
-                             t('product.weight1kg')}
+                {sizesOptions.length > 0 ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    {sizesOptions.map((opt, idx) => (
+                      <div key={idx} className="relative">
+                        <button
+                          onClick={() => setSelectedSizeIdx(idx)}
+                          className={cn(
+                            "w-full px-6 py-4 border-2 font-medium transition-all duration-300 relative group",
+                            selectedSizeIdx === idx
+                              ? "border-[#361c0c] text-[#361c0c] bg-[#361c0c]/5"
+                              : "border-gray-300 text-gray-600 hover:border-gray-400 hover:bg-gray-50"
+                          )}
+                        >
+                          <div className="text-center">
+                            <div className="text-lg font-bold mb-1">{opt.label}</div>
+                            <div className="text-sm text-gray-500 mb-2">₴{(opt.price).toFixed(2)}</div>
                           </div>
-                          
-                          {/* Price per weight */}
-                          <div className="text-sm text-gray-500 mb-2">
-                            ₴{(basePrice * (weight === '500g' ? 2.2 : weight === '1kg' ? 3.2 : 1)).toFixed(2)}
-                          </div>
-                          
-                          {/* Gift packaging indicator for 500g */}
-                          {weight === '500g' && (
-                            <div className="inline-flex items-center space-x-1 text-xs font-bold text-amber-700 bg-amber-100 px-2 py-1 rounded-full">
-                              <span>{t('product.giftPackaging')}</span>
+                          {selectedSizeIdx === idx && (
+                            <div className="absolute top-2 right-2">
+                              <div className="w-6 h-6 bg-[#361c0c] rounded-full flex items-center justify-center">
+                                <div className="w-2 h-2 bg-white rounded-full"></div>
+                              </div>
                             </div>
                           )}
-                        </div>
-                        
-                        {/* Elegant selection indicator */}
-                        {selectedWeight === weight && (
-                          <div className="absolute top-2 right-2">
-                            <div className="w-6 h-6 bg-[#361c0c] rounded-full flex items-center justify-center">
-                              <div className="w-2 h-2 bg-white rounded-full"></div>
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    {(['250g', '500g', '1kg'] as const).map((weight) => (
+                      <div key={weight} className="relative">
+                        <button
+                          onClick={() => setSelectedWeight(weight)}
+                          className={cn(
+                            "w-full px-6 py-4 border-2 font-medium transition-all duration-300 relative group",
+                            selectedWeight === weight
+                              ? "border-[#361c0c] text-[#361c0c] bg-[#361c0c]/5"
+                              : "border-gray-300 text-gray-600 hover:border-gray-400 hover:bg-gray-50",
+                            weight === '500g' && "border-yellow-300 bg-gradient-to-br from-yellow-50 to-amber-50 shadow-lg hover:shadow-xl"
+                          )}
+                        >
+                          <div className="text-center">
+                            <div className="text-lg font-bold mb-1">
+                              {weight === '250g' ? t('product.weight250g') : 
+                               weight === '500g' ? t('product.weight500g') : 
+                               t('product.weight1kg')}
                             </div>
+                            <div className="text-sm text-gray-500 mb-2">
+                              ₴{(basePrice * (weight === '500g' ? 2.2 : weight === '1kg' ? 3.2 : 1)).toFixed(2)}
+                            </div>
+                            {weight === '500g' && (
+                              <div className="inline-flex items-center space-x-1 text-xs font-bold text-amber-700 bg-amber-100 px-2 py-1 rounded-full">
+                                <span>{t('product.giftPackaging')}</span>
+                              </div>
+                            )}
                           </div>
-                        )}
-                      </button>
-                    </div>
-                  ))}
-                </div>
+                          {selectedWeight === weight && (
+                            <div className="absolute top-2 right-2">
+                              <div className="w-6 h-6 bg-[#361c0c] rounded-full flex items-center justify-center">
+                                <div className="w-2 h-2 bg-white rounded-full"></div>
+                              </div>
+                            </div>
+                          )}
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
                 
                 {/* Elegant gift packaging description for 500g */}
-                {selectedWeight === '500g' && (
+                {sizesOptions.length === 0 && selectedWeight === '500g' && (
                   <div className="mt-6 p-6 bg-gradient-to-r from-amber-50 to-yellow-50 border border-amber-200 rounded-xl shadow-sm">
                     <h4 className="text-lg font-bold text-amber-800 mb-2">{t('product.giftPackagingTitle')}</h4>
                     <p className="text-amber-700 leading-relaxed">{t('product.giftPackagingDesc')}</p>
@@ -646,16 +679,16 @@ export default function Product() {
 
               {/* Add to Cart Button */}
               <Button
-                disabled={!product.inStock}
+                disabled={notFound || !product!.inStock}
                 onClick={() => {
-                  if (product.inStock) {
+                  if (!notFound && product!.inStock) {
                     addItem({
-                      productId: product.id,
-                      name: product.name,
-                      image: product.image,
+                      productId: product!.id,
+                      name: product!.name,
+                      image: product!.image,
                       price: finalPrice / quantity, // unit price
                       quantity: quantity,
-                      variant: `${selectedWeight} ${selectedGrind === 'beans' ? t('product.grindBeans') : t('product.grindGround')}`,
+                      variant: `${sizesOptions.length ? (sizesOptions[selectedSizeIdx]?.label || '') : selectedWeight} ${selectedGrind === 'beans' ? t('product.grindBeans') : t('product.grindGround')}`,
                       type: 'coffee'
                     });
                     
@@ -670,7 +703,7 @@ export default function Product() {
                 className="w-full px-8 py-4 bg-[#361c0c] text-white font-black text-lg hover:bg-[#2a0808] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <ShoppingCart className="w-5 h-5 mr-2" />
-                {product.inStock ? t('coffee.addToCart') : t('coffee.outOfStock')}
+                {!notFound && product!.inStock ? t('coffee.addToCart') : t('coffee.outOfStock')}
               </Button>
             </div>
           </div>

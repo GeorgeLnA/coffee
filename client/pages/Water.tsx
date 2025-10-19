@@ -2,7 +2,6 @@ import { ArrowRight, Droplets, CheckCircle, Star, Plus, Minus, ShoppingCart } fr
 import { Link } from "react-router-dom";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
-import FloatingContact from "../components/FloatingContact";
 import { useLanguage } from "../contexts/LanguageContext";
 import { useCart } from "../contexts/CartContext";
 import { useToast } from "../hooks/use-toast";
@@ -290,9 +289,6 @@ export default function Water() {
 
       {/* Footer */}
       <Footer />
-
-      {/* Floating Contact Widget */}
-      <FloatingContact />
     </div>
   );
 }

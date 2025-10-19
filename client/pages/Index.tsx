@@ -10,10 +10,19 @@ import { useRef, useState, useEffect } from "react";
 import CoffeeBeanAnimation from "../components/CoffeeBeanAnimation";
 import { useLanguage } from "../contexts/LanguageContext";
 import SeasonCarousel from "../components/SeasonCarousel";
+import { useHomepageSettings, useFeaturedSlides } from "../hooks/use-supabase";
+import { useFeaturedProducts, useTradePoints, usePosts } from "../hooks/use-directus";
+import { EditableContent } from "../components/EditableContent";
 
 export default function Index() {
   const videoRef = useRef<HTMLVideoElement>(null);
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
+  
+  // Fetch data from Directus CMS
+  const { data: homepageSettings } = useHomepageSettings();
+  const { data: featuredSlides } = useFeaturedSlides();
+  const { data: cmsTradePoints } = useTradePoints();
+  const { data: cmsPosts } = usePosts(3);
   
   // Trade points state
   const [selectedTradePoint, setSelectedTradePoint] = useState(0);
@@ -46,7 +55,15 @@ export default function Index() {
     return currentDay === dayOfWeek && currentHour >= openHour && currentHour < closeHour;
   };
 
-  const tradePoints = [
+  // Use CMS trade points if available, otherwise fallback to hardcoded
+  const tradePoints = cmsTradePoints?.length ? cmsTradePoints.map(point => ({
+    name: point.name,
+    address: point.address,
+    active: isCurrentlyOpen(point.day_of_week || 6, point.open_hour || 6, point.close_hour || 14),
+    hours: point.hours || '',
+    lat: point.latitude,
+    lng: point.longitude
+  })) : [
     {
       name: t('cafes.cafe1.name'),
       address: t('cafes.cafe1.address'),
@@ -65,7 +82,18 @@ export default function Index() {
     }
   ];
 
-  const newsArticles = [
+  // Use CMS posts if available, otherwise fallback to hardcoded news
+  const newsArticles = cmsPosts?.length ? cmsPosts.map(post => ({
+    id: post.id,
+    title: post.title,
+    excerpt: post.excerpt || '',
+    content: post.content || '',
+    image: post.featured_image || "https://api.builder.io/api/v1/image/assets/TEMP/48fca8d935a28fbac0cc9a8942725c2a971d05a2?width=811",
+    category: "News",
+    author: post.author || "THE COFFEE MANIFEST Team",
+    date: new Date(post.date_created).toLocaleDateString('uk-UA', { day: 'numeric', month: 'long', year: 'numeric' }),
+    readTime: "5 хв"
+  })) : [
     {
       id: 1,
       title: t('news.article1.title'),
@@ -133,7 +161,15 @@ export default function Index() {
 
   const currentIndex = getCurrentArticleIndex();
 
-  const seasonItems = [
+  // Use CMS featured products if available, otherwise fallback to hardcoded
+  const seasonItems = featuredSlides?.length ? featuredSlides.map(slide => ({
+    id: `${slide.id}`,
+    title: language === 'ru' ? (slide.title_ru || slide.title_ua) : (slide.title_ua || slide.title_ru),
+    desc: language === 'ru' ? (slide.description_ru || slide.description_ua || '') : (slide.description_ua || slide.description_ru || ''),
+    image: slide.image_url || '/250-g_Original.PNG',
+    hoverImage: slide.hover_image_url || '/woocommerce-placeholder_Original.PNG',
+    href: slide.link_url || '/coffee'
+  })) : [
     {
       id: 'colombia',
       title: t('season.colombia.title'),
@@ -160,6 +196,15 @@ export default function Index() {
     }
   ];
 
+  const gridCols = seasonItems.length === 1
+    ? 'md:grid-cols-1 lg:grid-cols-1'
+    : seasonItems.length === 2
+      ? 'md:grid-cols-2 lg:grid-cols-2'
+      : 'md:grid-cols-2 lg:grid-cols-3';
+  const gridGap = seasonItems.length === 2 ? 'gap-8 lg:gap-10' : 'gap-12';
+  const gridJustify = seasonItems.length <= 2 ? 'justify-items-center' : '';
+  const cardWidthClass = seasonItems.length <= 2 ? 'max-w-xl mx-auto w-full' : 'w-full';
+
   const handlePlayPause = () => {
     if (videoRef.current) {
       if (videoRef.current.paused) {
@@ -178,7 +223,7 @@ export default function Index() {
           {/* Hero Section - Bold & Immersive */}
           <section className="fixed top-0 left-0 w-full h-screen overflow-hidden z-0">
             <video 
-              src="/Coffee_beans_fly_202510011757_183lh.mp4" 
+              src={homepageSettings?.hero_video_url || homepageSettings?.hero_video || "/Coffee_beans_fly_202510011757_183lh.mp4"}
               autoPlay 
               muted 
               loop 
@@ -193,20 +238,33 @@ export default function Index() {
             <div className="absolute inset-0 flex items-center justify-center">
               <div className="text-center max-w-4xl mx-auto px-6">
                 {/* Main Title - Bold & Animated */}
-                 <h1 className="text-7xl md:text-9xl lg:text-9xl font-black mb-8 leading-tight font-dosis tracking-wider text-white">
-                   <span className="block">THE</span>
-                   <span className="block">COFFEE</span>
-                   <span className="block">MANIFEST</span>
-                 </h1>
-                 
-                 
+                <EditableContent 
+                  collection="homepage_settings" 
+                  itemId="1"
+                  fields={['hero_title_line1', 'hero_title_line2', 'hero_title_line3']}
+                  mode="modal"
+                >
+                  <h1 className="text-7xl md:text-9xl lg:text-9xl font-black mb-8 leading-tight font-dosis tracking-wider text-white">
+                    <span className="block">{homepageSettings?.hero_title_line1 || "THE"}</span>
+                    <span className="block">{homepageSettings?.hero_title_line2 || "COFFEE"}</span>
+                    <span className="block">{homepageSettings?.hero_title_line3 || "MANIFEST"}</span>
+                  </h1>
+                </EditableContent>
+                
                 {/* CTA Button - Clean */}
-                <Link to="/coffee" className="group inline-block px-12 py-6 bg-transparent border-2 border-white text-white font-black text-xl hover:bg-[#fcf4e4] hover:text-[#361c0c] transition-all duration-300">
-                  <span className="flex items-center space-x-4">
-                    <span>{t('hero.cta')}</span>
-                    <ArrowRight className="w-6 h-6 group-hover:translate-x-2 transition-transform" />
-                  </span>
-                </Link>
+                <EditableContent 
+                  collection="homepage_settings" 
+                  itemId="1"
+                  fields="hero_cta_text"
+                  mode="popover"
+                >
+                  <Link to={homepageSettings?.hero_cta_link || "/coffee"} className="group inline-block px-12 py-6 bg-transparent border-2 border-white text-white font-black text-xl hover:bg-[#fcf4e4] hover:text-[#361c0c] transition-all duration-300">
+                    <span className="flex items-center space-x-4">
+                      <span>{homepageSettings?.hero_cta_text || t('hero.cta')}</span>
+                      <ArrowRight className="w-6 h-6 group-hover:translate-x-2 transition-transform" />
+                    </span>
+                  </Link>
+                </EditableContent>
                 
               </div>
             </div>
@@ -224,90 +282,46 @@ export default function Index() {
         <div className="max-w-8xl mx-auto px-6 lg:px-8 relative z-10">
           {/* Section Header - Bold & Centered */}
           <div className="text-center mb-20">
-             <h2 className="text-5xl md:text-7xl font-black mb-8 leading-tight font-coolvetica tracking-wider">
-               <span style={{ color: '#fcf4e4' }}>{t('season.title')}</span>
-             </h2>
+            <EditableContent 
+              collection="homepage_settings" 
+              itemId="1"
+              fields="season_title"
+              mode="popover"
+            >
+              <h2 className="text-5xl md:text-7xl font-black mb-8 leading-tight font-coolvetica tracking-wider">
+                <span style={{ color: '#fcf4e4' }}>{homepageSettings?.season_title || t('season.title')}</span>
+              </h2>
+            </EditableContent>
           </div>
 
-          {/* Desktop Grid - Hidden on mobile */}
-          <div className="hidden md:grid md:grid-cols-2 lg:grid-cols-3 gap-12 max-w-8xl mx-auto">
-            {/* Coffee for Home - Colombia Supremo */}
-            <Link to="/coffee" className="group block">
-              <div className="relative aspect-[4/5] bg-gray-100 overflow-hidden mb-6">
-                <div className="absolute inset-0 ">
-                  <img
-                    src="/250-g_Original.PNG"
-                    alt="Colombia Supremo Coffee"
-                    className="w-full h-full object-cover group-hover:opacity-0 transition-opacity duration-700"
-                  />
-                  <img
-                    src="/woocommerce-placeholder_Original.PNG"
-                    alt="Colombia Supremo Coffee"
-                    className="w-full h-full object-cover absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700"
-                  />
+          {/* Desktop Grid - Hidden on mobile (dynamic by number of slides) */}
+          <div className={`hidden md:grid ${gridCols} ${gridGap} ${gridJustify} max-w-8xl mx-auto`}>
+            {seasonItems.map((item) => (
+              <Link key={item.id} to={item.href} className={`group block ${cardWidthClass}`}>
+                <div className="relative aspect-[4/5] bg-gray-100 overflow-hidden mb-6">
+                  <div className="absolute inset-0 ">
+                    <img
+                      src={item.image}
+                      alt={item.title}
+                      className="w-full h-full object-cover group-hover:opacity-0 transition-opacity duration-700"
+                    />
+                    <img
+                      src={item.hoverImage}
+                      alt={item.title}
+                      className="w-full h-full object-cover absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700"
+                    />
+                  </div>
                 </div>
-              </div>
-              <div>
-                <h3 className="text-4xl font-black font-coolvetica tracking-wider uppercase mb-4" style={{ color: '#fcf4e4' }}>
-                  {t('season.colombia.title')}
-                </h3>
-                <div className="font-medium text-lg" style={{ color: '#fcf4e4' }}>
-                  {t('season.colombia.desc')}
+                <div>
+                  <h3 className="text-4xl font-black font-coolvetica tracking-wider uppercase mb-4" style={{ color: '#fcf4e4' }}>
+                    {item.title}
+                  </h3>
+                  <div className="font-medium text-lg" style={{ color: '#fcf4e4' }}>
+                    {item.desc}
+                  </div>
                 </div>
-              </div>
-            </Link>
-
-            {/* Coffee for Office - Ethiopia Guji Organic */}
-            <Link to="/coffee" className="group block">
-              <div className="relative aspect-[4/5] bg-gray-100 overflow-hidden mb-6">
-                <div className="absolute inset-0 ">
-                  <img
-                    src="/250-g_Original.PNG"
-                    alt="Ethiopia Guji Organic Coffee"
-                    className="w-full h-full object-cover group-hover:opacity-0 transition-opacity duration-700"
-                  />
-                  <img
-                    src="/woocommerce-placeholder_Original.PNG"
-                    alt="Ethiopia Guji Organic Coffee"
-                    className="w-full h-full object-cover absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700"
-                  />
-                </div>
-              </div>
-              <div>
-                <h3 className="text-4xl font-black font-coolvetica tracking-wider uppercase mb-4" style={{ color: '#fcf4e4' }}>
-                  {t('season.ethiopia.title')}
-                </h3>
-                <div className="font-medium text-lg" style={{ color: '#fcf4e4' }}>
-                  {t('season.ethiopia.desc')}
-                </div>
-              </div>
-            </Link>
-
-            {/* Coffee for Business - Brazil Santos */}
-            <Link to="/coffee" className="group block">
-              <div className="relative aspect-[4/5] bg-gray-100 overflow-hidden mb-6">
-                <div className="absolute inset-0 ">
-                  <img
-                    src="/250-g_Original.PNG"
-                    alt="Brazil Santos Coffee"
-                    className="w-full h-full object-cover group-hover:opacity-0 transition-opacity duration-700"
-                  />
-                  <img
-                    src="/woocommerce-placeholder_Original.PNG"
-                    alt="Brazil Santos Coffee"
-                    className="w-full h-full object-cover absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700"
-                  />
-                </div>
-              </div>
-              <div>
-                <h3 className="text-4xl font-black font-coolvetica tracking-wider uppercase mb-4" style={{ color: '#fcf4e4' }}>
-                  {t('season.brazil.title')}
-                </h3>
-                <div className="font-medium text-lg" style={{ color: '#fcf4e4' }}>
-                  {t('season.brazil.desc')}
-                </div>
-              </div>
-            </Link>
+              </Link>
+            ))}
           </div>
 
           {/* Mobile Carousel - Visible only on mobile */}
@@ -334,7 +348,7 @@ export default function Index() {
               <div className="relative overflow-hidden">
                  <video 
                    ref={videoRef}
-                   src="/Macro_shot_of_202509171627_znyzw.mp4" 
+                   src={homepageSettings?.video_url || "/Macro_shot_of_202509171627_znyzw.mp4"} 
                    autoPlay 
                    muted 
                    loop 
@@ -419,7 +433,7 @@ export default function Index() {
               <div className="relative">
                 {/* Main Image */}
                 <img 
-                  src="/photo_2023-11-03_07-29-18.jpg" 
+                  src={homepageSettings?.about_image_url || "/photo_2023-11-03_07-29-18.jpg"} 
                   alt="THE COFFEE MANIFEST Team" 
                   className="w-full h-[600px] object-cover"
                   style={{ objectPosition: '35% center' }}
