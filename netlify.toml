@@ -3,6 +3,9 @@
   functions = "netlify/functions"
   publish = "dist/spa"
 
+[build.environment]
+  SECRETS_SCAN_SMART_DETECTION_ENABLED = "false"
+
 
 [functions]
   external_node_modules = ["express"]

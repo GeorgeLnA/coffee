@@ -42,7 +42,7 @@ const GoogleMapsMap: React.FC<GoogleMapsMapProps> = ({
 
       const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
       if (!apiKey) {
-        console.error('Google Maps API key not found. Please set VITE_GOOGLE_MAPS_API_KEY environment variable.');
+        console.warn('Google Maps API key not found. Map will not be displayed.');
         return;
       }
 
