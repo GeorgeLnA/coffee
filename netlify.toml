@@ -16,3 +16,9 @@
   from = "/api/*"
   status = 200
   to = "/.netlify/functions/api/:splat"
+
+# SPA routing - redirect all non-API routes to index.html
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
