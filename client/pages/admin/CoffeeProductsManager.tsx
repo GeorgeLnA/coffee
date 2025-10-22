@@ -366,45 +366,6 @@ export function CoffeeProductsManager() {
                 </div>
               </div>
 
-              {/* Metrics controls */}
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div>
-                  <Label>Міцність</Label>
-                  <Select value={(p.strength_level ?? 0).toString()} onValueChange={(v) => updateProductField(pIdx, 'strength_level', Number(v))}>
-                    <SelectTrigger><SelectValue placeholder="Оберіть від 1 до 5" /></SelectTrigger>
-                    <SelectContent>
-                      {[1,2,3,4,5].map(n => (<SelectItem key={n} value={n.toString()}>{n}</SelectItem>))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label>Кислотність</Label>
-                  <Select value={(p.acidity_level ?? 0).toString()} onValueChange={(v) => updateProductField(pIdx, 'acidity_level', Number(v))}>
-                    <SelectTrigger><SelectValue placeholder="Оберіть від 1 до 5" /></SelectTrigger>
-                    <SelectContent>
-                      {[1,2,3,4,5].map(n => (<SelectItem key={n} value={n.toString()}>{n}</SelectItem>))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label>Обсмажування</Label>
-                  <Select value={(p.roast_level ?? 0).toString()} onValueChange={(v) => updateProductField(pIdx, 'roast_level', Number(v))}>
-                    <SelectTrigger><SelectValue placeholder="Оберіть від 1 до 5" /></SelectTrigger>
-                    <SelectContent>
-                      {[1,2,3,4,5].map(n => (<SelectItem key={n} value={n.toString()}>{n}</SelectItem>))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label>Насиченість</Label>
-                  <Select value={(p.body_level ?? 0).toString()} onValueChange={(v) => updateProductField(pIdx, 'body_level', Number(v))}>
-                    <SelectTrigger><SelectValue placeholder="Оберіть від 1 до 5" /></SelectTrigger>
-                    <SelectContent>
-                      {[1,2,3,4,5].map(n => (<SelectItem key={n} value={n.toString()}>{n}</SelectItem>))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
 
               <MediaUploader
                 label="Зображення"
