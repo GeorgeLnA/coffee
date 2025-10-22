@@ -856,23 +856,8 @@ export default function Coffee() {
                       {t('coffee.clearAll')}
                     </Button>
                   </div>
-                        )}
+                )}
               </div>
-
-                      {/* Mobile label (separate block, not overlay) */}
-                      {coffee.label_data && (
-                        <div className="md:hidden px-4 pt-3">
-                          <CoffeeLabel
-                            coffeeName={coffee.name}
-                            strength={coffee.strength_level || 3}
-                            acidity={coffee.acidity_level || 3}
-                            roast={coffee.roast_level || 3}
-                            body={coffee.body_level || 3}
-                            labelData={coffee.label_data}
-                            className="w-full"
-                          />
-                        </div>
-                      )}
             </div>
           </div>
         </section>
