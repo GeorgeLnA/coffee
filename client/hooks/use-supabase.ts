@@ -1,4 +1,5 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useEffect } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 
 export interface HomepageSettings {
@@ -284,6 +285,7 @@ export interface DBCoffeeProduct {
   acidity_level?: number | null;
   roast_level?: number | null;
   body_level?: number | null;
+  label_data?: any | null;
   coffee_sizes?: DBCoffeeSize[];
 }
 
@@ -295,6 +297,25 @@ function mapLevelToString(level: number | null | undefined, low: string, medium:
 }
 
 export function useCoffeeProducts() {
+  const queryClient = useQueryClient();
+
+  // Realtime updates for coffee products and sizes
+  useEffect(() => {
+    const channel = supabase
+      .channel('coffee-products-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'coffee_products' }, () => {
+        try { queryClient.invalidateQueries({ queryKey: ['coffee-products'] }); } catch {}
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'coffee_sizes' }, () => {
+        try { queryClient.invalidateQueries({ queryKey: ['coffee-products'] }); } catch {}
+      })
+      .subscribe();
+
+    return () => {
+      try { supabase.removeChannel(channel); } catch {}
+    };
+  }, [queryClient]);
+
   return useQuery({
     queryKey: ['coffee-products'],
     queryFn: async () => {
@@ -326,13 +347,42 @@ export function useCoffeeProducts() {
           process: '',
           elevation: 0,
           inStock: !!p.in_stock,
+          // Expose numeric metrics and label data for custom labels
+          strength_level: p.strength_level || 0,
+          acidity_level: p.acidity_level || 0,
+          roast_level: p.roast_level || 0,
+          body_level: p.body_level || 0,
+          label_data: p.label_data || null,
         };
       });
     },
+    // Refetch behaviours to feel "live"
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
+    staleTime: 0,
   });
 }
 
 export function useCoffeeProduct(id: string | number) {
+  const queryClient = useQueryClient();
+
+  // Realtime updates for a single product
+  useEffect(() => {
+    const channel = supabase
+      .channel(`coffee-product-${id}-realtime`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'coffee_products', filter: `id=eq.${Number(id)}` }, () => {
+        try { queryClient.invalidateQueries({ queryKey: ['coffee-product', id] }); } catch {}
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'coffee_sizes', filter: `product_id=eq.${Number(id)}` }, () => {
+        try { queryClient.invalidateQueries({ queryKey: ['coffee-product', id] }); } catch {}
+      })
+      .subscribe();
+
+    return () => {
+      try { supabase.removeChannel(channel); } catch {}
+    };
+  }, [id, queryClient]);
+
   return useQuery({
     queryKey: ['coffee-product', id],
     queryFn: async () => {
@@ -373,13 +423,15 @@ export function useCoffeeProduct(id: string | number) {
         elevation: 0,
         inStock: !!p.in_stock,
         sizes,
-        metrics: {
-          strength: p.strength_level || 0,
-          acidity: p.acidity_level || 0,
-          roast: p.roast_level || 0,
-          body: p.body_level || 0,
-        }
+        strength_level: p.strength_level || 0,
+        acidity_level: p.acidity_level || 0,
+        roast_level: p.roast_level || 0,
+        body_level: p.body_level || 0,
+        label_data: p.label_data || null,
       };
     },
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
+    staleTime: 0,
   });
 }

@@ -15,6 +15,7 @@ import { useCart } from "../contexts/CartContext";
 import AddToCartModal from "../components/AddToCartModal";
 import { useToast } from "../hooks/use-toast";
 import { useCoffeeProducts } from "../hooks/use-supabase";
+import { CoffeeLabel } from "../components/CoffeeLabel";
 
 // Helper function to get translated description
 const getCoffeeDescription = (coffeeId: string, language: string) => {
@@ -399,7 +400,7 @@ export default function Coffee() {
           return 0; // Default order (as they appear in the array)
       }
     });
-  }, [filters, sortBy]);
+  }, [filters, sortBy, supaProducts]);
 
   const handleFilterChange = (key: keyof CoffeeFilters, value: any) => {
     setFilters(prev => ({ ...prev, [key]: value }));
@@ -607,7 +608,7 @@ export default function Coffee() {
                       className="group bg-white rounded-lg shadow-lg overflow-hidden hover:shadow-xl transition-all duration-300 flex flex-col"
                     >
                       {/* Image */}
-                      <div className="relative aspect-[4/5] overflow-hidden">
+                      <div className="relative aspect-[4/5] overflow-hidden md:pr-[240px]">
                         <img
                           src={coffee.image}
                           alt={coffee.name}
@@ -624,80 +625,94 @@ export default function Coffee() {
                         )}
 
                         {/* Coffee Metrics Label */}
-                        <div className="absolute top-4 right-4 bg-white/95 backdrop-blur-sm rounded-lg p-3 shadow-lg">
-                          <div className="text-center">
-                            <div className="text-xs font-black uppercase tracking-wider mb-2" style={{ color: '#361c0c' }}>
-                              {coffee.origin.toUpperCase()}
-                            </div>
-                            
-                            {/* Metrics */}
-                            <div className="space-y-1 text-xs">
-                              <div className="flex items-center justify-between">
-                                <span className="text-gray-600 font-medium mr-3">{t('coffee.strength')}:</span>
-                                <div className="flex space-x-1">
-                                  {[1, 2, 3, 4, 5].map((level) => (
-                                    <div
-                                      key={level}
-                                      className={`w-2 h-2 rounded-full ${
-                                        level <= (coffee.body === 'full' ? 4 : coffee.body === 'medium' ? 3 : 2)
-                                          ? 'bg-orange-500'
-                                          : 'bg-gray-300'
-                                      }`}
-                                    />
-                                  ))}
-                                </div>
+                        {coffee.label_data ? (
+                          <div className="hidden md:block absolute top-4 right-4 w-[220px]">
+                            <CoffeeLabel
+                              coffeeName={coffee.name}
+                              strength={coffee.strength_level || 3}
+                              acidity={coffee.acidity_level || 3}
+                              roast={coffee.roast_level || 3}
+                              body={coffee.body_level || 3}
+                              labelData={coffee.label_data}
+                              className="w-full"
+                            />
+                          </div>
+                        ) : (
+                          <div className="absolute top-4 right-4 bg-white/95 backdrop-blur-sm rounded-lg p-3 shadow-lg">
+                            <div className="text-center">
+                              <div className="text-xs font-black uppercase tracking-wider mb-2" style={{ color: '#361c0c' }}>
+                                {coffee.origin.toUpperCase()}
                               </div>
                               
-                              <div className="flex items-center justify-between">
-                                <span className="text-gray-600 font-medium mr-3">{t('coffee.acidity')}:</span>
-                                <div className="flex space-x-1">
-                                  {[1, 2, 3, 4, 5].map((level) => (
-                                    <div
-                                      key={level}
-                                      className={`w-2 h-2 rounded-full ${
-                                        level <= (coffee.acidity === 'high' ? 4 : coffee.acidity === 'medium' ? 3 : 2)
-                                          ? 'bg-orange-500'
-                                          : 'bg-gray-300'
-                                      }`}
-                                    />
-                                  ))}
+                              {/* Metrics */}
+                              <div className="space-y-1 text-xs">
+                                <div className="flex items-center justify-between">
+                                  <span className="text-gray-600 font-medium mr-3">{t('coffee.strength')}:</span>
+                                  <div className="flex space-x-1">
+                                    {[1, 2, 3, 4, 5].map((level) => (
+                                      <div
+                                        key={level}
+                                        className={`w-2 h-2 rounded-full ${
+                                          level <= (coffee.body === 'full' ? 4 : coffee.body === 'medium' ? 3 : 2)
+                                            ? 'bg-orange-500'
+                                            : 'bg-gray-300'
+                                        }`}
+                                      />
+                                    ))}
+                                  </div>
                                 </div>
-                              </div>
-                              
-                              <div className="flex items-center justify-between">
-                                <span className="text-gray-600 font-medium mr-3">{t('coffee.roast')}:</span>
-                                <div className="flex space-x-1">
-                                  {[1, 2, 3, 4, 5].map((level) => (
-                                    <div
-                                      key={level}
-                                      className={`w-2 h-2 rounded-full ${
-                                        level <= (coffee.roast === 'dark' ? 5 : coffee.roast === 'medium' ? 3 : 2)
-                                          ? 'bg-orange-500'
-                                          : 'bg-gray-300'
-                                      }`}
-                                    />
-                                  ))}
+                                
+                                <div className="flex items-center justify-between">
+                                  <span className="text-gray-600 font-medium mr-3">{t('coffee.acidity')}:</span>
+                                  <div className="flex space-x-1">
+                                    {[1, 2, 3, 4, 5].map((level) => (
+                                      <div
+                                        key={level}
+                                        className={`w-2 h-2 rounded-full ${
+                                          level <= (coffee.acidity === 'high' ? 4 : coffee.acidity === 'medium' ? 3 : 2)
+                                            ? 'bg-orange-500'
+                                            : 'bg-gray-300'
+                                        }`}
+                                      />
+                                    ))}
+                                  </div>
                                 </div>
-                              </div>
-                              
-                              <div className="flex items-center justify-between">
-                                <span className="text-gray-600 font-medium mr-3">{t('coffee.body')}:</span>
-                                <div className="flex space-x-1">
-                                  {[1, 2, 3, 4, 5].map((level) => (
-                                    <div
-                                      key={level}
-                                      className={`w-2 h-2 rounded-full ${
-                                        level <= (coffee.body === 'full' ? 5 : coffee.body === 'medium' ? 3 : 2)
-                                          ? 'bg-orange-500'
-                                          : 'bg-gray-300'
-                                      }`}
-                                    />
-                                  ))}
+                                
+                                <div className="flex items-center justify-between">
+                                  <span className="text-gray-600 font-medium mr-3">{t('coffee.roast')}:</span>
+                                  <div className="flex space-x-1">
+                                    {[1, 2, 3, 4, 5].map((level) => (
+                                      <div
+                                        key={level}
+                                        className={`w-2 h-2 rounded-full ${
+                                          level <= (coffee.roast === 'dark' ? 5 : coffee.roast === 'medium' ? 3 : 2)
+                                            ? 'bg-orange-500'
+                                            : 'bg-gray-300'
+                                        }`}
+                                      />
+                                    ))}
+                                  </div>
+                                </div>
+                                
+                                <div className="flex items-center justify-between">
+                                  <span className="text-gray-600 font-medium mr-3">{t('coffee.body')}:</span>
+                                  <div className="flex space-x-1">
+                                    {[1, 2, 3, 4, 5].map((level) => (
+                                      <div
+                                        key={level}
+                                        className={`w-2 h-2 rounded-full ${
+                                          level <= (coffee.body === 'full' ? 5 : coffee.body === 'medium' ? 3 : 2)
+                                            ? 'bg-orange-500'
+                                            : 'bg-gray-300'
+                                        }`}
+                                      />
+                                    ))}
+                                  </div>
                                 </div>
                               </div>
                             </div>
                           </div>
-                        </div>
+                        )}
 
                       </div>
 
@@ -841,8 +856,23 @@ export default function Coffee() {
                       {t('coffee.clearAll')}
                     </Button>
                   </div>
-                )}
+                        )}
               </div>
+
+                      {/* Mobile label (separate block, not overlay) */}
+                      {coffee.label_data && (
+                        <div className="md:hidden px-4 pt-3">
+                          <CoffeeLabel
+                            coffeeName={coffee.name}
+                            strength={coffee.strength_level || 3}
+                            acidity={coffee.acidity_level || 3}
+                            roast={coffee.roast_level || 3}
+                            body={coffee.body_level || 3}
+                            labelData={coffee.label_data}
+                            className="w-full"
+                          />
+                        </div>
+                      )}
             </div>
           </div>
         </section>

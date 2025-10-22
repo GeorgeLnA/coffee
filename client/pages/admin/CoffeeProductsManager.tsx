@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { MediaUploader } from "@/components/ui/MediaUploader";
+import { CoffeeLabelGenerator } from "@/components/CoffeeLabelGenerator";
 
 type CoffeeSize = {
   id?: number;
@@ -18,6 +19,12 @@ type CoffeeSize = {
   label_ru?: string | null;
   weight?: number | null; // grams
   price?: number | null; // UAH
+};
+
+type CoffeeLabelData = {
+  template: 'classic' | 'caramel' | 'emerald' | 'indigo' | 'crimson' | 'gold';
+  size: 'small' | 'medium' | 'large';
+  flavor_notes?: string[];
 };
 
 type CoffeeProduct = {
@@ -41,6 +48,7 @@ type CoffeeProduct = {
   acidity_level?: number | null;
   roast_level?: number | null;
   body_level?: number | null;
+  label_data?: CoffeeLabelData | null;
   sizes?: CoffeeSize[];
 };
 
@@ -48,6 +56,7 @@ export function CoffeeProductsManager() {
   const [products, setProducts] = useState<CoffeeProduct[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedProductForLabel, setSelectedProductForLabel] = useState<number | null>(null);
   const queryClient = useQueryClient();
 
   const load = async () => {
@@ -172,6 +181,7 @@ export function CoffeeProductsManager() {
       acidity_level: p.acidity_level,
       roast_level: p.roast_level,
       body_level: p.body_level,
+      label_data: p.label_data,
     };
     let productId = p.id;
     if (!productId) {
@@ -225,6 +235,8 @@ export function CoffeeProductsManager() {
 
   if (loading) return <div>Завантаження…</div>;
 
+  const selectedProduct = selectedProductForLabel !== null ? products[selectedProductForLabel] : null;
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -233,6 +245,70 @@ export function CoffeeProductsManager() {
           <Button variant="outline" onClick={addProduct}>Додати продукт</Button>
         </div>
       </div>
+
+      {/* Label Generator */}
+      {selectedProduct && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-semibold">
+              Генератор мітки для: {selectedProduct.name_ua}
+            </h3>
+            <Button 
+              variant="outline" 
+              onClick={() => setSelectedProductForLabel(null)}
+            >
+              Закрити
+            </Button>
+          </div>
+          <CoffeeLabelGenerator
+            coffeeName={selectedProduct.name_ua}
+            strength={selectedProduct.strength_level || 3}
+            acidity={selectedProduct.acidity_level || 3}
+            roast={selectedProduct.roast_level || 3}
+            body={selectedProduct.body_level || 3}
+            onLabelDataChange={(data) => {
+              // Update the product with new label data
+              const updatedProducts = [...products];
+              const productIndex = selectedProductForLabel;
+              if (productIndex !== null) {
+                updatedProducts[productIndex] = {
+                  ...updatedProducts[productIndex],
+                  strength_level: data.strength,
+                  acidity_level: data.acidity,
+                  roast_level: data.roast,
+                  body_level: data.body,
+                };
+                setProducts(updatedProducts);
+              }
+            }}
+            onApplyLabel={async (data) => {
+              // Apply the label to the product
+              const updatedProducts = [...products];
+              const productIndex = selectedProductForLabel;
+              if (productIndex !== null) {
+                updatedProducts[productIndex] = {
+                  ...updatedProducts[productIndex],
+                  strength_level: data.strength,
+                  acidity_level: data.acidity,
+                  roast_level: data.roast,
+                  body_level: data.body,
+                  label_data: {
+                    template: data.template,
+                    size: data.size,
+                    flavor_notes: data.flavor_notes || [],
+                  },
+                };
+                setProducts(updatedProducts);
+                setSelectedProductForLabel(null);
+                try {
+                  await saveProduct(productIndex);
+                } catch {}
+                alert('Мітку застосовано та збережено!');
+              }
+            }}
+          />
+        </div>
+      )}
 
       {error && <div className="text-destructive">{error}</div>}
 
@@ -381,7 +457,15 @@ export function CoffeeProductsManager() {
               </div>
 
               <div className="flex justify-between">
-                <Button variant="outline" onClick={() => removeProduct(pIdx)}>Видалити продукт</Button>
+                <div className="flex gap-2">
+                  <Button variant="outline" onClick={() => removeProduct(pIdx)}>Видалити продукт</Button>
+                  <Button 
+                    variant="secondary" 
+                    onClick={() => setSelectedProductForLabel(pIdx)}
+                  >
+                    Створити мітку
+                  </Button>
+                </div>
                 <Button onClick={() => saveProduct(pIdx)}>Зберегти продукт</Button>
               </div>
             </CardContent>

@@ -12,6 +12,18 @@ export interface DemoResponse {
 }
 
 /**
+ * Coffee label data interface
+ */
+export interface CoffeeLabelData {
+  // Predefined template id (one of six curated options)
+  template: 'classic' | 'caramel' | 'emerald' | 'indigo' | 'crimson' | 'gold';
+  // Label size
+  size: 'small' | 'medium' | 'large';
+  // Flavor notes to render on the label
+  flavor_notes?: string[];
+}
+
+/**
  * Coffee product interface
  */
 export interface CoffeeProduct {
@@ -29,6 +41,12 @@ export interface CoffeeProduct {
   process: 'washed' | 'natural' | 'honey' | 'semi-washed';
   elevation: number; // in meters
   inStock: boolean;
+  // New fields for custom labels and metrics
+  strength_level?: number;
+  acidity_level?: number;
+  roast_level?: number;
+  body_level?: number;
+  label_data?: CoffeeLabelData | null;
 }
 
 /**
