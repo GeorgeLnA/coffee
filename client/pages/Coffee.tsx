@@ -608,7 +608,7 @@ export default function Coffee() {
                       className="group bg-white rounded-lg shadow-lg overflow-hidden hover:shadow-xl transition-all duration-300 flex flex-col"
                     >
                       {/* Image */}
-                      <div className="relative aspect-[4/5] overflow-hidden md:pr-[240px]">
+                      <div className="relative aspect-[4/5] overflow-hidden">
                         <img
                           src={coffee.image}
                           alt={coffee.name}
@@ -624,9 +624,9 @@ export default function Coffee() {
                           </div>
                         )}
 
-                        {/* Coffee Metrics Label */}
+                        {/* Coffee Label - Overlay on top of image */}
                         {coffee.label_data ? (
-                          <div className="hidden md:block absolute top-4 right-4 w-[220px]">
+                          <div className="absolute top-4 right-4 w-[220px]">
                             <CoffeeLabel
                               coffeeName={coffee.name}
                               strength={coffee.strength_level || 3}
@@ -638,7 +638,7 @@ export default function Coffee() {
                             />
                           </div>
                         ) : (
-                          <div className="absolute top-4 right-4 bg-white/95 backdrop-blur-sm rounded-lg p-3 shadow-lg">
+                          <div className="absolute top-4 right-4 bg-white/95 backdrop-blur-sm rounded-lg p-3 shadow-lg w-[220px]">
                             <div className="text-center">
                               <div className="text-xs font-black uppercase tracking-wider mb-2" style={{ color: '#361c0c' }}>
                                 {coffee.origin.toUpperCase()}
@@ -713,7 +713,6 @@ export default function Coffee() {
                             </div>
                           </div>
                         )}
-
                       </div>
 
                       {/* Content */}
