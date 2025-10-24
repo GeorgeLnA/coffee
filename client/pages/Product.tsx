@@ -321,6 +321,8 @@ export default function Product() {
       label: s.label_ua || s.label_ru || (s.weight ? `${s.weight}g` : ''),
       weight: s.weight,
       price: s.price || 0,
+      image: s.image_url || null,
+      special: s.special || false,
     }));
   }, [productData]);
 
@@ -343,12 +345,14 @@ export default function Product() {
     return (basePrice || 0) * multiplier * quantity;
   }, [basePrice, selectedWeight, quantity, sizesOptions.length]);
 
-  // Additional product images (placeholder - you can add real images)
-  const additionalImages = [
-    product?.image || "/250-g_Original.PNG",
-    "/250-g_Original.PNG",
-    "/500_Manifestcoffee_Original.PNG",
-  ];
+  // Image to show: prefer selected size image, fall back to product image
+  const currentImage = useMemo(() => {
+    if (sizesOptions.length) {
+      const current = sizesOptions[selectedSizeIdx] || sizesOptions[0];
+      return current?.image || product?.image || "/250-g_Original.PNG";
+    }
+    return product?.image || "/250-g_Original.PNG";
+  }, [sizesOptions, selectedSizeIdx, product]);
 
   const [selectedImage, setSelectedImage] = useState(0);
 
@@ -376,32 +380,10 @@ export default function Product() {
               {/* Main Image */}
               <div className="aspect-[4/5] overflow-hidden rounded-lg">
                 <img
-                  src={additionalImages[selectedImage]}
+                  src={currentImage}
                   alt={product?.name || ''}
                   className="w-full h-full object-cover"
                 />
-              </div>
-
-              {/* Thumbnail Images */}
-              <div className="grid grid-cols-3 gap-4">
-                {additionalImages.map((image, index) => (
-                  <button
-                    key={index}
-                    onClick={() => setSelectedImage(index)}
-                    className={cn(
-                      "aspect-square overflow-hidden rounded-lg border-2 transition-colors",
-                      selectedImage === index 
-                        ? "border-[#361c0c]" 
-                        : "border-gray-200 hover:border-gray-300"
-                    )}
-                  >
-                    <img
-                      src={image}
-                      alt={`${product?.name || ''} ${index + 1}`}
-                      className="w-full h-full object-cover"
-                    />
-                  </button>
-                ))}
               </div>
             </div>
 
@@ -449,14 +431,14 @@ export default function Product() {
                   {t('product.description')}
                 </h3>
                 <p className="text-gray-600 leading-relaxed">
-                  {!notFound ? getCoffeeDescription(product!.id, language) : ''}
+                  {!notFound ? product!.description : ''}
                 </p>
               </div>
 
-              {/* Flavor Notes */}
+              {/* Aftertaste */}
               <div>
                 <h3 className="text-lg font-bold mb-3" style={{ color: '#361c0c' }}>
-                  {t('product.flavorNotes')}
+                  Післясмак
                 </h3>
                 <div className="flex flex-wrap gap-2">
                   {!notFound && product!.flavorNotes.map((note) => (
@@ -554,21 +536,27 @@ export default function Product() {
                   {t('product.weight')}
                 </h3>
                 {sizesOptions.length > 0 ? (
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                     {sizesOptions.map((opt, idx) => (
                       <div key={idx} className="relative">
                         <button
                           onClick={() => setSelectedSizeIdx(idx)}
                           className={cn(
-                            "w-full px-6 py-4 border-2 font-medium transition-all duration-300 relative group",
+                            "w-full px-8 py-6 border-2 font-medium transition-all duration-300 relative group",
                             selectedSizeIdx === idx
                               ? "border-[#361c0c] text-[#361c0c] bg-[#361c0c]/5"
-                              : "border-gray-300 text-gray-600 hover:border-gray-400 hover:bg-gray-50"
+                              : "border-gray-300 text-gray-600 hover:border-gray-400 hover:bg-gray-50",
+                            opt.special && "border-yellow-300 bg-gradient-to-br from-yellow-50 to-amber-50 shadow-lg hover:shadow-xl"
                           )}
                         >
                           <div className="text-center">
                             <div className="text-lg font-bold mb-1">{opt.label}</div>
                             <div className="text-sm text-gray-500 mb-2">₴{(opt.price).toFixed(2)}</div>
+                            {opt.special && (
+                              <div className="inline-flex items-center space-x-1 text-xs font-bold text-amber-700 bg-amber-100 px-2 py-1 rounded-full">
+                                <span>🎁 Подарункове пакування</span>
+                              </div>
+                            )}
                           </div>
                           {selectedSizeIdx === idx && (
                             <div className="absolute top-2 right-2">
@@ -582,13 +570,13 @@ export default function Product() {
                     ))}
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                     {(['250g', '500g', '1kg'] as const).map((weight) => (
                       <div key={weight} className="relative">
                         <button
                           onClick={() => setSelectedWeight(weight)}
                           className={cn(
-                            "w-full px-6 py-4 border-2 font-medium transition-all duration-300 relative group",
+                            "w-full px-8 py-6 border-2 font-medium transition-all duration-300 relative group",
                             selectedWeight === weight
                               ? "border-[#361c0c] text-[#361c0c] bg-[#361c0c]/5"
                               : "border-gray-300 text-gray-600 hover:border-gray-400 hover:bg-gray-50",

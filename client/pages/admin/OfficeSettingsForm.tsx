@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { OfficeSettings } from "@/hooks/use-supabase";
+import { Checkbox } from "@/components/ui/checkbox";
 
 export function OfficeSettingsForm() {
   const queryClient = useQueryClient();
@@ -164,7 +165,7 @@ export function OfficeSettingsForm() {
       <CardContent className="space-y-8">
         {/* HERO */}
         <div className="space-y-4">
-          <div className="font-semibold">Херой</div>
+          <div className="font-semibold">Шапка</div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <Label>Заголовок (UA)</Label>
@@ -189,7 +190,13 @@ export function OfficeSettingsForm() {
 
         {/* SUPPLY */}
         <div className="space-y-4">
-          <div className="font-semibold">Постачання</div>
+          <div className="flex items-center justify-between">
+            <div className="font-semibold">Постачання</div>
+            <div className="flex items-center gap-2">
+              <Checkbox id="hide_supply" checked={(form as any).hide_supply || false} onCheckedChange={(checked) => updateField('hide_supply' as any, Boolean(checked))} />
+              <Label htmlFor="hide_supply">Сховати</Label>
+            </div>
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <Label>Заголовок (UA)</Label>
@@ -414,7 +421,19 @@ export function OfficeSettingsForm() {
 
         {/* Знижки та переваги */}
         <div className="space-y-4">
-          <div className="font-semibold">Знижки та переваги</div>
+          <div className="flex items-center justify-between">
+            <div className="font-semibold">Знижки та переваги</div>
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <Checkbox id="hide_discounts" checked={(form as any).hide_discounts || false} onCheckedChange={(checked) => updateField('hide_discounts' as any, Boolean(checked))} />
+                <Label htmlFor="hide_discounts">Сховати знижки</Label>
+              </div>
+              <div className="flex items-center gap-2">
+                <Checkbox id="hide_benefits" checked={(form as any).hide_benefits || false} onCheckedChange={(checked) => updateField('hide_benefits' as any, Boolean(checked))} />
+                <Label htmlFor="hide_benefits">Сховати переваги</Label>
+              </div>
+            </div>
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <Label>Бейдж (UA)</Label>
@@ -565,7 +584,13 @@ export function OfficeSettingsForm() {
 
         {/* CTA */}
         <div className="space-y-4">
-          <div className="font-semibold">CTA</div>
+          <div className="flex items-center justify-between">
+            <div className="font-semibold">CTA</div>
+            <div className="flex items-center gap-2">
+              <Checkbox id="hide_cta" checked={(form as any).hide_cta || false} onCheckedChange={(checked) => updateField('hide_cta' as any, Boolean(checked))} />
+              <Label htmlFor="hide_cta">Сховати</Label>
+            </div>
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <Label>Заголовок (UA)</Label>

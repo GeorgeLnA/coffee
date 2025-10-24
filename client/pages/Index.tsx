@@ -11,6 +11,8 @@ import CoffeeBeanAnimation from "../components/CoffeeBeanAnimation";
 import { useLanguage } from "../contexts/LanguageContext";
 import SeasonCarousel from "../components/SeasonCarousel";
 import { useHomepageSettings, useFeaturedSlides } from "../hooks/use-supabase";
+import { usePageSections } from "@/hooks/use-supabase";
+import { CustomSection } from "@/components/CustomSection";
 
 export default function Index() {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -19,6 +21,7 @@ export default function Index() {
   // Fetch data from Supabase CMS
   const { data: homepageSettings } = useHomepageSettings();
   const { data: featuredSlides } = useFeaturedSlides();
+  const { data: customSections } = usePageSections('home');
   
   // Trade points state
   const [selectedTradePoint, setSelectedTradePoint] = useState(0);
@@ -239,6 +242,7 @@ export default function Index() {
       {/* <CoffeeBeanAnimation /> */}
 
       {/* We Create Something Unique - Dynamic Background */}
+      {!homepageSettings?.hide_season && (
       <section className="py-16 md:py-32 relative overflow-hidden z-10" style={{ backgroundColor: '#361c0c', marginTop: '100vh' }}>
         {/* Background Elements */}
         <div className="absolute top-20 left-20 w-32 h-32 bg-coffee-accent  blur-3xl opacity-10"></div>
@@ -296,8 +300,15 @@ export default function Index() {
           </div>
         </div>
       </section>
+      )}
+
+      {/* Custom sections at 'after-season' anchor */}
+      {(customSections || []).filter(s => s.anchor_key === 'after-season' && s.active !== false).map((s) => (
+        <CustomSection key={s.id} {...s} />
+      ))}
 
       {/* Video Section - Clean & Minimalistic */}
+      {!homepageSettings?.hide_video && (
       <section className="py-32 relative overflow-hidden" style={{ backgroundColor: '#361c0c' }}>
         <div className="max-w-8xl mx-auto px-6 lg:px-8 relative z-10">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-20 items-center">
@@ -350,8 +361,15 @@ export default function Index() {
           </div>
         </div>
       </section>
+      )}
+
+      {/* Custom sections at 'after-video' anchor */}
+      {(customSections || []).filter(s => s.anchor_key === 'after-video' && s.active !== false).map((s) => (
+        <CustomSection key={s.id} {...s} />
+      ))}
 
           {/* About Section - Clean & Minimalistic */}
+          {!homepageSettings?.hide_about && (
           <section className="py-32 relative overflow-hidden" style={{ backgroundColor: '#fcf4e4' }}>
         <div className="max-w-8xl mx-auto px-6 lg:px-8 relative z-10">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-20 items-center">
@@ -402,8 +420,15 @@ export default function Index() {
           </div>
         </div>
       </section>
+      )}
+
+      {/* Custom sections at 'after-about' anchor */}
+      {(customSections || []).filter(s => s.anchor_key === 'after-about' && s.active !== false).map((s) => (
+        <CustomSection key={s.id} {...s} />
+      ))}
 
       {/* Our Cafes - Clean & Minimalistic */}
+      {!homepageSettings?.hide_cafes && (
       <section className="py-32 relative overflow-hidden" style={{ backgroundColor: '#361c0c' }}>
         <div className="max-w-8xl mx-auto px-6 lg:px-8 relative z-10">
           {/* Header - Clean */}
@@ -478,8 +503,15 @@ export default function Index() {
 
         </div>
       </section>
+      )}
+
+      {/* Custom sections at 'after-cafes' anchor */}
+      {(customSections || []).filter(s => s.anchor_key === 'after-cafes' && s.active !== false).map((s) => (
+        <CustomSection key={s.id} {...s} />
+      ))}
 
           {/* News Section - Clean & Minimalistic */}
+          {!homepageSettings?.hide_news && (
           <section className="py-32 relative overflow-hidden" style={{ backgroundColor: '#fcf4e4' }}>
         <div className="max-w-8xl mx-auto px-6 lg:px-8 relative z-10">
           {/* Header - Clean */}
@@ -547,6 +579,12 @@ export default function Index() {
             </div>
         </div>
       </section>
+      )}
+
+      {/* Custom sections at 'after-news' anchor */}
+      {(customSections || []).filter(s => s.anchor_key === 'after-news' && s.active !== false).map((s) => (
+        <CustomSection key={s.id} {...s} />
+      ))}
 
       {/* Footer */}
       <Footer />

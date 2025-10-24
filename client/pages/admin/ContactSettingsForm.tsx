@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ContactSettings } from "@/hooks/use-supabase";
+import { Checkbox } from "@/components/ui/checkbox";
 
 export function ContactSettingsForm() {
   const queryClient = useQueryClient();
@@ -87,6 +88,15 @@ export function ContactSettingsForm() {
       </CardHeader>
       <CardContent className="space-y-8">
         {/* Titles */}
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="font-semibold">Загальні налаштування</div>
+            <div className="flex items-center gap-2">
+              <Checkbox id="hide_contact_info" checked={(form as any).hide_contact_info || false} onCheckedChange={(checked) => setForm({ ...(form as any), hide_contact_info: Boolean(checked) } as any)} />
+              <Label htmlFor="hide_contact_info">Сховати контакти</Label>
+            </div>
+          </div>
+        </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <Label>Заголовок (UA)</Label>
@@ -205,7 +215,13 @@ export function ContactSettingsForm() {
 
         {/* Trading header */}
         <div className="space-y-3">
-          <div className="font-semibold">Торгові точки — заголовки</div>
+          <div className="flex items-center justify-between">
+            <div className="font-semibold">Торгові точки — заголовки</div>
+            <div className="flex items-center gap-2">
+              <Checkbox id="hide_trade_points" checked={(form as any).hide_trade_points || false} onCheckedChange={(checked) => setForm({ ...(form as any), hide_trade_points: Boolean(checked) } as any)} />
+              <Label htmlFor="hide_trade_points">Сховати торгові точки</Label>
+            </div>
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <Label>Заголовок (UA)</Label>

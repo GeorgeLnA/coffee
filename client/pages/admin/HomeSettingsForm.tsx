@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { MediaUploader } from "@/components/ui/MediaUploader";
+import { Checkbox } from "@/components/ui/checkbox";
 
 type HomeSettings = {
   id: number;
@@ -121,7 +122,7 @@ export function HomeSettingsForm() {
     load();
   }, []);
 
-  const updateField = (key: keyof HomeSettings, value: string) => {
+  const updateField = (key: keyof HomeSettings, value: any) => {
     if (!form) return;
     setForm({ ...form, [key]: value });
   };
@@ -172,7 +173,13 @@ export function HomeSettingsForm() {
 
         {/* SEASON */}
         <div className="space-y-4">
-          <div className="font-semibold">Сезонний блок</div>
+          <div className="flex items-center justify-between">
+            <div className="font-semibold">Сезонний блок</div>
+            <div className="flex items-center gap-2">
+              <Checkbox id="hide_season" checked={!!form.hide_season} onCheckedChange={(checked) => updateField('hide_season' as any, Boolean(checked))} />
+              <Label htmlFor="hide_season">Сховати</Label>
+            </div>
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <Label htmlFor="season_title_ua">Заголовок (UA)</Label>
@@ -201,7 +208,13 @@ export function HomeSettingsForm() {
 
         {/* VIDEO UA */}
         <div className="space-y-4">
-          <div className="font-semibold">Відео (UA)</div>
+          <div className="flex items-center justify-between">
+            <div className="font-semibold">Відео (UA)</div>
+            <div className="flex items-center gap-2">
+              <Checkbox id="hide_video" checked={!!form.hide_video} onCheckedChange={(checked) => updateField('hide_video' as any, Boolean(checked))} />
+              <Label htmlFor="hide_video">Сховати</Label>
+            </div>
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <Label htmlFor="video_title1_ua">Заголовок 1</Label>
@@ -277,7 +290,13 @@ export function HomeSettingsForm() {
 
         {/* ABOUT */}
         <div className="space-y-4">
-          <div className="font-semibold">Про нас</div>
+          <div className="flex items-center justify-between">
+            <div className="font-semibold">Про нас</div>
+            <div className="flex items-center gap-2">
+              <Checkbox id="hide_about" checked={!!form.hide_about} onCheckedChange={(checked) => updateField('hide_about' as any, Boolean(checked))} />
+              <Label htmlFor="hide_about">Сховати</Label>
+            </div>
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <Label htmlFor="about_badge_ua">Бейдж (UA)</Label>
@@ -343,6 +362,34 @@ export function HomeSettingsForm() {
                 placeholder="https://...jpg"
               />
             </div>
+          </div>
+        </div>
+
+        {/* CAFES */}
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="font-semibold">Наші кафе</div>
+            <div className="flex items-center gap-2">
+              <Checkbox id="hide_cafes" checked={!!form.hide_cafes} onCheckedChange={(checked) => updateField('hide_cafes' as any, Boolean(checked))} />
+              <Label htmlFor="hide_cafes">Сховати</Label>
+            </div>
+          </div>
+          <div className="text-sm text-gray-600">
+            Секція з картою та списком кафе
+          </div>
+        </div>
+
+        {/* NEWS */}
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="font-semibold">Новини</div>
+            <div className="flex items-center gap-2">
+              <Checkbox id="hide_news" checked={!!form.hide_news} onCheckedChange={(checked) => updateField('hide_news' as any, Boolean(checked))} />
+              <Label htmlFor="hide_news">Сховати</Label>
+            </div>
+          </div>
+          <div className="text-sm text-gray-600">
+            Секція з новинними статтями
           </div>
         </div>
 

@@ -17,6 +17,7 @@ import { useToast } from "../hooks/use-toast";
 import { useCoffeeProducts } from "../hooks/use-supabase";
 import { CoffeeLabel } from "../components/CoffeeLabel";
 
+
 // Helper function to get translated description
 const getCoffeeDescription = (coffeeId: string, language: string) => {
   const descriptions = {
@@ -347,6 +348,11 @@ export default function Coffee() {
   const filteredCoffees = useMemo(() => {
     const source = (supaProducts && supaProducts.length) ? supaProducts : placeholderCoffees;
     const filtered = source.filter((coffee) => {
+      // Only show active products
+      if (coffee.active === false) {
+        return false;
+      }
+
       // Search filter
       if (filters.search && !coffee.name.toLowerCase().includes(filters.search.toLowerCase()) && 
           !coffee.origin.toLowerCase().includes(filters.search.toLowerCase())) {
@@ -608,11 +614,12 @@ export default function Coffee() {
                       className="group bg-white rounded-lg shadow-lg overflow-hidden hover:shadow-xl transition-all duration-300 flex flex-col"
                     >
                       {/* Image */}
-                      <div className="relative aspect-[4/5] overflow-hidden">
+                      <div className="relative aspect-[4/5] overflow-hidden" style={{ backgroundColor: '#fcf4e4' }}>
                         <img
                           src={coffee.image}
                           alt={coffee.name}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          className="object-cover group-hover:scale-105 transition-transform duration-300 absolute bottom-0 left-0"
+                          style={{ width: '80%', height: '80%' }}
                         />
                         
                         {/* Stock Status */}
@@ -624,9 +631,24 @@ export default function Coffee() {
                           </div>
                         )}
 
-                        {/* Coffee Label - Overlay on top of image */}
+                        {/* Custom Label */}
+                        {coffee.custom_label && (
+                          <div className={`absolute left-4 ${!coffee.inStock ? 'top-12' : 'top-4'}`}>
+                            <span 
+                              className="px-3 py-1 text-sm font-bold rounded-full shadow-lg"
+                              style={{
+                                backgroundColor: coffee.custom_label_color || '#f59e0b',
+                                color: coffee.custom_label_text_color || '#92400e'
+                              }}
+                            >
+                              {coffee.custom_label}
+                            </span>
+                          </div>
+                        )}
+
+                        {/* Coffee Label - Overlay on top right of image */}
                         {coffee.label_data ? (
-                          <div className="absolute top-4 right-4 w-[220px]">
+                          <div className="absolute top-4 right-4 w-[198px]">
                             <CoffeeLabel
                               coffeeName={coffee.name}
                               strength={coffee.strength_level || 3}
@@ -638,7 +660,7 @@ export default function Coffee() {
                             />
                           </div>
                         ) : (
-                          <div className="absolute top-4 right-4 bg-white/95 backdrop-blur-sm rounded-lg p-3 shadow-lg w-[220px]">
+                          <div className="absolute top-4 right-4 bg-white/95 backdrop-blur-sm rounded-lg p-3 shadow-lg w-[198px]">
                             <div className="text-center">
                               <div className="text-xs font-black uppercase tracking-wider mb-2" style={{ color: '#361c0c' }}>
                                 {coffee.origin.toUpperCase()}
@@ -731,21 +753,9 @@ export default function Coffee() {
                         </h3>
 
                         <p className="text-gray-600 mb-4 text-sm leading-relaxed flex-grow">
-                          {getCoffeeDescription(coffee.id, language)}
+                          {coffee.description}
                         </p>
 
-                        {/* Flavor Notes */}
-                        <div className="flex flex-wrap gap-2 mb-4">
-                          {coffee.flavorNotes.slice(0, 3).map((note) => (
-                            <span
-                              key={note}
-                              className="px-2 py-1 text-xs font-medium rounded-full"
-                              style={{ backgroundColor: '#fcf4e4', color: '#361c0c' }}
-                            >
-                              {translateFlavorNote(note, language)}
-                            </span>
-                          ))}
-                        </div>
 
                         {/* Price and Add to Cart */}
                         <div className="flex flex-col space-y-4 mt-auto">

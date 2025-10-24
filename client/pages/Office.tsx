@@ -1,12 +1,15 @@
 import { Phone, Mail, ArrowRight, Percent, Building2, Coffee, Droplet, CupSoda, Shield, Clock, Truck } from "lucide-react";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
+import { usePageSections } from "@/hooks/use-supabase";
+import { CustomSection } from "@/components/CustomSection";
 import { useLanguage } from "../contexts/LanguageContext";
 import { useOfficeSettings } from "../hooks/use-supabase";
 
 export default function Office() {
   const { t, language } = useLanguage();
   const { data: office } = useOfficeSettings();
+  const { data: customSections } = usePageSections('office');
   const pick = (ua?: string | null, ru?: string | null, fallback: string = "") => (language === 'ru' ? (ru ?? ua ?? fallback) : (ua ?? ru ?? fallback));
 
   const supplies = [
@@ -98,7 +101,13 @@ export default function Office() {
         </div>
       </section>
 
+      {/* Custom sections at 'after-hero' anchor */}
+      {(customSections || []).filter(s => s.anchor_key === 'after-hero' && s.active !== false).map((s) => (
+        <CustomSection key={s.id} {...s} />
+      ))}
+
       {/* What we supply */}
+      {!office?.hide_supply && (
       <section className="py-20" style={{ backgroundColor: '#fcf4e4' }}>
         <div className="max-w-8xl mx-auto px-6 lg:px-8">
           <div className="text-center mb-14">
@@ -137,12 +146,20 @@ export default function Office() {
           </div>
         </div>
       </section>
+      )}
+
+      {/* Custom sections at 'after-supply' anchor */}
+      {(customSections || []).filter(s => s.anchor_key === 'after-supply' && s.active !== false).map((s) => (
+        <CustomSection key={s.id} {...s} />
+      ))}
 
       {/* Discounts & Benefits */}
+      {!(office?.hide_discounts && office?.hide_benefits) && (
       <section className="py-20" style={{ backgroundColor: '#361c0c' }}>
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-start">
             {/* Discounts */}
+            {!office?.hide_discounts && (
             <div>
               <div className="inline-flex items-center gap-2 px-4 py-2 mb-4" style={{ backgroundColor: '#fcf4e4' + '10' }}>
                 <Percent className="w-4 h-4" style={{ color: '#fcf4e4' }} />
@@ -188,8 +205,10 @@ export default function Office() {
                 </ul>
               </div>
             </div>
+            )}
 
             {/* Benefits */}
+            {!office?.hide_benefits && (
             <div className="space-y-6">
               {benefits.map((b, i) => (
                 <div key={i} className="flex items-start gap-4 p-6 rounded-lg border border-white/10" style={{ backgroundColor: '#fcf4e4' + '10' }}>
@@ -207,11 +226,19 @@ export default function Office() {
                 </div>
               ))}
             </div>
+            )}
           </div>
         </div>
       </section>
+      )}
+
+      {/* Custom sections at 'after-benefits' anchor */}
+      {(customSections || []).filter(s => s.anchor_key === 'after-benefits' && s.active !== false).map((s) => (
+        <CustomSection key={s.id} {...s} />
+      ))}
 
       {/* CTA */}
+      {!office?.hide_cta && (
       <section className="py-20" style={{ backgroundColor: '#fcf4e4' }}>
         <div className="max-w-4xl mx-auto px-6 lg:px-8 text-center">
           <h3 className="text-3xl md:text-5xl font-black mb-6 font-coolvetica tracking-wider" style={{ color: '#361c0c' }}>
@@ -238,6 +265,12 @@ export default function Office() {
           </div>
         </div>
       </section>
+      )}
+
+      {/* Custom sections at 'after-cta' anchor */}
+      {(customSections || []).filter(s => s.anchor_key === 'after-cta' && s.active !== false).map((s) => (
+        <CustomSection key={s.id} {...s} />
+      ))}
 
       <Footer />
     </div>

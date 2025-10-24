@@ -1,6 +1,8 @@
 import { MapPin, Phone, Mail, Clock } from "lucide-react";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
+import { usePageSections } from "@/hooks/use-supabase";
+import { CustomSection } from "@/components/CustomSection";
 import { useLanguage } from "../contexts/LanguageContext";
 import { useContactPoints, useContactSettings } from "../hooks/use-supabase";
 
@@ -8,6 +10,7 @@ export default function Contact() {
   const { t, language } = useLanguage();
   const { data: settings } = useContactSettings();
   const { data: points } = useContactPoints();
+  const { data: customSections } = usePageSections('contact');
   const pick = (ua?: string | null, ru?: string | null, fallback: string = "") => (language === 'ru' ? (ru ?? ua ?? fallback) : (ua ?? ru ?? fallback));
 
   const contactInfo = [
@@ -59,6 +62,7 @@ export default function Contact() {
 
 
       {/* Contact Information */}
+      {!settings?.hide_contact_info && (
       <section className="pt-40 pb-20 relative overflow-hidden" style={{ backgroundColor: '#fcf4e4' }}>
         <div className="max-w-8xl mx-auto px-6 lg:px-8 relative z-10">
           <div className="text-center mb-16">
@@ -93,8 +97,15 @@ export default function Contact() {
           </div>
         </div>
       </section>
+      )}
+
+      {/* Custom sections at 'after-contact' anchor */}
+      {(customSections || []).filter(s => s.anchor_key === 'after-contact' && s.active !== false).map((s) => (
+        <CustomSection key={s.id} {...s} />
+      ))}
 
       {/* Trading Points */}
+      {!settings?.hide_trade_points && (
       <section className="py-20 relative overflow-hidden" style={{ backgroundColor: '#361c0c' }}>
         <div className="max-w-8xl mx-auto px-6 lg:px-8 relative z-10">
           <div className="text-center mb-16">
@@ -136,6 +147,12 @@ export default function Contact() {
           </div>
         </div>
       </section>
+      )}
+
+      {/* Custom sections at 'after-trade' anchor */}
+      {(customSections || []).filter(s => s.anchor_key === 'after-trade' && s.active !== false).map((s) => (
+        <CustomSection key={s.id} {...s} />
+      ))}
 
       {/* Footer */}
       <Footer />

@@ -5,44 +5,13 @@ import Footer from "../components/Footer";
 import { useLanguage } from "../contexts/LanguageContext";
 import { useCart } from "../contexts/CartContext";
 import { useToast } from "../hooks/use-toast";
+import { useWaterProducts } from "../hooks/use-supabase";
 
 export default function Water() {
   const { t } = useLanguage();
   const { addItem, items, updateQuantity, removeItem } = useCart();
   const { toast } = useToast();
-
-  const waterProducts = [
-    {
-      id: 1,
-      name: t('water.product1Name'),
-      description: t('water.product1Desc'),
-      price: "85₴",
-      volume: "5L",
-      features: [
-        t('water.product1Feature1'),
-        t('water.product1Feature2'),
-        t('water.product1Feature3'),
-        t('water.product1Feature4')
-      ],
-      image: "/dreamstime_xl_12522351.jpg",
-      popular: true
-    },
-    {
-      id: 2,
-      name: t('water.product2Name'),
-      description: t('water.product2Desc'),
-      price: "250₴",
-      volume: "20L",
-      features: [
-        t('water.product2Feature1'),
-        t('water.product2Feature2'),
-        t('water.product2Feature3'),
-        t('water.product2Feature4')
-      ],
-      image: "/dreamstime_xl_12522351.jpg",
-      popular: false
-    }
-  ];
+  const { data: waterProducts = [], isLoading } = useWaterProducts();
 
   const benefits = [
     {
@@ -88,7 +57,16 @@ export default function Water() {
            </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 max-w-6xl mx-auto items-stretch">
-           {waterProducts.map((product) => (
+           {isLoading ? (
+             <div className="col-span-2 text-center py-12">
+               <div className="text-lg">Завантаження...</div>
+             </div>
+           ) : waterProducts.length === 0 ? (
+             <div className="col-span-2 text-center py-12">
+               <div className="text-lg">Немає доступних продуктів</div>
+             </div>
+           ) : (
+             waterProducts.filter(product => product.active).map((product) => (
              <Link 
                key={product.id}
                to={`/water/${product.id}`}
@@ -120,7 +98,7 @@ export default function Water() {
                        {product.name}
                      </h3>
                      <span className="text-2xl font-black" style={{ color: '#361c0c' }}>
-                       {product.price}
+                       ₴{product.price}
                      </span>
                    </div>
 
@@ -147,7 +125,7 @@ export default function Water() {
 
                   {/* Inline Cart Controls */}
                   {(() => {
-                    const productId = product.volume === '5L' ? 'water-5L' : 'water-20L';
+                    const productId = `water-${product.id}`;
                     const cartItem = items.find(it => it.productId === productId);
                     const isInCart = cartItem && cartItem.quantity > 0;
 
@@ -166,14 +144,13 @@ export default function Water() {
                     const handleAddFromCard = (e: React.MouseEvent) => {
                       e.preventDefault();
                       e.stopPropagation();
-                      const numericPrice = parseFloat(String(product.price).replace(/[^0-9.]/g, ''));
+                      const numericPrice = product.price;
                       addItem({
                         productId,
-                        name: `${product.name}`,
+                        name: product.name,
                         image: product.image,
                         price: isNaN(numericPrice) ? 0 : numericPrice,
                         quantity: 1,
-                        variant: product.volume,
                         type: 'water',
                       });
                       toast({
@@ -221,7 +198,8 @@ export default function Water() {
                   })()}
                  </div>
              </Link>
-            ))}
+             ))
+           )}
           </div>
          </div>
        </section>

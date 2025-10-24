@@ -15,12 +15,20 @@ export interface DemoResponse {
  * Coffee label data interface
  */
 export interface CoffeeLabelData {
-  // Predefined template id (one of six curated options)
-  template: 'classic' | 'caramel' | 'emerald' | 'indigo' | 'crimson' | 'gold';
+  // Predefined template id (one of six curated options) or custom
+  template: 'classic' | 'caramel' | 'emerald' | 'indigo' | 'crimson' | 'gold' | 'custom';
   // Label size
   size: 'small' | 'medium' | 'large';
   // Flavor notes to render on the label
   flavor_notes?: string[];
+  // Pattern for the label background
+  pattern?: 'dots' | 'stripes' | 'grid' | 'geometric' | 'waves' | 'stars' | 'leaves' | 'diamonds' | 'lines';
+  // Custom colors when template is 'custom'
+  customColors?: {
+    bg: string;
+    text: string;
+    accent: string;
+  };
 }
 
 /**
@@ -28,6 +36,7 @@ export interface CoffeeLabelData {
  */
 export interface CoffeeProduct {
   id: string;
+  slug?: string;
   name: string;
   origin: string;
   roast: 'light' | 'medium' | 'dark';
@@ -41,6 +50,10 @@ export interface CoffeeProduct {
   process: 'washed' | 'natural' | 'honey' | 'semi-washed';
   elevation: number; // in meters
   inStock: boolean;
+  active?: boolean;
+  custom_label?: string | null;
+  custom_label_color?: string | null;
+  custom_label_text_color?: string | null;
   // New fields for custom labels and metrics
   strength_level?: number;
   acidity_level?: number;
@@ -58,4 +71,51 @@ export interface CoffeeFilters {
   roasts: string[];
   priceRange: [number, number];
   inStock: boolean | null;
+}
+
+/**
+ * LiqPay client-side types (no private key needed)
+ */
+export interface LiqPayConfig {
+  version: number;
+  public_key: string;
+  action: string;
+  amount: number;
+  currency: string;
+  description: string;
+  order_id: string;
+  result_url?: string;
+  server_url?: string;
+  language?: string;
+  paytypes?: string;
+  sandbox?: number;
+  info?: string;
+  customer?: string;
+}
+
+export interface LiqPayCheckoutInit {
+  data: string; // base64-encoded config
+  signature: string; // empty for client-side
+  language: string;
+  mode: "embed" | "popup";
+}
+
+export type LiqPayStatus =
+  | "success"
+  | "wait_accept"
+  | "sandbox"
+  | "failure"
+  | "error"
+  | "reversed"
+  | "subscribed"
+  | "unsubscribed"
+  | "processing";
+
+export interface LiqPayCallbackData {
+  status: LiqPayStatus;
+  order_id: string;
+  transaction_id?: number;
+  amount?: number;
+  currency?: string;
+  [key: string]: unknown;
 }

@@ -1,5 +1,5 @@
 import { ArrowRight, CheckCircle, Plus, Minus, Phone, Mail } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
 import { useLanguage } from "../contexts/LanguageContext";
@@ -7,12 +7,14 @@ import { useCart } from "../contexts/CartContext";
 import AddToCartModal from "../components/AddToCartModal";
 import { useToast } from "../hooks/use-toast";
 import { useState } from "react";
+import { useWaterProduct } from "../hooks/use-supabase";
 
 export default function WaterProduct() {
   const { t } = useLanguage();
   const { addItem, items, updateQuantity, removeItem } = useCart();
   const { toast } = useToast();
-  const [selectedSize, setSelectedSize] = useState<'5L' | '20L'>('5L');
+  const { id } = useParams();
+  const { data: product, isLoading } = useWaterProduct(id || '');
   const [quantity, setQuantity] = useState(1);
   const [modalOpen, setModalOpen] = useState(false);
   const [addedItem, setAddedItem] = useState<{name: string, image?: string, quantity: number} | null>(null);
@@ -27,46 +29,41 @@ export default function WaterProduct() {
   };
 
 
-  const waterProduct = {
-    name: t('water.productName'),
-    description: t('water.productDescription'),
-    image: "/dreamstime_xl_12522351.jpg",
-    features: [
-      t('water.feature1'),
-      t('water.feature2'),
-      t('water.feature3'),
-      t('water.feature4')
-    ]
-  };
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-[#fcf4e4]">
+        <Header />
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <div className="text-lg">Завантаження...</div>
+        </div>
+        <Footer />
+      </div>
+    );
+  }
 
-  const sizes = [
-    {
-      size: '5L',
-      price: '85₴',
-      description: t('water.size5LDesc'),
-      popular: true
-    },
-    {
-      size: '20L',
-      price: '250₴',
-      description: t('water.size20LDesc'),
-      popular: false
-    }
-  ];
+  if (!product) {
+    return (
+      <div className="min-h-screen bg-[#fcf4e4]">
+        <Header />
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <div className="text-lg">Продукт не знайдено</div>
+        </div>
+        <Footer />
+      </div>
+    );
+  }
 
-  const selectedSizeData = sizes.find(s => s.size === selectedSize)!;
 
   const handleOrder = () => {
-    const numericPrice = parseFloat(selectedSizeData.price.replace(/[^0-9.]/g, ''));
-    const itemName = `${waterProduct.name} ${selectedSize}`;
+    const numericPrice = product.price;
+    const itemName = product.name;
     
     addItem({
-      productId: `water-${selectedSize}`,
+      productId: `water-${product.id}`,
       name: itemName,
-      image: waterProduct.image,
+      image: product.image,
       price: isNaN(numericPrice) ? 0 : numericPrice,
       quantity,
-      variant: selectedSize,
       type: 'water',
     });
     
@@ -81,7 +78,7 @@ export default function WaterProduct() {
     if (!hasSeenModal()) {
       setAddedItem({
         name: itemName,
-        image: waterProduct.image,
+        image: product.image,
         quantity: quantity
       });
       setModalOpen(true);
@@ -102,7 +99,7 @@ export default function WaterProduct() {
               {t('nav.water')}
             </Link>
             <span>/</span>
-            <span className="text-white">{waterProduct.name}</span>
+            <span className="text-white">{product.name}</span>
           </nav>
         </div>
       </section>
@@ -116,8 +113,8 @@ export default function WaterProduct() {
             <div className="relative">
               <div className="aspect-square overflow-hidden rounded-lg">
                 <img 
-                  src={waterProduct.image} 
-                  alt={waterProduct.name}
+                  src={product.image} 
+                  alt={product.name}
                   className="w-full h-full object-cover"
                 />
               </div>
@@ -127,64 +124,25 @@ export default function WaterProduct() {
             <div className="space-y-8">
               <div>
                 <h1 className="text-4xl lg:text-5xl font-black mb-6 leading-tight font-coolvetica tracking-wider" style={{ color: '#fcf4e4' }}>
-                  {waterProduct.name}
+                  {product.name}
                 </h1>
                 <p className="text-xl font-medium leading-relaxed mb-8" style={{ color: '#fcf4e4' }}>
-                  {waterProduct.description}
+                  {product.description}
                 </p>
               </div>
 
-              {/* Size Selection */}
+              {/* Price Display */}
               <div>
                 <h3 className="text-2xl font-black mb-6" style={{ color: '#fcf4e4' }}>
-                  {t('water.chooseSize')}
+                  Ціна
                 </h3>
-                <div className="space-y-4">
-                  {sizes.map((size) => (
-                    <div 
-                      key={size.size}
-                      className={`p-6 rounded-lg border-2 cursor-pointer transition-all duration-300 ${
-                        selectedSize === size.size 
-                          ? 'border-[#fcf4e4] bg-[#fcf4e4]/10' 
-                          : 'border-white/20 hover:border-white/40'
-                      }`}
-                      onClick={() => setSelectedSize(size.size as '5L' | '20L')}
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-4">
-                          <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
-                            selectedSize === size.size 
-                              ? 'border-[#fcf4e4] bg-[#fcf4e4]' 
-                              : 'border-white/40'
-                          }`}>
-                            {selectedSize === size.size && (
-                              <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: '#361c0c' }}></div>
-                            )}
-                          </div>
-                          <div>
-                            <h4 className="text-2xl font-black" style={{ color: '#fcf4e4' }}>
-                              {size.size}
-                            </h4>
-                            <p className="text-lg font-medium" style={{ color: '#fcf4e4' }}>
-                              {size.description}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <div className="text-3xl font-black mb-1" style={{ color: '#fcf4e4' }}>
-                            {size.price}
-                          </div>
-                          {size.popular && (
-                            <span className="px-3 py-1 text-sm font-bold rounded-full" style={{ backgroundColor: '#fcf4e4', color: '#361c0c' }}>
-                              {t('water.popular')}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                 </div>
-               </div>
+                <div className="text-4xl font-black mb-4" style={{ color: '#fcf4e4' }}>
+                  ₴{product.price}
+                </div>
+                <div className="text-lg font-medium" style={{ color: '#fcf4e4' }}>
+                  {product.volume}
+                </div>
+              </div>
 
                {/* Quantity */}
                <div>

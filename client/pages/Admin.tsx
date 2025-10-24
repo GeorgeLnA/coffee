@@ -11,6 +11,8 @@ import { OfficeSettingsForm } from "@/pages/admin/OfficeSettingsForm";
 import { ContactSettingsForm } from "@/pages/admin/ContactSettingsForm";
 import { ContactTradePointsForm } from "@/pages/admin/ContactTradePointsForm";
 import { CoffeeProductsManager } from "@/pages/admin/CoffeeProductsManager";
+import { WaterProductsManager } from "@/pages/admin/WaterProductsManager";
+import { CustomSectionsManager } from "@/pages/admin/CustomSectionsManager";
 import {
   SidebarProvider,
   Sidebar,
@@ -23,12 +25,13 @@ import {
   SidebarTrigger,
   SidebarRail,
 } from "@/components/ui/sidebar";
-import { FileText, Boxes, Settings as SettingsIcon, ShoppingCart, Search } from "lucide-react";
+import { FileText, Boxes, ShoppingCart, BarChart3 } from "lucide-react";
+import { AdminAnalytics } from "@/pages/admin/AdminAnalytics";
 
 export default function Admin() {
   const [isAuthed, setIsAuthed] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(true);
-  const [section, setSection] = useState<"pages" | "cards" | "settings" | "orders" | "seo">("pages");
+  const [section, setSection] = useState<"pages" | "cards" | "orders" | "analysis">("pages");
 
   useEffect(() => {
     const init = async () => {
@@ -116,26 +119,14 @@ export default function Admin() {
               </SidebarMenuItem>
               <SidebarMenuItem>
                 <SidebarMenuButton
-                  isActive={section === "seo"}
-                  onClick={() => setSection("seo")}
-                  tooltip="SEO"
+                  isActive={section === "analysis"}
+                  onClick={() => setSection("analysis")}
+                  tooltip="Аналіз"
                   size="lg"
                   className="w-full justify-start h-16 text-lg font-semibold px-4"
                 >
-                  <Search className="h-8 w-8" />
-                  <span>SEO</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  isActive={section === "settings"}
-                  onClick={() => setSection("settings")}
-                  tooltip="Налаштування"
-                  size="lg"
-                  className="w-full justify-start h-16 text-lg font-semibold px-4"
-                >
-                  <SettingsIcon className="h-8 w-8" />
-                  <span>Налаштування</span>
+                  <BarChart3 className="h-8 w-8" />
+                  <span>Аналіз</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>
@@ -159,6 +150,7 @@ export default function Admin() {
                 <TabsTrigger value="office">Для офісу</TabsTrigger>
                 <TabsTrigger value="contact">Контакти</TabsTrigger>
                 <TabsTrigger value="trade-points">Точки продажу</TabsTrigger>
+                <TabsTrigger value="custom-sections">Кастомні секції</TabsTrigger>
               </TabsList>
               <TabsContent value="home">
                 <HomeSettingsForm />
@@ -172,6 +164,9 @@ export default function Admin() {
               <TabsContent value="trade-points">
                 <ContactTradePointsForm />
               </TabsContent>
+              <TabsContent value="custom-sections">
+                <CustomSectionsManager />
+              </TabsContent>
             </Tabs>
           )}
 
@@ -179,10 +174,14 @@ export default function Admin() {
             <Tabs defaultValue="coffee" className="w-full">
               <TabsList>
                 <TabsTrigger value="coffee">Кава</TabsTrigger>
+                <TabsTrigger value="water">Вода</TabsTrigger>
                 <TabsTrigger value="featured">Сезонні слайди</TabsTrigger>
               </TabsList>
               <TabsContent value="coffee">
                 <CoffeeProductsManager />
+              </TabsContent>
+              <TabsContent value="water">
+                <WaterProductsManager />
               </TabsContent>
               <TabsContent value="featured">
                 <FeaturedProductsManager />
@@ -203,66 +202,11 @@ export default function Admin() {
             </div>
           )}
 
-          {section === "seo" && (
-            <div className="space-y-6">
-              <h2 className="text-xl font-semibold">SEO</h2>
-              <Card>
-                <CardContent className="p-6">
-                  <div className="text-sm text-muted-foreground">
-                    SEO налаштування — незабаром.
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
+          {section === "analysis" && (
+            <AdminAnalytics />
           )}
 
-          {section === "settings" && (
-            <Tabs defaultValue="pages" className="w-full">
-              <TabsList>
-                <TabsTrigger value="pages">Сторінки</TabsTrigger>
-                <TabsTrigger value="general">Загальні</TabsTrigger>
-                <TabsTrigger value="system">Система</TabsTrigger>
-              </TabsList>
-              <TabsContent value="pages">
-                <div className="space-y-6">
-                  <h3 className="text-lg font-semibold">Налаштування сторінок</h3>
-                  <Card>
-                    <CardContent className="p-6">
-                      <div className="text-sm text-muted-foreground">
-                        Налаштування сторінок сайту — незабаром.
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
-              </TabsContent>
-              <TabsContent value="general">
-                <div className="space-y-6">
-                  <h3 className="text-lg font-semibold">Загальні налаштування</h3>
-                  <Card>
-                    <CardContent className="p-6">
-                      <div className="text-sm text-muted-foreground">
-                        Загальні налаштування сайту — незабаром.
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
-              </TabsContent>
-              <TabsContent value="system">
-                <div className="space-y-6">
-                  <h3 className="text-lg font-semibold">Системні налаштування</h3>
-                  <Card>
-                    <CardContent className="p-6">
-                      <div className="text-sm text-muted-foreground">
-                        Системні налаштування — незабаром.
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
-              </TabsContent>
-            </Tabs>
-          )}
           </div>
-          <Footer />
         </SidebarInset>
       </SidebarProvider>
     </div>
