@@ -137,15 +137,18 @@ export default function Checkout() {
 
     try {
       setIsSubmitting(true);
+      const payload = {
+        customer: { fullName, phone, email },
+        shipping: { method: shippingMethod, city, cityRef, address, warehouseRef: selectedWarehouse, price: shippingPrice },
+        notes,
+        items,
+      };
+      console.log('Submitting order:', payload);
+      console.log('Items count:', items.length);
       const res = await fetch("/api/orders/prepare", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          customer: { fullName, phone, email },
-          shipping: { method: shippingMethod, city, cityRef, address, warehouseRef: selectedWarehouse, price: shippingPrice },
-          notes,
-          items,
-        }),
+        body: JSON.stringify(payload),
       });
 
       const data = await res.json();

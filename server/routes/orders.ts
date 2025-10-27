@@ -11,8 +11,12 @@ function sign(data: string, privateKey: string) {
 
 export const prepareOrder: RequestHandler = async (req, res) => {
   try {
+    console.log('prepareOrder received:', JSON.stringify(req.body, null, 2));
     const { customer, shipping, items, notes } = req.body as any;
+    console.log('Parsed:', { customer, shipping, itemsCount: items?.length, notes });
+    
     if (!customer || !items || !Array.isArray(items) || items.length === 0) {
+      console.error('Invalid payload - missing customer, items, or empty items array');
       return res.status(400).json({ error: 'Invalid order payload' });
     }
 
