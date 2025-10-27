@@ -7,8 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useFilterOptions } from "@/hooks/use-supabase";
 import { MediaUploader } from "@/components/ui/MediaUploader";
-import { CoffeeLabelGenerator } from "@/components/CoffeeLabelGenerator";
 import { ChevronUp, ChevronDown } from "lucide-react";
 
 type CoffeeSize = {
@@ -45,10 +45,13 @@ type CoffeeProduct = {
   roast?: string | null; // 'light' | 'medium' | 'dark'
   in_stock?: boolean | null;
   custom_label?: string | null;
+  custom_label_ru?: string | null;
   custom_label_color?: string | null;
   custom_label_text_color?: string | null;
   active?: boolean | null;
   flavor_notes_array?: string[] | null;
+  aftertaste_ua?: string[] | null;
+  aftertaste_ru?: string[] | null;
   metric_label_strength?: string | null;
   metric_label_acidity?: string | null;
   metric_label_roast?: string | null;
@@ -58,10 +61,14 @@ type CoffeeProduct = {
   roast_level?: number | null;
   body_level?: number | null;
   label_data?: CoffeeLabelData | null;
+  label_image_url?: string | null;
+  seo_keywords_ua?: string[] | null;
+  seo_keywords_ru?: string[] | null;
   sizes?: CoffeeSize[];
 };
 
 export function CoffeeProductsManager() {
+  const { data: filterOptions } = useFilterOptions('ua');
   const [products, setProducts] = useState<CoffeeProduct[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -91,7 +98,12 @@ export function CoffeeProductsManager() {
       
       return {
         ...p,
+        aftertaste_ua: Array.isArray(p.aftertaste_ua) ? p.aftertaste_ua : (Array.isArray(flavorNotesArray) ? flavorNotesArray : []),
+        aftertaste_ru: Array.isArray(p.aftertaste_ru) ? p.aftertaste_ru : (Array.isArray(flavorNotesArray) ? flavorNotesArray : []),
         flavor_notes_array: flavorNotesArray,
+        seo_keywords_ua: Array.isArray(p.seo_keywords_ua) ? p.seo_keywords_ua : [],
+        seo_keywords_ru: Array.isArray(p.seo_keywords_ru) ? p.seo_keywords_ru : [],
+        label_image_url: p.label_image_url || null,
         sizes: (p.coffee_sizes || []).sort((a: any, b: any) => (a.sort ?? 0) - (b.sort ?? 0))
       };
     });
@@ -101,30 +113,7 @@ export function CoffeeProductsManager() {
 
   useEffect(() => { load(); }, []);
 
-  // Sync flavor_notes_array with label_data whenever products change
-  useEffect(() => {
-    const syncedProducts = products.map(p => {
-      if (p.flavor_notes_array && p.flavor_notes_array.length > 0 && p.label_data) {
-        return {
-          ...p,
-          label_data: {
-            ...p.label_data,
-            flavor_notes: p.flavor_notes_array
-          }
-        };
-      }
-      return p;
-    });
-    
-    // Only update if there's actually a change to avoid infinite loops
-    const hasChanges = syncedProducts.some((p, idx) => 
-      p.label_data?.flavor_notes !== products[idx]?.label_data?.flavor_notes
-    );
-    
-    if (hasChanges) {
-      setProducts(syncedProducts);
-    }
-  }, [products.map(p => p.flavor_notes_array).join(',')]);
+  // No auto-sync between label_data and aftertaste; keep them separate
 
   const addProduct = (event?: React.MouseEvent) => {
     if (event) {
@@ -144,12 +133,15 @@ export function CoffeeProductsManager() {
         roast: 'medium',
         in_stock: true,
         custom_label: null,
+        custom_label_ru: null,
         active: true,
         flavor_notes_array: [],
+        aftertaste_ua: [],
+        aftertaste_ru: [],
         sort: maxSort + 1,
         metric_label_strength: 'Міцність',
         metric_label_acidity: 'Кислотність',
-        metric_label_roast: 'Обсмажування',
+        metric_label_roast: 'Обробка',
         metric_label_body: 'Насиченість',
         strength_level: 3,
         acidity_level: 3,
@@ -228,14 +220,8 @@ export function CoffeeProductsManager() {
     setError(null);
     const p = override ?? products[pIdx];
     
-    // Sync flavor_notes_array with label_data before saving
+    // Keep label_data independent of aftertaste fields
     let syncedLabelData = p.label_data;
-    if (p.flavor_notes_array && p.flavor_notes_array.length > 0) {
-      syncedLabelData = {
-        ...p.label_data,
-        flavor_notes: p.flavor_notes_array
-      };
-    }
     
     // Upsert product
     const productPayload = {
@@ -251,10 +237,13 @@ export function CoffeeProductsManager() {
       roast: p.roast,
       in_stock: p.in_stock,
       custom_label: p.custom_label,
+      custom_label_ru: p.custom_label_ru,
       custom_label_color: p.custom_label_color,
       custom_label_text_color: p.custom_label_text_color,
       active: p.active,
       flavor_notes_array: (p.flavor_notes_array || null) as any,
+      aftertaste_ua: (p.aftertaste_ua || null) as any,
+      aftertaste_ru: (p.aftertaste_ru || null) as any,
       metric_label_strength: p.metric_label_strength,
       metric_label_acidity: p.metric_label_acidity,
       metric_label_roast: p.metric_label_roast,
@@ -264,6 +253,9 @@ export function CoffeeProductsManager() {
       roast_level: p.roast_level,
       body_level: p.body_level,
       label_data: syncedLabelData,
+      label_image_url: p.label_image_url ?? null,
+      seo_keywords_ua: (p.seo_keywords_ua || null) as any,
+      seo_keywords_ru: (p.seo_keywords_ru || null) as any,
     };
     let productId = p.id;
     if (!productId) {
@@ -468,44 +460,110 @@ export function CoffeeProductsManager() {
                 </div>
 
 
-              {/* Flavor notes (comma-separated -> array) */}
+              {/* Aftertaste fields */}
               <div>
-                <Label>Післясмак (через кому)</Label>
+                <Label>Післясмак (UA, через кому)</Label>
                 <Input
                   placeholder="шоколад, карамель, горіхи"
-                  value={(p.flavor_notes_array || []).join(', ')}
+                  value={(p.aftertaste_ua || []).join(', ')}
                   onChange={(e) => {
                     const raw = e.target.value || '';
                     const arr = raw
                       .split(',')
                       .map(s => s.trim())
                       .filter(Boolean);
-                    
-                    // Update both flavor_notes_array and label_data
                     const next = [...products];
-                    next[pIdx].flavor_notes_array = arr;
-                    
-                    // Sync with label_data if it exists
-                    if (next[pIdx].label_data) {
-                      next[pIdx].label_data = {
-                        ...next[pIdx].label_data,
-                        flavor_notes: arr
-                      };
-                    }
-                    
+                    next[pIdx].aftertaste_ua = arr;
                     setProducts(next);
                   }}
                 />
               </div>
 
+              <div>
+                <Label>Послевкусие (RU, через запятую)</Label>
+                <Input
+                  placeholder="шоколад, карамель, орехи"
+                  value={(p.aftertaste_ru || []).join(', ')}
+                  onChange={(e) => {
+                    const raw = e.target.value || '';
+                    const arr = raw
+                      .split(',')
+                      .map(s => s.trim())
+                      .filter(Boolean);
+                    const next = [...products];
+                    next[pIdx].aftertaste_ru = arr;
+                    setProducts(next);
+                  }}
+                />
+              </div>
+
+              {/* Coffee Characteristics Editor - separate from label generator */}
+              <div className="space-y-4 border-t border-gray-200 pt-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-semibold">Характеристики кави</h3>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label>Міцність (1-5)</Label>
+                    <Input
+                      type="number"
+                      min="1"
+                      max="5"
+                      value={p.strength_level ?? 3}
+                      onChange={(e) => updateProductField(pIdx, 'strength_level', Number(e.target.value))}
+                    />
+                  </div>
+                  <div>
+                    <Label>Кислотність (1-5)</Label>
+                    <Input
+                      type="number"
+                      min="1"
+                      max="5"
+                      value={p.acidity_level ?? 3}
+                      onChange={(e) => updateProductField(pIdx, 'acidity_level', Number(e.target.value))}
+                    />
+                  </div>
+                  <div>
+                    <Label>Обробка (1-5)</Label>
+                    <Input
+                      type="number"
+                      min="1"
+                      max="5"
+                      value={p.roast_level ?? 3}
+                      onChange={(e) => updateProductField(pIdx, 'roast_level', Number(e.target.value))}
+                    />
+                  </div>
+                  <div>
+                    <Label>Насиченість (1-5)</Label>
+                    <Input
+                      type="number"
+                      min="1"
+                      max="5"
+                      value={p.body_level ?? 3}
+                      onChange={(e) => updateProductField(pIdx, 'body_level', Number(e.target.value))}
+                    />
+                  </div>
+                </div>
+                <p className="text-xs text-gray-500">Ці характеристики відображаються на сторінці продукту з coffee bean іконками</p>
+              </div>
+
               {/* Custom Label with Color Picker */}
               <div className="space-y-3">
                 <div>
-                  <Label className="text-sm font-medium">Кастомна мітка</Label>
+                  <Label className="text-sm font-medium">Кастомна мітка (UA)</Label>
                   <Input
                     placeholder="Наприклад: Рекомендований, Новий, Популярний..."
                     value={p.custom_label ?? ''}
                     onChange={(e) => updateProductField(pIdx, 'custom_label', e.target.value)}
+                    className="w-full"
+                  />
+                </div>
+                <div>
+                  <Label className="text-sm font-medium">Кастомна мітка (RU)</Label>
+                  <Input
+                    placeholder="Например: Рекомендуемый, Новый, Популярный..."
+                    value={p.custom_label_ru ?? ''}
+                    onChange={(e) => updateProductField(pIdx, 'custom_label_ru', e.target.value)}
                     className="w-full"
                   />
                 </div>
@@ -551,11 +609,32 @@ export function CoffeeProductsManager() {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
                     <Label>Походження</Label>
-                    <Input value={p.origin ?? ''} onChange={(e) => updateProductField(pIdx, 'origin', e.target.value)} />
+                    <Select value={p.origin ?? ''} onValueChange={(v) => updateProductField(pIdx, 'origin', v)}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Оберіть країну" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {(filterOptions?.origins || []).map((o) => (
+                          <SelectItem key={o} value={o}>{o}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div>
-                    <Label>Обсмажування</Label>
-                    <Input value={p.roast ?? ''} onChange={(e) => updateProductField(pIdx, 'roast', e.target.value)} placeholder="light | medium | dark" />
+                    <Label>Обробка</Label>
+                    <Select value={p.roast ?? ''} onValueChange={(v) => updateProductField(pIdx, 'roast', v)}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Оберіть рівень" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {(filterOptions?.roasts || []).map((r) => {
+                          const label = r === 'light' ? 'Світле' : r === 'medium' ? 'Середнє' : r === 'dark' ? 'Темне' : r;
+                          return (
+                            <SelectItem key={r} value={r}>{label}</SelectItem>
+                          );
+                        })}
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div className="flex flex-wrap items-end gap-x-6 gap-y-3">
                     <div className="flex items-center gap-2 whitespace-nowrap">
@@ -617,6 +696,7 @@ export function CoffeeProductsManager() {
                         <div>
                           <Label>Зображення розміру</Label>
                           <MediaUploader
+                            label="Зображення"
                             value={s.image_url ?? ''}
                             onChange={(url) => updateSizeField(pIdx, sIdx, 'image_url', url)}
                             accept="image/*"
@@ -642,16 +722,47 @@ export function CoffeeProductsManager() {
                   </div>
                 </div>
 
-                {/* Create Label Button */}
-                <div className="flex justify-center">
-                  <Button 
-                    variant="outline" 
-                    onClick={() => setSelectedProductForLabel(pIdx)}
-                    className="px-12 py-3 bg-white text-gray-900 border-gray-300 hover:bg-gray-50 w-64"
-                  >
-                    Створити мітку
-                  </Button>
+                {/* External Label Image */}
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Зображення мітки (зовнішнє)</Label>
+                  <MediaUploader
+                    label="Зображення мітки"
+                    value={p.label_image_url ?? ''}
+                    onChange={(url) => updateProductField(pIdx, 'label_image_url', url)}
+                    accept="image/*"
+                    folder="coffee/labels"
+                    placeholder="https://...png"
+                  />
+                  <p className="text-xs text-gray-500">Відображається у картці товару шириною 198px (як зараз).</p>
                 </div>
+
+              {/* SEO Keywords */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-sm font-medium">SEO ключові слова (UA, через кому)</Label>
+                  <Input
+                    placeholder="кава, арабіка, обсмажування"
+                    value={(p.seo_keywords_ua || []).join(', ')}
+                    onChange={(e) => {
+                      const raw = e.target.value || '';
+                      const arr = raw.split(',').map(s => s.trim()).filter(Boolean);
+                      updateProductField(pIdx, 'seo_keywords_ua', arr);
+                    }}
+                  />
+                </div>
+                <div>
+                  <Label className="text-sm font-medium">SEO ключевые слова (RU, через запятую)</Label>
+                  <Input
+                    placeholder="кофе, арабика, обжарка"
+                    value={(p.seo_keywords_ru || []).join(', ')}
+                    onChange={(e) => {
+                      const raw = e.target.value || '';
+                      const arr = raw.split(',').map(s => s.trim()).filter(Boolean);
+                      updateProductField(pIdx, 'seo_keywords_ru', arr);
+                    }}
+                  />
+                </div>
+              </div>
 
                 <div className="flex justify-between">
                   <div className="flex gap-2">
@@ -668,88 +779,7 @@ export function CoffeeProductsManager() {
               </CardContent>
             </Card>
 
-            {/* Label Generator - appears right under the clicked product card */}
-            {selectedProductForLabel === pIdx && (
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-semibold">
-                    Генератор мітки для: {p.name_ua}
-                  </h3>
-                  <Button 
-                    variant="outline" 
-                    onClick={() => setSelectedProductForLabel(null)}
-                  >
-                    Закрити
-                  </Button>
-                </div>
-                <CoffeeLabelGenerator
-                  coffeeName={p.name_ua}
-                  strength={p.strength_level || 3}
-                  acidity={p.acidity_level || 3}
-                  roast={p.roast_level || 3}
-                  body={p.body_level || 3}
-                  initialFlavorNotes={p.flavor_notes_array || []}
-                  onLabelDataChange={(data) => {
-                    // Update the product with new label data
-                    const updatedProducts = [...products];
-                    updatedProducts[pIdx] = {
-                      ...updatedProducts[pIdx],
-                      strength_level: data.strength,
-                      acidity_level: data.acidity,
-                      roast_level: data.roast,
-                      body_level: data.body,
-                    };
-                    setProducts(updatedProducts);
-                  }}
-                  onApplyLabel={async (data) => {
-                    // Apply the label to the product and sync flavor notes
-                    const updatedProducts = [...products];
-                    const flavorNotes = data.flavor_notes || [];
-                    
-                    // Rich label_data so patterns and colors render correctly
-                    const labelData: any = {
-                      template: data.template,
-                      size: data.size,
-                      flavor_notes: flavorNotes,
-                    };
-
-                    // Include valid pattern
-                    const validPatterns = ['dots', 'stripes', 'grid', 'geometric', 'waves', 'stars', 'leaves', 'diamonds', 'lines'];
-                    if (data.pattern && validPatterns.includes(data.pattern)) {
-                      labelData.pattern = data.pattern;
-                    }
-
-                    // Include custom colors when template is custom; fall back to safe defaults
-                    if (data.template === 'custom') {
-                      const bg = data.customColors?.bg || '#2F2A26';
-                      const text = data.customColors?.text || '#FFFFFF';
-                      const accent = data.customColors?.accent || '#D3B58F';
-                      labelData.customColors = { bg, text, accent };
-                    }
-                    
-                    const nextProduct: CoffeeProduct = {
-                      ...updatedProducts[pIdx],
-                      strength_level: data.strength,
-                      acidity_level: data.acidity,
-                      roast_level: data.roast,
-                      body_level: data.body,
-                      flavor_notes_array: flavorNotes, // Sync with aftertaste field
-                      label_data: labelData,
-                    };
-                    updatedProducts[pIdx] = nextProduct;
-                    setProducts(updatedProducts);
-                    // Keep modal open - don't close it
-                    try {
-                      // Save with the latest in-memory product to avoid stale first-save
-                      await saveProduct(pIdx, undefined, nextProduct, true);
-                      alert('Мітку застосовано та збережено!');
-                    } catch (error) {
-                      alert('Помилка збереження: ' + error);
-                    }
-                  }}
-                />
-              </div>
-            )}
+            {/* Label Generator removed */}
           </div>
         ))}
       </div>

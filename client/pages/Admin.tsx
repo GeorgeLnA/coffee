@@ -13,6 +13,7 @@ import { ContactTradePointsForm } from "@/pages/admin/ContactTradePointsForm";
 import { CoffeeProductsManager } from "@/pages/admin/CoffeeProductsManager";
 import { WaterProductsManager } from "@/pages/admin/WaterProductsManager";
 import { CustomSectionsManager } from "@/pages/admin/CustomSectionsManager";
+import { FilterOptionsManager } from "@/pages/admin/FilterOptionsManager";
 import {
   SidebarProvider,
   Sidebar,
@@ -27,6 +28,7 @@ import {
 } from "@/components/ui/sidebar";
 import { FileText, Boxes, ShoppingCart, BarChart3 } from "lucide-react";
 import { AdminAnalytics } from "@/pages/admin/AdminAnalytics";
+import { OrdersManager } from "@/pages/admin/OrdersManager";
 
 export default function Admin() {
   const [isAuthed, setIsAuthed] = useState<boolean>(false);
@@ -176,6 +178,7 @@ export default function Admin() {
                 <TabsTrigger value="coffee">Кава</TabsTrigger>
                 <TabsTrigger value="water">Вода</TabsTrigger>
                 <TabsTrigger value="featured">Сезонні слайди</TabsTrigger>
+                <TabsTrigger value="filters">Фільтри</TabsTrigger>
               </TabsList>
               <TabsContent value="coffee">
                 <CoffeeProductsManager />
@@ -186,20 +189,14 @@ export default function Admin() {
               <TabsContent value="featured">
                 <FeaturedProductsManager />
               </TabsContent>
+              <TabsContent value="filters">
+                <FilterOptionsManager />
+              </TabsContent>
             </Tabs>
           )}
 
           {section === "orders" && (
-            <div className="space-y-6">
-              <h2 className="text-xl font-semibold">Замовлення</h2>
-              <Card>
-                <CardContent className="p-6">
-                  <div className="text-sm text-muted-foreground">
-                    Управління замовленнями — незабаром.
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
+            <OrdersManager />
           )}
 
           {section === "analysis" && (

@@ -1,4 +1,5 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { useEffect } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 
@@ -350,10 +351,13 @@ export interface DBCoffeeProduct {
   roast: string | null; // 'light' | 'medium' | 'dark'
   in_stock: boolean | null;
   custom_label: string | null;
+  custom_label_ru: string | null;
   custom_label_color: string | null;
   custom_label_text_color: string | null;
   active: boolean | null;
   flavor_notes_array: string[] | null;
+  aftertaste_ua?: string[] | null;
+  aftertaste_ru?: string[] | null;
   metric_label_strength?: string | null;
   metric_label_acidity?: string | null;
   metric_label_roast?: string | null;
@@ -363,6 +367,9 @@ export interface DBCoffeeProduct {
   roast_level?: number | null;
   body_level?: number | null;
   label_data?: any | null;
+  label_image_url?: string | null;
+  seo_keywords_ua?: string[] | null;
+  seo_keywords_ru?: string[] | null;
   coffee_sizes?: DBCoffeeSize[];
 }
 
@@ -375,6 +382,7 @@ function mapLevelToString(level: number | null | undefined, low: string, medium:
 
 export function useCoffeeProducts() {
   const queryClient = useQueryClient();
+  const { language } = useLanguage();
 
   // Realtime updates for coffee products and sizes
   useEffect(() => {
@@ -405,9 +413,12 @@ export function useCoffeeProducts() {
       const mappedData = list.map((p) => {
         const sizes = (p.coffee_sizes || []).filter(s => s.price != null);
         const minPrice = sizes.length ? Math.min(...sizes.map(s => s.price || 0)) : 0;
-        const name = p.name_ua || p.name_ru || '';
-        const description = p.description_ua || p.description_ru || '';
-        const flavorNotes = Array.isArray(p.flavor_notes_array) ? p.flavor_notes_array : [];
+        const name = language === 'ru' ? (p.name_ru || p.name_ua || '') : (p.name_ua || p.name_ru || '');
+        const description = language === 'ru' ? (p.description_ru || p.description_ua || '') : (p.description_ua || p.description_ru || '');
+        // Choose aftertaste by language, fallback to flavor_notes_array
+        const flavorNotes = language === 'ru'
+          ? (Array.isArray(p.aftertaste_ru) ? p.aftertaste_ru : (Array.isArray(p.flavor_notes_array) ? p.flavor_notes_array : []))
+          : (Array.isArray(p.aftertaste_ua) ? p.aftertaste_ua : (Array.isArray(p.flavor_notes_array) ? p.flavor_notes_array : []));
         const acidity = mapLevelToString(p.acidity_level, 'low', 'medium', 'high');
         const body = mapLevelToString(p.body_level, 'light', 'medium', 'full');
         const mappedProduct = {
@@ -428,6 +439,7 @@ export function useCoffeeProducts() {
           inStock: !!p.in_stock,
           active: p.active !== false, // Default to true if not explicitly set to false
           custom_label: p.custom_label || null,
+          custom_label_ru: p.custom_label_ru || null,
           custom_label_color: p.custom_label_color || '#f59e0b',
           custom_label_text_color: p.custom_label_text_color || '#92400e',
           // Expose numeric metrics and label data for custom labels
@@ -436,6 +448,9 @@ export function useCoffeeProducts() {
           roast_level: p.roast_level || 0,
           body_level: p.body_level || 0,
           label_data: p.label_data || null,
+          label_image_url: p.label_image_url || null,
+          seo_keywords_ua: p.seo_keywords_ua || null,
+          seo_keywords_ru: p.seo_keywords_ru || null,
         };
         return mappedProduct;
       });
@@ -445,11 +460,13 @@ export function useCoffeeProducts() {
     refetchOnWindowFocus: true,
     refetchOnReconnect: true,
     staleTime: 0,
+    queryKey: ['coffee-products', language], // Add language to query key so it refetches when language changes
   });
 }
 
 export function useCoffeeProduct(id: string | number) {
   const queryClient = useQueryClient();
+  const { language } = useLanguage();
 
   // Realtime updates for a single product
   useEffect(() => {
@@ -495,14 +512,17 @@ export function useCoffeeProduct(id: string | number) {
       return {
         id: String(p.id),
         slug: p.slug || String(p.id),
-        name: p.name_ua || p.name_ru || '',
+        name: language === 'ru' ? (p.name_ru || p.name_ua || '') : (p.name_ua || p.name_ru || ''),
         origin: p.origin || '',
         roast: p.roast || 'medium',
         price: minPrice,
         image: p.image_url || '/250-g_Original.PNG',
-        description: p.description_ua || p.description_ru || '',
+        description: language === 'ru' ? (p.description_ru || p.description_ua || '') : (p.description_ua || p.description_ru || ''),
         weight: sizes.length ? Math.min(...sizes.map(s => s.weight || 0)) : 250,
-        flavorNotes: Array.isArray(p.flavor_notes_array) ? p.flavor_notes_array : [],
+        // Choose aftertaste by language, fallback to flavor_notes_array
+        flavorNotes: language === 'ru'
+          ? (Array.isArray(p.aftertaste_ru) ? p.aftertaste_ru : (Array.isArray(p.flavor_notes_array) ? p.flavor_notes_array : []))
+          : (Array.isArray(p.aftertaste_ua) ? p.aftertaste_ua : (Array.isArray(p.flavor_notes_array) ? p.flavor_notes_array : [])),
         acidity: mapLevelToString(p.acidity_level, 'low', 'medium', 'high'),
         body: mapLevelToString(p.body_level, 'light', 'medium', 'full'),
         process: '',
@@ -510,6 +530,7 @@ export function useCoffeeProduct(id: string | number) {
         inStock: !!p.in_stock,
         active: p.active !== false,
         custom_label: p.custom_label || null,
+        custom_label_ru: p.custom_label_ru || null,
         custom_label_color: p.custom_label_color || '#f59e0b',
         custom_label_text_color: p.custom_label_text_color || '#92400e',
         sizes,
@@ -518,11 +539,15 @@ export function useCoffeeProduct(id: string | number) {
         roast_level: p.roast_level || 0,
         body_level: p.body_level || 0,
         label_data: p.label_data || null,
+        label_image_url: p.label_image_url || null,
+        seo_keywords_ua: (p as any).seo_keywords_ua || null,
+        seo_keywords_ru: (p as any).seo_keywords_ru || null,
       };
     },
     refetchOnWindowFocus: true,
     refetchOnReconnect: true,
     staleTime: 0,
+    queryKey: ['coffee-product', id, language], // Add language to query key so it refetches when language changes
   });
 }
 
@@ -672,6 +697,71 @@ export function useWaterProduct(id: string | number) {
         active: p.active !== false,
         features: Array.isArray(p.features_ua) ? p.features_ua : [],
       };
+    },
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
+    staleTime: 0,
+  });
+}
+
+export function useFilterOptions(language: string = 'ua') {
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    const channel = supabase
+      .channel(`filter-options-realtime`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'filter_options' }, () => {
+        try {
+          queryClient.invalidateQueries({ queryKey: ['filter-options'] });
+          queryClient.invalidateQueries({ queryKey: ['filter-options', language] });
+        } catch {}
+      })
+      .subscribe();
+
+    return () => {
+      try { supabase.removeChannel(channel); } catch {}
+    };
+  }, [queryClient, language]);
+
+  return useQuery({
+    queryKey: ['filter-options', language],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('filter_options')
+        .select('*')
+        .eq('active', true)
+        .order('filter_type', { ascending: true })
+        .order('sort', { ascending: true, nullsFirst: true });
+
+      if (error) {
+        console.error('Error fetching filter options:', error);
+        return { origins: [], roasts: [], originPairs: [], roastPairs: [] } as {
+          origins: string[];
+          roasts: string[];
+          originPairs: { ua: string; ru: string }[];
+          roastPairs: { ua: string; ru: string }[];
+        };
+      }
+
+      // Use value_ru for Russian, value for Ukrainian/English
+      const all = (data || []) as Array<{ filter_type: string; value: string; value_ru?: string | null }>;
+      const origins = all
+        .filter(f => f.filter_type === 'origin')
+        .map(f => language === 'ru' ? (f.value_ru || f.value) : f.value);
+      
+      const roasts = all
+        .filter(f => f.filter_type === 'roast')
+        .map(f => language === 'ru' ? (f.value_ru || f.value) : f.value);
+
+      const originPairs = all
+        .filter(f => f.filter_type === 'origin')
+        .map(f => ({ ua: f.value, ru: f.value_ru || f.value }));
+
+      const roastPairs = all
+        .filter(f => f.filter_type === 'roast')
+        .map(f => ({ ua: f.value, ru: f.value_ru || f.value }));
+
+      return { origins, roasts, originPairs, roastPairs };
     },
     refetchOnWindowFocus: true,
     refetchOnReconnect: true,

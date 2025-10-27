@@ -1,6 +1,22 @@
 import { useState, useMemo, useEffect } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { ArrowLeft, ShoppingCart, Plus, Minus } from "lucide-react";
+
+// Coffee bean icon component - simplified single path
+const CoffeeBeanIcon = ({ className = "" }: { className?: string }) => (
+  <svg width="24" height="24" viewBox="0 0 64 64" className={className}>
+    <g transform="matrix(1,0,0,1,-1152,-256)">
+      <g transform="matrix(0.866025,0.5,-0.5,0.866025,717.879,-387.292)">
+        <g transform="matrix(1,0,0,1,0,-0.699553)">
+          <path fill="currentColor" d="M737.673,328.231C738.494,328.056 739.334,328.427 739.757,329.152C739.955,329.463 740.106,329.722 740.106,329.722C740.106,329.722 745.206,338.581 739.429,352.782C737.079,358.559 736.492,366.083 738.435,371.679C738.697,372.426 738.482,373.258 737.89,373.784C737.298,374.31 736.447,374.426 735.735,374.077C730.192,371.375 722.028,365.058 722.021,352C722.015,340.226 728.812,330.279 737.673,328.231Z"/>
+        </g>
+        <g transform="matrix(-1,0,0,-1,1483.03,703.293)">
+          <path fill="currentColor" d="M737.609,328.246C738.465,328.06 739.344,328.446 739.785,329.203C739.97,329.49 740.106,329.722 740.106,329.722C740.106,329.722 745.206,338.581 739.429,352.782C737.1,358.507 736.503,365.948 738.383,371.527C738.646,372.304 738.415,373.164 737.796,373.703C737.177,374.243 736.294,374.356 735.56,373.989C730.02,371.241 722.028,364.92 722.021,352C722.016,340.255 728.779,330.328 737.609,328.246Z"/>
+        </g>
+      </g>
+    </g>
+  </svg>
+);
 import Header from "../components/Header";
 import Footer from "../components/Footer";
 import { CoffeeProduct } from "@shared/api";
@@ -95,32 +111,64 @@ const translateFlavorNote = (note: string, language: string) => {
   return translations[language as keyof typeof translations]?.[note as keyof typeof translations.ua] || note;
 };
 
-// Helper function to translate origins
+// Helper function to translate origins - now also handles reverse lookup (UA/RU -> EN)
 const translateOrigin = (origin: string, language: string) => {
   const translations = {
     ua: {
       "Colombia": "Колумбія",
+      "Колумбія": "Колумбія", // Handle reverse
+      "Колумбия": "Колумбія", // Handle RU
       "Ethiopia": "Ефіопія",
+      "Ефіопія": "Ефіопія",
+      "Эфиопия": "Ефіопія",
       "Brazil": "Бразилія",
+      "Бразилія": "Бразилія",
+      "Бразилия": "Бразилія",
       "Kenya": "Кенія",
+      "Кенія": "Кенія",
+      "Кения": "Кенія",
       "Guatemala": "Гватемала",
+      "Гватемала": "Гватемала",
       "Jamaica": "Ямайка",
+      "Ямайка": "Ямайка",
       "Peru": "Перу",
+      "Перу": "Перу",
       "Costa Rica": "Коста-Рика",
+      "Коста-Рика": "Коста-Рика",
       "Indonesia": "Індонезія",
-      "Hawaii": "Гаваї"
+      "Індонезія": "Індонезія",
+      "Индонезия": "Індонезія",
+      "Hawaii": "Гаваї",
+      "Гаваї": "Гаваї",
+      "Гавайи": "Гаваї"
     },
     ru: {
       "Colombia": "Колумбия",
+      "Колумбія": "Колумбия", // Handle UA
+      "Колумбия": "Колумбия", // Handle reverse
       "Ethiopia": "Эфиопия",
+      "Ефіопія": "Эфиопия",
+      "Эфиопия": "Эфиопия",
       "Brazil": "Бразилия",
+      "Бразилія": "Бразилия",
+      "Бразилия": "Бразилия",
       "Kenya": "Кения",
+      "Кенія": "Кения",
+      "Кения": "Кения",
       "Guatemala": "Гватемала",
+      "Гватемала": "Гватемала",
       "Jamaica": "Ямайка",
+      "Ямайка": "Ямайка",
       "Peru": "Перу",
+      "Перу": "Перу",
       "Costa Rica": "Коста-Рика",
+      "Коста-Рика": "Коста-Рика",
       "Indonesia": "Индонезия",
-      "Hawaii": "Гавайи"
+      "Індонезія": "Индонезия",
+      "Индонезия": "Индонезия",
+      "Hawaii": "Гавайи",
+      "Гаваї": "Гавайи",
+      "Гавайи": "Гавайи"
     }
   };
   return translations[language as keyof typeof translations]?.[origin as keyof typeof translations.ua] || origin;
@@ -302,14 +350,45 @@ export default function Product() {
   const [selectedGrind, setSelectedGrind] = useState<'beans' | 'ground'>('beans');
   const [quantity, setQuantity] = useState(1);
 
+  // Always call hooks unconditionally to keep hooks order stable
+  const { data: productData } = useCoffeeProduct(id || '0');
+  const product = productData || null;
+
   // Scroll to top when component mounts or product ID changes
   useEffect(() => {
     window.scrollTo(0, 0);
   }, [id]);
 
-  // Always call hooks unconditionally to keep hooks order stable
-  const { data: productData } = useCoffeeProduct(id || '0');
-  const product = productData || null;
+  // Update SEO meta tags
+  useEffect(() => {
+    if (!product) return;
+
+    // Keywords from product data
+    const keywords = language === 'ru' 
+      ? (product.seo_keywords_ru || []).join(', ')
+      : (product.seo_keywords_ua || []).join(', ');
+
+    // Update meta keywords tag
+    let metaKeywords = document.querySelector('meta[name="keywords"]');
+    if (!metaKeywords) {
+      metaKeywords = document.createElement('meta');
+      metaKeywords.setAttribute('name', 'keywords');
+      document.head.appendChild(metaKeywords);
+    }
+    metaKeywords.setAttribute('content', keywords || `${product.name}, кава, ${product.origin}, ${product.roast}`);
+
+    // Update page title
+    document.title = `${product.name} - THE COFFEE MANIFEST`;
+
+    // Update meta description
+    let metaDesc = document.querySelector('meta[name="description"]');
+    if (!metaDesc) {
+      metaDesc = document.createElement('meta');
+      metaDesc.setAttribute('name', 'description');
+      document.head.appendChild(metaDesc);
+    }
+    metaDesc.setAttribute('content', product.description || `Premium ${product.name} coffee from ${product.origin}`);
+  }, [product, language]);
 
   const notFound = !product;
 
@@ -376,14 +455,22 @@ export default function Product() {
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
             {/* Product Images */}
-            <div className="space-y-4">
-              {/* Main Image */}
-              <div className="aspect-[4/5] overflow-hidden rounded-lg">
-                <img
-                  src={currentImage}
-                  alt={product?.name || ''}
-                  className="w-full h-full object-cover"
-                />
+            <div>
+              <div className="relative">
+                {/* Main Image */}
+                <div className="aspect-[4/5] overflow-hidden rounded-lg">
+                  <img
+                    src={currentImage}
+                    alt={product?.name || ''}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+                {/* Label image overlay - scales with image container */}
+                {!notFound && (product as any)?.label_image_url && (
+                  <div className="absolute top-2 right-2" style={{ width: 'clamp(120px, 30%, 250px)' }}>
+                    <img src={(product as any).label_image_url} alt="label" className="w-full h-auto" />
+                  </div>
+                )}
               </div>
             </div>
 
@@ -438,7 +525,7 @@ export default function Product() {
               {/* Aftertaste */}
               <div>
                 <h3 className="text-lg font-bold mb-3" style={{ color: '#361c0c' }}>
-                  Післясмак
+                  {language === 'ru' ? 'Послевкусие' : 'Післясмак'}
                 </h3>
                 <div className="flex flex-wrap gap-2">
                   {!notFound && product!.flavorNotes.map((note) => (
@@ -464,16 +551,14 @@ export default function Product() {
                   <div className="flex items-center justify-between py-2 border-b border-gray-100">
                     <span className="text-gray-700 font-medium">{t('coffee.strength')}:</span>
                     <div className="flex space-x-2">
-                      {[1, 2, 3, 4, 5].map((level) => (
-                        <div
-                          key={level}
-                          className={`w-3 h-3 rounded-full ${
-                            level <= (product && (product.body === 'full' ? 5 : product.body === 'medium' ? 3 : 2))
-                              ? 'bg-orange-500'
-                              : 'bg-gray-200'
-                          }`}
-                        />
-                      ))}
+                      {[1, 2, 3, 4, 5].map((level) => {
+                        const isActive = level <= (product?.strength_level || 3);
+                        return (
+                          <div key={level} className={`${isActive ? 'text-[#361c0c]' : 'text-gray-300'}`}>
+                            <CoffeeBeanIcon />
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                   
@@ -481,16 +566,14 @@ export default function Product() {
                   <div className="flex items-center justify-between py-2 border-b border-gray-100">
                     <span className="text-gray-700 font-medium">{t('coffee.acidity')}:</span>
                     <div className="flex space-x-2">
-                      {[1, 2, 3, 4, 5].map((level) => (
-                        <div
-                          key={level}
-                          className={`w-3 h-3 rounded-full ${
-                            level <= (product && (product.acidity === 'high' ? 5 : product.acidity === 'medium' ? 3 : 2))
-                              ? 'bg-orange-500'
-                              : 'bg-gray-200'
-                          }`}
-                        />
-                      ))}
+                      {[1, 2, 3, 4, 5].map((level) => {
+                        const isActive = level <= (product?.acidity_level || 3);
+                        return (
+                          <div key={level} className={`${isActive ? 'text-[#361c0c]' : 'text-gray-300'}`}>
+                            <CoffeeBeanIcon />
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                   
@@ -498,16 +581,14 @@ export default function Product() {
                   <div className="flex items-center justify-between py-2 border-b border-gray-100">
                     <span className="text-gray-700 font-medium">{t('coffee.roast')}:</span>
                     <div className="flex space-x-2">
-                      {[1, 2, 3, 4, 5].map((level) => (
-                        <div
-                          key={level}
-                          className={`w-3 h-3 rounded-full ${
-                            level <= (product && (product.roast === 'dark' ? 5 : product.roast === 'medium' ? 3 : 2))
-                              ? 'bg-orange-500'
-                              : 'bg-gray-200'
-                          }`}
-                        />
-                      ))}
+                      {[1, 2, 3, 4, 5].map((level) => {
+                        const isActive = level <= (product?.roast_level || 3);
+                        return (
+                          <div key={level} className={`${isActive ? 'text-[#361c0c]' : 'text-gray-300'}`}>
+                            <CoffeeBeanIcon />
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                   
@@ -515,16 +596,14 @@ export default function Product() {
                   <div className="flex items-center justify-between py-2">
                     <span className="text-gray-700 font-medium">{t('coffee.body')}:</span>
                     <div className="flex space-x-2">
-                      {[1, 2, 3, 4, 5].map((level) => (
-                        <div
-                          key={level}
-                          className={`w-3 h-3 rounded-full ${
-                            level <= (product && (product.body === 'full' ? 5 : product.body === 'medium' ? 3 : 2))
-                              ? 'bg-orange-500'
-                              : 'bg-gray-200'
-                          }`}
-                        />
-                      ))}
+                      {[1, 2, 3, 4, 5].map((level) => {
+                        const isActive = level <= (product?.body_level || 3);
+                        return (
+                          <div key={level} className={`${isActive ? 'text-[#361c0c]' : 'text-gray-300'}`}>
+                            <CoffeeBeanIcon />
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 </div>

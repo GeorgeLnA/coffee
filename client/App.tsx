@@ -17,6 +17,9 @@ import Office from "./pages/Office";
 import NotFound from "./pages/NotFound";
 import Basket from "./pages/Basket";
 import Admin from "./pages/Admin";
+import Delivery from "./pages/Delivery";
+import Terms from "./pages/Terms";
+import Returns from "./pages/Returns";
 import { LanguageProvider } from "./contexts/LanguageContext";
 import { CartProvider } from "./contexts/CartContext";
 import { LoadingProvider } from "./contexts/LoadingContext";
@@ -47,6 +50,9 @@ function App() {
                 <Route path="/water" element={<Water />} />
                 <Route path="/water/:id" element={<WaterProduct />} />
                 <Route path="/contact" element={<Contact />} />
+                <Route path="/delivery" element={<Delivery />} />
+                <Route path="/terms" element={<Terms />} />
+                <Route path="/returns" element={<Returns />} />
                 <Route path="/office" element={<Office />} />
                   <Route path="/basket" element={<Basket />} />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

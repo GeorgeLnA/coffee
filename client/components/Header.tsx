@@ -227,6 +227,15 @@ export default function Header() {
                 <Link to="/contact" className="block text-white font-bold text-2xl hover:text-white/80 transition-colors">
                   {t('nav.contacts')}
                 </Link>
+                <Link to="/delivery" className="block text-white font-bold text-2xl hover:text-white/80 transition-colors">
+                  {language === 'ru' ? 'Доставка и оплата' : 'Доставка та оплата'}
+                </Link>
+                <Link to="/terms" className="block text-white font-bold text-2xl hover:text-white/80 transition-colors">
+                  {language === 'ru' ? 'Условия использования' : 'Умови використання'}
+                </Link>
+                <Link to="/returns" className="block text-white font-bold text-2xl hover:text-white/80 transition-colors">
+                  {language === 'ru' ? 'Политика возврата' : 'Політика повернення'}
+                </Link>
               </nav>
                 
                 <div className="pt-8 border-t border-white/20">
@@ -291,6 +300,46 @@ export default function Header() {
                    isSecondHeaderVisible || isDropdownOpen ? 'text-white hover:text-white/80' : 'text-transparent'
                  }`}>
                   {t('nav.contacts')}
+                </span>
+                 <div className={`absolute -bottom-1 left-0 w-0 h-0.5 group-hover:w-full transition-all duration-300 ${
+                   isSecondHeaderVisible || isDropdownOpen ? 'bg-[#fcf4e4]' : 'bg-transparent'
+                 }`}></div>
+              </Link>
+              <Link to="/delivery" className="group relative lg:hidden">
+                 <span className={`font-medium text-lg tracking-wide transition-all duration-300 ${
+                   isSecondHeaderVisible || isDropdownOpen ? 'text-white hover:text-white/80' : 'text-transparent'
+                 }`}>
+                  {language === 'ru' ? 'Доставка и оплата' : 'Доставка та оплата'}
+                </span>
+                 <div className={`absolute -bottom-1 left-0 w-0 h-0.5 group-hover:w-full transition-all duration-300 ${
+                   isSecondHeaderVisible || isDropdownOpen ? 'bg-[#fcf4e4]' : 'bg-transparent'
+                 }`}></div>
+              </Link>
+              <Link to="/delivery" className="group relative">
+                 <span className={`font-medium text-lg tracking-wide transition-all duration-300 ${
+                   isSecondHeaderVisible || isDropdownOpen ? 'text-white hover:text-white/80' : 'text-transparent'
+                 }`}>
+                  {language === 'ru' ? 'Доставка и оплата' : 'Доставка та оплата'}
+                </span>
+                 <div className={`absolute -bottom-1 left-0 w-0 h-0.5 group-hover:w-full transition-all duration-300 ${
+                   isSecondHeaderVisible || isDropdownOpen ? 'bg-[#fcf4e4]' : 'bg-transparent'
+                 }`}></div>
+              </Link>
+              <Link to="/terms" className="group relative">
+                 <span className={`font-medium text-lg tracking-wide transition-all duration-300 ${
+                   isSecondHeaderVisible || isDropdownOpen ? 'text-white hover:text-white/80' : 'text-transparent'
+                 }`}>
+                  {language === 'ru' ? 'Условия использования' : 'Умови використання'}
+                </span>
+                 <div className={`absolute -bottom-1 left-0 w-0 h-0.5 group-hover:w-full transition-all duration-300 ${
+                   isSecondHeaderVisible || isDropdownOpen ? 'bg-[#fcf4e4]' : 'bg-transparent'
+                 }`}></div>
+              </Link>
+              <Link to="/returns" className="group relative">
+                 <span className={`font-medium text-lg tracking-wide transition-all duration-300 ${
+                   isSecondHeaderVisible || isDropdownOpen ? 'text-white hover:text-white/80' : 'text-transparent'
+                 }`}>
+                  {language === 'ru' ? 'Политика возврата' : 'Політика повернення'}
                 </span>
                  <div className={`absolute -bottom-1 left-0 w-0 h-0.5 group-hover:w-full transition-all duration-300 ${
                    isSecondHeaderVisible || isDropdownOpen ? 'bg-[#fcf4e4]' : 'bg-transparent'

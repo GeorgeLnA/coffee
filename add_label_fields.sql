@@ -52,7 +52,8 @@ add column if not exists strength_level integer default 3,
 add column if not exists acidity_level integer default 3,
 add column if not exists roast_level integer default 3,
 add column if not exists body_level integer default 3,
-add column if not exists label_data jsonb;
+add column if not exists label_data jsonb,
+add column if not exists label_image_url text;
 
 -- Add constraints for level fields (1-5 range) - using DO blocks for idempotent constraint creation
 do $$

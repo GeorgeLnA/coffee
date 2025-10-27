@@ -14,7 +14,7 @@ import { useLanguage } from "../contexts/LanguageContext";
 import { useCart } from "../contexts/CartContext";
 import AddToCartModal from "../components/AddToCartModal";
 import { useToast } from "../hooks/use-toast";
-import { useCoffeeProducts } from "../hooks/use-supabase";
+import { useCoffeeProducts, useFilterOptions } from "../hooks/use-supabase";
 import { CoffeeLabel } from "../components/CoffeeLabel";
 
 
@@ -102,32 +102,64 @@ const translateFlavorNote = (note: string, language: string) => {
   return translations[language as keyof typeof translations]?.[note as keyof typeof translations.ua] || note;
 };
 
-// Helper function to translate origins
+// Helper function to translate origins - now also handles reverse lookup (UA/RU -> EN)
 const translateOrigin = (origin: string, language: string) => {
   const translations = {
     ua: {
       "Colombia": "Колумбія",
+      "Колумбія": "Колумбія", // Handle reverse
+      "Колумбия": "Колумбія", // Handle RU
       "Ethiopia": "Ефіопія",
+      "Ефіопія": "Ефіопія",
+      "Эфиопия": "Ефіопія",
       "Brazil": "Бразилія",
+      "Бразилія": "Бразилія",
+      "Бразилия": "Бразилія",
       "Kenya": "Кенія",
+      "Кенія": "Кенія",
+      "Кения": "Кенія",
       "Guatemala": "Гватемала",
+      "Гватемала": "Гватемала",
       "Jamaica": "Ямайка",
+      "Ямайка": "Ямайка",
       "Peru": "Перу",
+      "Перу": "Перу",
       "Costa Rica": "Коста-Рика",
+      "Коста-Рика": "Коста-Рика",
       "Indonesia": "Індонезія",
-      "Hawaii": "Гаваї"
+      "Індонезія": "Індонезія",
+      "Индонезия": "Індонезія",
+      "Hawaii": "Гаваї",
+      "Гаваї": "Гаваї",
+      "Гавайи": "Гаваї"
     },
     ru: {
       "Colombia": "Колумбия",
+      "Колумбія": "Колумбия", // Handle UA
+      "Колумбия": "Колумбия", // Handle reverse
       "Ethiopia": "Эфиопия",
+      "Ефіопія": "Эфиопия",
+      "Эфиопия": "Эфиопия",
       "Brazil": "Бразилия",
+      "Бразилія": "Бразилия",
+      "Бразилия": "Бразилия",
       "Kenya": "Кения",
+      "Кенія": "Кения",
+      "Кения": "Кения",
       "Guatemala": "Гватемала",
+      "Гватемала": "Гватемала",
       "Jamaica": "Ямайка",
+      "Ямайка": "Ямайка",
       "Peru": "Перу",
+      "Перу": "Перу",
       "Costa Rica": "Коста-Рика",
+      "Коста-Рика": "Коста-Рика",
       "Indonesia": "Индонезия",
-      "Hawaii": "Гавайи"
+      "Індонезія": "Индонезия",
+      "Индонезия": "Индонезия",
+      "Hawaii": "Гавайи",
+      "Гаваї": "Гавайи",
+      "Гавайи": "Гавайи"
     }
   };
   return translations[language as keyof typeof translations]?.[origin as keyof typeof translations.ua] || origin;
@@ -297,13 +329,15 @@ const placeholderCoffees: CoffeeProduct[] = [
   },
 ];
 
-const origins = ["Colombia", "Ethiopia", "Brazil", "Kenya", "Guatemala", "Jamaica", "Peru", "Costa Rica", "Indonesia", "Hawaii"];
-const roasts = ["light", "medium", "dark"];
+// Default fallback values if database is empty
+const defaultOrigins = ["Colombia", "Ethiopia", "Brazil", "Kenya", "Guatemala", "Jamaica", "Peru", "Costa Rica", "Indonesia", "Hawaii"];
+const defaultRoasts = ["light", "medium", "dark"];
 
 export default function Coffee() {
   const { t, language } = useLanguage();
   const { addItem, items, updateQuantity, removeItem } = useCart();
   const { toast } = useToast();
+  const { data: filterOptions } = useFilterOptions(language);
   const [modalOpen, setModalOpen] = useState(false);
   const [addedItem, setAddedItem] = useState<{name: string, image?: string, quantity: number} | null>(null);
 
@@ -346,6 +380,23 @@ export default function Coffee() {
 
   // Filter coffee products based on current filters
   const filteredCoffees = useMemo(() => {
+    // Helpers for robust matching
+    const normalize = (s: string) => (s || '').trim().toLowerCase();
+    const defaultOriginPairs = defaultOrigins.map((en) => ({ ua: translateOrigin(en, 'ua'), ru: translateOrigin(en, 'ru') }));
+    const originPairs = (filterOptions as any)?.originPairs && (filterOptions as any)?.originPairs.length
+      ? (filterOptions as any).originPairs
+      : defaultOriginPairs;
+
+    const roastToCode = (r: string): string => {
+      const v = normalize(r);
+      if (['light', 'світле', 'светлое'].includes(v)) return 'light';
+      if (['medium', 'середнє', 'среднее', 'середньосвітле', 'среднесветлое', 'середньотемне', 'среднетемное', 'medium-dark', 'light-medium'].includes(v)) return 'medium';
+      if (['dark', 'темне', 'темное', 'дуже темне', 'очень темное', 'very-dark'].includes(v)) return 'dark';
+      return v; // fallback to raw
+    };
+
+    const selectedRoastCodes = filters.roasts.map(ro => roastToCode(ro));
+
     const source = (supaProducts && supaProducts.length) ? supaProducts : placeholderCoffees;
     const filtered = source.filter((coffee) => {
       // Only show active products
@@ -359,20 +410,39 @@ export default function Coffee() {
         return false;
       }
 
-      // Origin filter
-      if (filters.origins.length > 0 && !filters.origins.includes(coffee.origin)) {
-        return false;
+      // Origin filter (match UA/RU synonyms)
+      if (filters.origins.length > 0) {
+        const coffeeOrigin = normalize(coffee.origin);
+        let anyOriginMatch = false;
+        for (const sel of filters.origins) {
+          const selNorm = normalize(sel);
+          const pair = originPairs.find((p: any) => normalize(p.ua) === selNorm || normalize(p.ru) === selNorm);
+          if (pair) {
+            const ua = normalize(pair.ua);
+            const ru = normalize(pair.ru);
+            if (coffeeOrigin === ua || coffeeOrigin === ru) {
+              anyOriginMatch = true;
+              break;
+            }
+          } else {
+            // Fallback to direct comparison when using defaults (EN)
+            if (coffeeOrigin === selNorm) {
+              anyOriginMatch = true;
+              break;
+            }
+          }
+        }
+        if (!anyOriginMatch) return false;
       }
 
-      // Roast filter
-      if (filters.roasts.length > 0 && !filters.roasts.includes(coffee.roast)) {
-        return false;
+      // Roast filter (normalize to codes)
+      if (selectedRoastCodes.length > 0) {
+        const productRoastCode = roastToCode(coffee.roast);
+        if (!selectedRoastCodes.includes(productRoastCode)) {
+          return false;
+        }
       }
 
-      // Price filter
-      if (coffee.price < filters.priceRange[0] || coffee.price > filters.priceRange[1]) {
-        return false;
-      }
 
       // Stock filter
       if (filters.inStock !== null && coffee.inStock !== filters.inStock) {
@@ -485,28 +555,13 @@ export default function Coffee() {
                     </div>
                   </div>
 
-                  {/* Price Range */}
-                  <div className="mb-6">
-                    <label className="block text-sm font-medium mb-2" style={{ color: '#361c0c' }}>
-                      {t('coffee.priceRange')}: ₴{filters.priceRange[0]} - ₴{filters.priceRange[1]}
-                    </label>
-                    <Slider
-                      value={filters.priceRange}
-                      onValueChange={(value) => handleFilterChange("priceRange", value)}
-                      max={1000}
-                      min={0}
-                      step={5}
-                      className="w-full"
-                    />
-                  </div>
-
                   {/* Origins */}
                   <div className="mb-6">
                     <label className="block text-sm font-medium mb-3" style={{ color: '#361c0c' }}>
                       {t('coffee.origins')}
                     </label>
                     <div className="space-y-2">
-                      {origins.map((origin) => (
+                      {(filterOptions?.origins || defaultOrigins).map((origin) => (
                         <div key={origin} className="flex items-center space-x-2">
                           <Checkbox
                             id={origin}
@@ -533,7 +588,7 @@ export default function Coffee() {
                       {t('coffee.roastLevel')}
                     </label>
                     <div className="space-y-2">
-                      {roasts.map((roast) => (
+                      {(filterOptions?.roasts || defaultRoasts).map((roast) => (
                         <div key={roast} className="flex items-center space-x-2">
                           <Checkbox
                             id={roast}
@@ -546,8 +601,8 @@ export default function Coffee() {
                               }
                             }}
                           />
-                          <label htmlFor={roast} className="text-sm font-medium capitalize">
-                            {roast === 'light' ? t('product.roastLight') : roast === 'medium' ? t('product.roastMedium') : t('product.roastDark')}
+                          <label htmlFor={roast} className="text-sm font-medium">
+                            {roast}
                           </label>
                         </div>
                       ))}
@@ -632,7 +687,7 @@ export default function Coffee() {
                         )}
 
                         {/* Custom Label */}
-                        {coffee.custom_label && (
+                        {((coffee.custom_label && language === 'ua') || (coffee.custom_label_ru && language === 'ru')) && (
                           <div className={`absolute left-4 ${!coffee.inStock ? 'top-12' : 'top-4'}`}>
                             <span 
                               className="px-3 py-1 text-sm font-bold rounded-full shadow-lg"
@@ -641,14 +696,18 @@ export default function Coffee() {
                                 color: coffee.custom_label_text_color || '#92400e'
                               }}
                             >
-                              {coffee.custom_label}
+                              {language === 'ru' ? (coffee.custom_label_ru || coffee.custom_label) : (coffee.custom_label || coffee.custom_label_ru)}
                             </span>
                           </div>
                         )}
 
-                        {/* Coffee Label - Overlay on top right of image */}
-                        {coffee.label_data ? (
-                          <div className="absolute top-4 right-4 w-[198px]">
+                        {/* External Label Image (preferred), fallback to generated label - scales with card */}
+                        {(coffee as any).label_image_url ? (
+                          <div className="absolute top-2 right-2" style={{ width: 'clamp(120px, 30%, 250px)' }}>
+                            <img src={(coffee as any).label_image_url} alt="label" className="w-full h-auto" />
+                          </div>
+                        ) : coffee.label_data ? (
+                          <div className="absolute top-2 right-2" style={{ width: 'clamp(120px, 30%, 250px)' }}>
                             <CoffeeLabel
                               coffeeName={coffee.name}
                               strength={coffee.strength_level || 3}
@@ -660,10 +719,10 @@ export default function Coffee() {
                             />
                           </div>
                         ) : (
-                          <div className="absolute top-4 right-4 bg-white/95 backdrop-blur-sm rounded-lg p-3 shadow-lg w-[198px]">
+                          <div className="absolute top-2 right-2 bg-white/95 backdrop-blur-sm rounded-lg p-3 shadow-lg" style={{ width: 'clamp(120px, 30%, 250px)' }}>
                             <div className="text-center">
                               <div className="text-xs font-black uppercase tracking-wider mb-2" style={{ color: '#361c0c' }}>
-                                {coffee.origin.toUpperCase()}
+                                {translateOrigin(coffee.origin, language).toUpperCase()}
                               </div>
                               
                               {/* Metrics */}

@@ -36,12 +36,24 @@ export function AdminAnalytics() {
     setLoading(true);
     setError(null);
     try {
-      // Optional date filtering if you add orders table
+      // Try to query orders table, but handle if it doesn't exist
       let q = supabase.from('orders').select('*').order('created_at', { ascending: false }).limit(1000);
       if (dateFrom) q = q.gte('created_at', dateFrom);
       if (dateTo) q = q.lte('created_at', dateTo);
       const { data: oData, error: oErr } = await q;
-      if (oErr) throw oErr;
+      
+      if (oErr) {
+        // If table doesn't exist, just show empty state
+        if (oErr.message && oErr.message.includes('could not find the table')) {
+          console.log('Orders table not found - showing placeholder data');
+          setOrders([]);
+          setItems([]);
+          setLoading(false);
+          return;
+        }
+        throw oErr;
+      }
+      
       setOrders((oData as any) || []);
 
       const orderIds = ((oData as any[]) || []).map(o => o.id);
@@ -50,13 +62,24 @@ export function AdminAnalytics() {
           .from('order_items')
           .select('*')
           .in('order_id', orderIds);
-        if (iErr) throw iErr;
+        
+        if (iErr) {
+          // If order_items table doesn't exist, just continue with empty items
+          if (iErr.message && iErr.message.includes('could not find the table')) {
+            console.log('Order items table not found - showing placeholder data');
+          } else {
+            throw iErr;
+          }
+        }
+        
         setItems((iData as any) || []);
       } else {
         setItems([]);
       }
     } catch (e: any) {
       setError(e.message);
+      setOrders([]);
+      setItems([]);
     }
     setLoading(false);
   };

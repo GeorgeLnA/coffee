@@ -237,6 +237,7 @@ do $$ declare pid bigint; begin
   if not exists (select 1 from public.coffee_sizes where product_id=pid and weight=250) then
     insert into public.coffee_sizes (product_id, sort, enabled, label_ua, label_ru, weight, price)
     values (pid,1,true,'250 г','250 г',250,149.90);
+    
   else
     update public.coffee_sizes set price=149.90, label_ua='250 г', label_ru='250 г', enabled=true where product_id=pid and weight=250;
   end if;

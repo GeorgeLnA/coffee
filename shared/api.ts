@@ -60,6 +60,9 @@ export interface CoffeeProduct {
   roast_level?: number;
   body_level?: number;
   label_data?: CoffeeLabelData | null;
+  label_image_url?: string | null;
+  seo_keywords_ua?: string[] | null;
+  seo_keywords_ru?: string[] | null;
 }
 
 /**

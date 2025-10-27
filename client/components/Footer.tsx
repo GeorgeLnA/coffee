@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { useLanguage } from "../contexts/LanguageContext";
 
 export default function Footer() {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   return (
     <footer className="relative overflow-hidden" style={{ backgroundColor: '#361c0c' }}>
       <div className="max-w-8xl mx-auto px-6 lg:px-8 relative z-10">
@@ -61,6 +61,18 @@ export default function Footer() {
                 <Link to="/contact" className="group flex items-center text-white font-medium hover:text-white/80 transition-all duration-300">
                   <ArrowRight className="w-4 h-4 mr-3 group-hover:translate-x-1 transition-transform" />
                   {t('nav.contacts')}
+                </Link>
+                <Link to="/delivery" className="group flex items-center text-white font-medium hover:text-white/80 transition-all duration-300">
+                  <ArrowRight className="w-4 h-4 mr-3 group-hover:translate-x-1 transition-transform" />
+                  {language === 'ru' ? 'Доставка и оплата' : 'Доставка та оплата'}
+                </Link>
+                <Link to="/terms" className="group flex items-center text-white font-medium hover:text-white/80 transition-all duration-300">
+                  <ArrowRight className="w-4 h-4 mr-3 group-hover:translate-x-1 transition-transform" />
+                  {language === 'ru' ? 'Условия использования' : 'Умови використання'}
+                </Link>
+                <Link to="/returns" className="group flex items-center text-white font-medium hover:text-white/80 transition-all duration-300">
+                  <ArrowRight className="w-4 h-4 mr-3 group-hover:translate-x-1 transition-transform" />
+                  {language === 'ru' ? 'Политика возврата' : 'Політика повернення'}
                 </Link>
               </nav>
             </div>
