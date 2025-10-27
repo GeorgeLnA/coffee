@@ -16,6 +16,7 @@ import Contact from "./pages/Contact";
 import Office from "./pages/Office";
 import NotFound from "./pages/NotFound";
 import Basket from "./pages/Basket";
+import Checkout from "./pages/Checkout";
 import Admin from "./pages/Admin";
 import Delivery from "./pages/Delivery";
 import Terms from "./pages/Terms";
@@ -54,7 +55,8 @@ function App() {
                 <Route path="/terms" element={<Terms />} />
                 <Route path="/returns" element={<Returns />} />
                 <Route path="/office" element={<Office />} />
-                  <Route path="/basket" element={<Basket />} />
+                <Route path="/basket" element={<Basket />} />
+                <Route path="/checkout" element={<Checkout />} />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />
                 </Routes>

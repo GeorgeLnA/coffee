@@ -2,6 +2,9 @@ import "dotenv/config";
 import express from "express";
 import cors from "cors";
 import { handleDemo } from "./routes/demo";
+import { handleLiqPaySignature } from "./routes/liqpay";
+import { prepareOrder } from "./routes/orders.ts";
+import { getWarehouses, searchSettlements } from "./routes/nova-poshta";
 
 export function createServer() {
   const app = express();
@@ -18,6 +21,10 @@ export function createServer() {
   });
 
   app.get("/api/demo", handleDemo);
+  app.post("/api/liqpay-signature", handleLiqPaySignature);
+  app.post("/api/orders/prepare", prepareOrder);
+  app.get("/api/warehouses", getWarehouses);
+  app.get("/api/settlements", searchSettlements);
 
   return app;
 }
