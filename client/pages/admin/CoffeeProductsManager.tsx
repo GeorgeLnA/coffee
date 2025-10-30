@@ -141,7 +141,7 @@ export function CoffeeProductsManager() {
         sort: maxSort + 1,
         metric_label_strength: 'Міцність',
         metric_label_acidity: 'Кислотність',
-        metric_label_roast: 'Обробка',
+        metric_label_roast: 'Обсмаження',
         metric_label_body: 'Насиченість',
         strength_level: 3,
         acidity_level: 3,
@@ -220,13 +220,34 @@ export function CoffeeProductsManager() {
     setError(null);
     const p = override ?? products[pIdx];
     
+    // Sanitize slug: lowercase, replace spaces/special chars with hyphens, remove invalid chars
+    let sanitizedSlug = (p.slug || '').trim().toLowerCase()
+      .replace(/\s+/g, '-')           // Replace spaces with hyphens
+      .replace(/[^a-z0-9-]/g, '')     // Remove invalid characters
+      .replace(/-+/g, '-')             // Replace multiple hyphens with single
+      .replace(/^-|-$/g, '');          // Remove leading/trailing hyphens
+    
+    // If slug is empty after sanitization, generate from name_ua
+    if (!sanitizedSlug && p.name_ua) {
+      sanitizedSlug = p.name_ua.trim().toLowerCase()
+        .replace(/\s+/g, '-')
+        .replace(/[^a-z0-9-]/g, '')
+        .replace(/-+/g, '-')
+        .replace(/^-|-$/g, '');
+    }
+    
+    // If still empty, use product ID as fallback
+    if (!sanitizedSlug && p.id) {
+      sanitizedSlug = String(p.id);
+    }
+    
     // Keep label_data independent of aftertaste fields
     let syncedLabelData = p.label_data;
     
     // Upsert product
     const productPayload = {
       id: p.id,
-      slug: p.slug,
+      slug: sanitizedSlug || null,
       sort: p.sort,
       name_ua: p.name_ua,
       name_ru: p.name_ru,
@@ -267,6 +288,11 @@ export function CoffeeProductsManager() {
       const { error } = await supabase.from('coffee_products').update(productPayload as any).eq('id', productId);
       if (error) return setError(error.message);
     }
+    
+    // Update local state with sanitized slug
+    const updated = [...products];
+    updated[pIdx] = { ...updated[pIdx], slug: sanitizedSlug || null };
+    setProducts(updated);
 
     // Upsert sizes
     const sizes = (p.sizes || []).map((s, i) => ({ ...s, sort: i + 1 }));
@@ -294,7 +320,10 @@ export function CoffeeProductsManager() {
     }
 
     // Only invalidate queries, don't reload the entire page
-    try { await queryClient.invalidateQueries({ queryKey: ['coffee-products'] }); } catch {}
+    try { 
+      await queryClient.invalidateQueries({ queryKey: ['coffee-products'] }); 
+      await queryClient.invalidateQueries({ queryKey: ['coffee-product'] }); 
+    } catch {}
     if (!suppressAlert) {
       alert('Збережено!');
     }
@@ -444,7 +473,27 @@ export function CoffeeProductsManager() {
                   </div>
                   <div>
                     <Label>Slug (URL)</Label>
-                    <Input value={p.slug ?? ''} onChange={(e) => updateProductField(pIdx, 'slug', e.target.value)} placeholder="guatemala-antigua" />
+                    <div className="flex gap-2">
+                      <Input value={p.slug ?? ''} onChange={(e) => updateProductField(pIdx, 'slug', e.target.value)} placeholder="guatemala-antigua" />
+                      <Button 
+                        type="button"
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => {
+                          const autoSlug = (p.name_ua || '').trim().toLowerCase()
+                            .replace(/\s+/g, '-')
+                            .replace(/[^a-z0-9-]/g, '')
+                            .replace(/-+/g, '-')
+                            .replace(/^-|-$/g, '');
+                          if (autoSlug) {
+                            updateProductField(pIdx, 'slug', autoSlug);
+                          }
+                        }}
+                        title="Генерувати з назви"
+                      >
+                        Auto
+                      </Button>
+                    </div>
                   </div>
                 </div>
 
@@ -504,47 +553,47 @@ export function CoffeeProductsManager() {
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <Label>Міцність (1-5)</Label>
+                    <Label>Міцність (0-5)</Label>
                     <Input
                       type="number"
-                      min="1"
+                      min="0"
                       max="5"
                       value={p.strength_level ?? 3}
                       onChange={(e) => updateProductField(pIdx, 'strength_level', Number(e.target.value))}
                     />
                   </div>
                   <div>
-                    <Label>Кислотність (1-5)</Label>
+                    <Label>Кислотність (0-5)</Label>
                     <Input
                       type="number"
-                      min="1"
+                      min="0"
                       max="5"
                       value={p.acidity_level ?? 3}
                       onChange={(e) => updateProductField(pIdx, 'acidity_level', Number(e.target.value))}
                     />
                   </div>
                   <div>
-                    <Label>Обробка (1-5)</Label>
+                    <Label>Обсмаження (0-5)</Label>
                     <Input
                       type="number"
-                      min="1"
+                      min="0"
                       max="5"
                       value={p.roast_level ?? 3}
                       onChange={(e) => updateProductField(pIdx, 'roast_level', Number(e.target.value))}
                     />
                   </div>
                   <div>
-                    <Label>Насиченість (1-5)</Label>
+                    <Label>Насиченість (0-5)</Label>
                     <Input
                       type="number"
-                      min="1"
+                      min="0"
                       max="5"
                       value={p.body_level ?? 3}
                       onChange={(e) => updateProductField(pIdx, 'body_level', Number(e.target.value))}
                     />
                   </div>
                 </div>
-                <p className="text-xs text-gray-500">Ці характеристики відображаються на сторінці продукту з coffee bean іконками</p>
+                <p className="text-xs text-gray-500">Значення може бути від 0 до 5. Ці характеристики відображаються на сторінці продукту з coffee bean іконками</p>
               </div>
 
               {/* Custom Label with Color Picker */}

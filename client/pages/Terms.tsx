@@ -1,68 +1,34 @@
 import Header from "../components/Header";
 import Footer from "../components/Footer";
 import { useLanguage } from "../contexts/LanguageContext";
+import { useLegalPage } from "../hooks/use-supabase";
 
 export default function Terms() {
   const { language } = useLanguage();
+  const { data: page } = useLegalPage('terms');
+  const pick = (ua?: string | null, ru?: string | null, fallback: string = "") => 
+    (language === 'ru' ? (ru ?? ua ?? fallback) : (ua ?? ru ?? fallback));
 
-  const ru = {
-    title: "Условия использования сайтом",
-    sections: [
-      {
-        h: "КОНФИДЕНЦИАЛЬНОСТЬ",
-        p: [
-          "Мы ответственно относимся к соблюдению права каждого посетителя нашего сайта на конфиденциальность персональных данных и принимаем меры по защите любой информации, которую вы предоставляете нам.",
-          "Используя Сайт Вы подтверждаете, что являетесь совершеннолетним физическим лицом и принимаете условия конфиденциальности.",
-          "Мы собираем и обрабатываем персональную информацию, которая предоставляется добровольно или необходима для предоставления/улучшения услуг.",
-        ],
-      },
-      {
-        h: "ПУБЛИЧНАЯ ОФЕРТА",
-        p: [
-          "Нижеследующий текст является официальным публичным предложением заключить Публичный Договор купли-продажи Товаров размещенных на веб-сайте https://coffeemanifest.com.ua.",
-          "Покупатель принимает условия предложения в момент оформления Заказа.",
-        ],
-      },
-    ],
-  };
-
-  const ua = {
-    title: "Умови використання сайту",
-    sections: [
-      {
-        h: "КОНФІДЕНЦІЙНІСТЬ",
-        p: [
-          "Ми відповідально ставимося до дотримання права кожного відвідувача нашого сайту на конфіденційність персональних даних і вживаємо заходів для захисту будь-якої інформації, яку ви нам надаєте.",
-          "Використовуючи Сайт, Ви підтверджуєте, що є повнолітньою особою та приймаєте умови конфіденційності.",
-          "Ми збираємо і обробляємо персональну інформацію, надану добровільно або необхідну для надання/покращення послуг.",
-        ],
-      },
-      {
-        h: "ПУБЛІЧНА ОФЕРТА",
-        p: [
-          "Наведений нижче текст є офіційною публічною пропозицією укласти Публічний Договір купівлі-продажу Товарів, розміщених на веб-сайті https://coffeemanifest.com.ua.",
-          "Покупець приймає умови пропозиції в момент оформлення Замовлення.",
-        ],
-      },
-    ],
-  };
-
-  const c = language === 'ru' ? ru : ua;
+  const title = pick(page?.title_ua, page?.title_ru, language === 'ru' ? 'Условия использования сайтом' : 'Умови використання сайту');
+  const content = pick(page?.content_ua, page?.content_ru, '');
 
   return (
     <div className="min-h-screen bg-coffee-background">
       <Header />
       <main className="pt-40 pb-20">
         <div className="max-w-4xl mx-auto px-6 lg:px-8">
-          <h1 className="text-4xl font-black mb-8" style={{ color: '#361c0c' }}>{c.title}</h1>
-          <div className="space-y-10 text-gray-800 leading-relaxed">
-            {c.sections.map((s, i) => (
-              <section key={i}>
-                <h2 className="text-2xl font-bold mb-4" style={{ color: '#361c0c' }}>{s.h}</h2>
-                {s.p.map((p, idx) => (<p key={idx} className="mb-3">{p}</p>))}
-              </section>
-            ))}
-          </div>
+          <h1 className="text-4xl font-black mb-8" style={{ color: '#361c0c' }}>{title}</h1>
+          {content && (
+            <div 
+              className="text-gray-800 leading-relaxed whitespace-pre-wrap"
+              dangerouslySetInnerHTML={{ __html: content.replace(/\n/g, '<br />') }}
+            />
+          )}
+          {!content && (
+            <div className="text-gray-800 leading-relaxed">
+              <p>{language === 'ru' ? 'Содержимое страницы будет добавлено в ближайшее время.' : 'Зміст сторінки буде додано найближчим часом.'}</p>
+            </div>
+          )}
         </div>
       </main>
       <Footer />

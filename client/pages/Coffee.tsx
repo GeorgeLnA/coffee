@@ -665,7 +665,7 @@ export default function Coffee() {
                   {filteredCoffees.map((coffee) => (
                     <Link 
                       key={coffee.id} 
-                      to={`/product/${coffee.id}`}
+                      to={`/product/${coffee.slug || coffee.id}`}
                       className="group bg-white rounded-lg shadow-lg overflow-hidden hover:shadow-xl transition-all duration-300 flex flex-col"
                     >
                       {/* Image */}
@@ -803,7 +803,15 @@ export default function Coffee() {
                           <span className="text-sm text-gray-500">{translateOrigin(coffee.origin, language)}</span>
                           <span className="text-sm text-gray-300">•</span>
                           <span className="text-sm text-gray-500">
-                            {coffee.roast === 'light' ? t('product.roastLight') : coffee.roast === 'medium' ? t('product.roastMedium') : t('product.roastDark')}
+                            {(() => {
+                              // Find label match in filterOptions.roasts (which are localized, ordered, as displayed in filter)
+                              const { roasts = [] } = filterOptions || {};
+                              // roastCode (as returned by filter), e.g. 'medium'
+                              const roastCode = coffee.roast && typeof coffee.roast === 'string' ? coffee.roast.toLowerCase() : '';
+                              // Try to match roast label to roastCode
+                              const label = roasts.find(r => r.toLowerCase().includes(roastCode)) || roasts.find(r => roastCode.includes(r.toLowerCase()));
+                              return label || coffee.roast || '-';
+                            })()}
                           </span>
                         </div>
 

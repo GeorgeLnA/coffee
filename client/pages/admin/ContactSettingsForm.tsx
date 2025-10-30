@@ -31,22 +31,14 @@ export function ContactSettingsForm() {
           title_ru: 'Наши контакты',
           phone_title_ua: 'Телефон',
           phone_title_ru: 'Телефон',
-          phone1: '+380 50 123 45 67',
-          phone2: '+380 44 123 45 67',
+          phone1: '+380 67 000 24 18',
           phone_desc_ua: 'Зв\'яжіться з нами для замовлення',
           phone_desc_ru: 'Свяжитесь с нами для заказа',
           email_title_ua: 'Email',
           email_title_ru: 'Email',
           email1: 'info@coffeemanifest.com',
-          email2: 'orders@coffeemanifest.com',
           email_desc_ua: 'Напишіть нам на пошту',
           email_desc_ru: 'Напишите нам на почту',
-          hours_title_ua: 'Графік роботи',
-          hours_title_ru: 'График работы',
-          hours_details_ua: 'Пн-Пт: 8:00 - 20:00, Сб-Нд: 9:00 - 18:00',
-          hours_details_ru: 'Пн-Пт: 8:00 - 20:00, Сб-Вс: 9:00 - 18:00',
-          hours_desc_ua: 'Коли ми працюємо',
-          hours_desc_ru: 'Когда мы работаем',
           trading_title_ua: 'Торгові точки',
           trading_title_ru: 'Торговые точки',
           trading_desc_ua: 'Наші фізичні точки продажу',
@@ -67,9 +59,20 @@ export function ContactSettingsForm() {
     if (!form) return;
     setSaving(true);
     setError(null);
+    const payload: any = { ...form, id: 1 };
+    // Optional: clear deprecated fields so they don't resurface
+    payload.phone2 = null;
+    payload.email2 = null;
+    payload.hours_title_ua = null;
+    payload.hours_title_ru = null;
+    payload.hours_details_ua = null;
+    payload.hours_details_ru = null;
+    payload.hours_desc_ua = null;
+    payload.hours_desc_ru = null;
+
     const { error } = await supabase
       .from('contact_settings')
-      .upsert({ ...form, id: 1 }, { onConflict: 'id' });
+      .upsert(payload, { onConflict: 'id' });
     setSaving(false);
     if (error) {
       setError(error.message);
@@ -108,9 +111,9 @@ export function ContactSettingsForm() {
           </div>
         </div>
 
-        {/* Phones */}
+        {/* Phone (single) */}
         <div className="space-y-3">
-          <div className="font-semibold">Телефони</div>
+          <div className="font-semibold">Телефон</div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <Label>Заголовок (UA)</Label>
@@ -123,12 +126,8 @@ export function ContactSettingsForm() {
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <Label>Телефон 1</Label>
+              <Label>Телефон</Label>
               <Input value={form.phone1 || ''} onChange={(e) => updateField('phone1', e.target.value)} />
-            </div>
-            <div>
-              <Label>Телефон 2</Label>
-              <Input value={form.phone2 || ''} onChange={(e) => updateField('phone2', e.target.value)} />
             </div>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -143,7 +142,7 @@ export function ContactSettingsForm() {
           </div>
         </div>
 
-        {/* Emails */}
+        {/* Email (single) */}
         <div className="space-y-3">
           <div className="font-semibold">Електронна пошта</div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -158,12 +157,8 @@ export function ContactSettingsForm() {
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <Label>Email 1</Label>
+              <Label>Email</Label>
               <Input value={form.email1 || ''} onChange={(e) => updateField('email1', e.target.value)} />
-            </div>
-            <div>
-              <Label>Email 2</Label>
-              <Input value={form.email2 || ''} onChange={(e) => updateField('email2', e.target.value)} />
             </div>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -174,41 +169,6 @@ export function ContactSettingsForm() {
             <div>
               <Label>Опис (RU)</Label>
               <Input value={form.email_desc_ru || ''} onChange={(e) => updateField('email_desc_ru', e.target.value)} />
-            </div>
-          </div>
-        </div>
-
-        {/* Hours */}
-        <div className="space-y-3">
-          <div className="font-semibold">Графік роботи</div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Label>Заголовок (UA)</Label>
-              <Input value={form.hours_title_ua || ''} onChange={(e) => updateField('hours_title_ua', e.target.value)} />
-            </div>
-            <div>
-              <Label>Заголовок (RU)</Label>
-              <Input value={form.hours_title_ru || ''} onChange={(e) => updateField('hours_title_ru', e.target.value)} />
-            </div>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Label>Деталі (UA)</Label>
-              <Input value={form.hours_details_ua || ''} onChange={(e) => updateField('hours_details_ua', e.target.value)} />
-            </div>
-            <div>
-              <Label>Деталі (RU)</Label>
-              <Input value={form.hours_details_ru || ''} onChange={(e) => updateField('hours_details_ru', e.target.value)} />
-            </div>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Label>Опис (UA)</Label>
-              <Input value={form.hours_desc_ua || ''} onChange={(e) => updateField('hours_desc_ua', e.target.value)} />
-            </div>
-            <div>
-              <Label>Опис (RU)</Label>
-              <Input value={form.hours_desc_ru || ''} onChange={(e) => updateField('hours_desc_ru', e.target.value)} />
             </div>
           </div>
         </div>

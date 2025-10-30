@@ -27,6 +27,7 @@ import { LoadingProvider } from "./contexts/LoadingContext";
 import LoadingAnimation from "./components/LoadingAnimation";
 import ScrollToTop from "./components/ScrollToTop";
 import { AdminButton } from "./components/AdminButton";
+import ErrorPage from "./pages/ErrorPage";
 
 const queryClient = new QueryClient();
 
@@ -57,6 +58,11 @@ function App() {
                 <Route path="/office" element={<Office />} />
                 <Route path="/basket" element={<Basket />} />
                 <Route path="/checkout" element={<Checkout />} />
+                {/* Error pages */}
+                <Route path="/402" element={<ErrorPage code={402} message="Payment Required" />} />
+                <Route path="/403" element={<ErrorPage code={403} message="Forbidden" />} />
+                <Route path="/500" element={<ErrorPage code={500} message="Server Error" />} />
+                <Route path="/error/:code" element={<ErrorPage />} />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />
                 </Routes>

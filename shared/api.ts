@@ -55,7 +55,10 @@ export interface CoffeeProduct {
   custom_label_color?: string | null;
   custom_label_text_color?: string | null;
   // New fields for custom labels and metrics
-  strength_level?: number;
+  /**
+   * Coffee metric levels (0-5; 0 means not specified/displayed)
+   */
+  strength_level?: number; // 0—5
   acidity_level?: number;
   roast_level?: number;
   body_level?: number;

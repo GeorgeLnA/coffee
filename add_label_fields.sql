@@ -64,7 +64,7 @@ begin
   ) then
     alter table public.coffee_products 
     add constraint coffee_strength_level_check 
-    check (strength_level is null or (strength_level >= 1 and strength_level <= 5));
+    check (strength_level is null or (strength_level >= 0 and strength_level <= 5));
   end if;
 end $$;
 
@@ -76,7 +76,7 @@ begin
   ) then
     alter table public.coffee_products 
     add constraint coffee_acidity_level_check 
-    check (acidity_level is null or (acidity_level >= 1 and acidity_level <= 5));
+    check (acidity_level is null or (acidity_level >= 0 and acidity_level <= 5));
   end if;
 end $$;
 
@@ -88,7 +88,7 @@ begin
   ) then
     alter table public.coffee_products 
     add constraint coffee_roast_level_check 
-    check (roast_level is null or (roast_level >= 1 and roast_level <= 5));
+    check (roast_level is null or (roast_level >= 0 and roast_level <= 5));
   end if;
 end $$;
 
@@ -100,7 +100,7 @@ begin
   ) then
     alter table public.coffee_products 
     add constraint coffee_body_level_check 
-    check (body_level is null or (body_level >= 1 and body_level <= 5));
+    check (body_level is null or (body_level >= 0 and body_level <= 5));
   end if;
 end $$;
 

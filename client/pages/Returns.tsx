@@ -1,37 +1,34 @@
 import Header from "../components/Header";
 import Footer from "../components/Footer";
 import { useLanguage } from "../contexts/LanguageContext";
+import { useLegalPage } from "../hooks/use-supabase";
 
 export default function Returns() {
   const { language } = useLanguage();
+  const { data: page } = useLegalPage('returns');
+  const pick = (ua?: string | null, ru?: string | null, fallback: string = "") => 
+    (language === 'ru' ? (ru ?? ua ?? fallback) : (ua ?? ru ?? fallback));
 
-  const ru = {
-    title: "Политика возврата",
-    p: [
-      "Наш интернет-магазин предоставляет гарантию на реализуемую продукцию. Сроки гарантии зависят от выбранной Вами продукции, более подробную информацию Вы можете узнать в описании товара или у менеджеров магазина.",
-      "Вернуть товар в магазин (или обменять его на другой аналогичный) можно в течение 14 дней с момента покупки. Это касается новых товаров надлежащего качества, без следов эксплуатации. Обратите внимание: не все категории товаров подлежат возврату согласно закону «О защите прав потребителей».",
-    ],
-  };
-
-  const ua = {
-    title: "Політика повернення",
-    p: [
-      "Наш інтернет-магазин надає гарантію на реалізовану продукцію. Строки гарантії залежать від обраної Вами продукції, детальнішу інформацію Ви можете дізнатися в описі товару або у менеджерів магазину.",
-      "Повернути товар в магазин (або обміняти його на інший аналогічний) можна протягом 14 днів з моменту покупки. Це стосується нових товарів належної якості, без слідів експлуатації. Зверніть увагу: не всі категорії товарів підлягають поверненню згідно із законом «Про захист прав споживачів».",
-    ],
-  };
-
-  const c = language === 'ru' ? ru : ua;
+  const title = pick(page?.title_ua, page?.title_ru, language === 'ru' ? 'Политика возврата' : 'Політика повернення');
+  const content = pick(page?.content_ua, page?.content_ru, '');
 
   return (
     <div className="min-h-screen bg-coffee-background">
       <Header />
       <main className="pt-40 pb-20">
         <div className="max-w-4xl mx-auto px-6 lg:px-8">
-          <h1 className="text-4xl font-black mb-8" style={{ color: '#361c0c' }}>{c.title}</h1>
-          <div className="space-y-3 text-gray-800 leading-relaxed">
-            {c.p.map((p, i) => (<p key={i}>{p}</p>))}
-          </div>
+          <h1 className="text-4xl font-black mb-8" style={{ color: '#361c0c' }}>{title}</h1>
+          {content && (
+            <div 
+              className="text-gray-800 leading-relaxed whitespace-pre-wrap"
+              dangerouslySetInnerHTML={{ __html: content.replace(/\n/g, '<br />') }}
+            />
+          )}
+          {!content && (
+            <div className="text-gray-800 leading-relaxed">
+              <p>{language === 'ru' ? 'Содержимое страницы будет добавлено в ближайшее время.' : 'Зміст сторінки буде додано найближчим часом.'}</p>
+            </div>
+          )}
         </div>
       </main>
       <Footer />

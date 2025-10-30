@@ -10,6 +10,9 @@ import { FeaturedProductsManager } from "@/pages/admin/FeaturedProductsManager";
 import { OfficeSettingsForm } from "@/pages/admin/OfficeSettingsForm";
 import { ContactSettingsForm } from "@/pages/admin/ContactSettingsForm";
 import { ContactTradePointsForm } from "@/pages/admin/ContactTradePointsForm";
+import { FooterSettingsForm } from "@/pages/admin/FooterSettingsForm";
+import { LegalPagesForm } from "@/pages/admin/LegalPagesForm";
+import { DeliverySettingsForm } from "@/pages/admin/DeliverySettingsForm";
 import { CoffeeProductsManager } from "@/pages/admin/CoffeeProductsManager";
 import { WaterProductsManager } from "@/pages/admin/WaterProductsManager";
 import { CustomSectionsManager } from "@/pages/admin/CustomSectionsManager";
@@ -152,6 +155,9 @@ export default function Admin() {
                 <TabsTrigger value="office">Для офісу</TabsTrigger>
                 <TabsTrigger value="contact">Контакти</TabsTrigger>
                 <TabsTrigger value="trade-points">Точки продажу</TabsTrigger>
+                <TabsTrigger value="footer">Футер</TabsTrigger>
+                <TabsTrigger value="delivery-settings">Доставка</TabsTrigger>
+                <TabsTrigger value="legal">Юридичні сторінки</TabsTrigger>
                 <TabsTrigger value="custom-sections">Кастомні секції</TabsTrigger>
               </TabsList>
               <TabsContent value="home">
@@ -165,6 +171,30 @@ export default function Admin() {
               </TabsContent>
               <TabsContent value="trade-points">
                 <ContactTradePointsForm />
+              </TabsContent>
+              <TabsContent value="footer">
+                <FooterSettingsForm />
+              </TabsContent>
+              <TabsContent value="delivery-settings">
+                <DeliverySettingsForm />
+              </TabsContent>
+              <TabsContent value="legal">
+                <Tabs defaultValue="delivery" className="w-full">
+                  <TabsList>
+                    <TabsTrigger value="delivery">Доставка та оплата</TabsTrigger>
+                    <TabsTrigger value="terms">Умови використання</TabsTrigger>
+                    <TabsTrigger value="returns">Політика повернення</TabsTrigger>
+                  </TabsList>
+                  <TabsContent value="delivery">
+                    <LegalPagesForm pageType="delivery" />
+                  </TabsContent>
+                  <TabsContent value="terms">
+                    <LegalPagesForm pageType="terms" />
+                  </TabsContent>
+                  <TabsContent value="returns">
+                    <LegalPagesForm pageType="returns" />
+                  </TabsContent>
+                </Tabs>
               </TabsContent>
               <TabsContent value="custom-sections">
                 <CustomSectionsManager />

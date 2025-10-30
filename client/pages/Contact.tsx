@@ -13,24 +13,22 @@ export default function Contact() {
   const { data: customSections } = usePageSections('contact');
   const pick = (ua?: string | null, ru?: string | null, fallback: string = "") => (language === 'ru' ? (ru ?? ua ?? fallback) : (ua ?? ru ?? fallback));
 
+  const primaryPhone = (settings?.phone1 || "+380 67 473 88 86").replace(/\s+/g, ' ').trim();
+  const primaryEmail = (settings?.email1 || "manifestcava@gmail.com").trim();
+
+  // Only phone and email cards (removed working hours)
   const contactInfo = [
     {
       icon: <Phone className="w-8 h-8" />,
       title: pick(settings?.phone_title_ua, settings?.phone_title_ru, t('contact.phone')),
-      details: [settings?.phone1 || "+380 50 123 45 67", settings?.phone2 || "+380 44 123 45 67"],
+      details: [primaryPhone],
       description: pick(settings?.phone_desc_ua, settings?.phone_desc_ru, t('contact.phoneDesc'))
     },
     {
       icon: <Mail className="w-8 h-8" />,
       title: pick(settings?.email_title_ua, settings?.email_title_ru, t('contact.email')),
-      details: [settings?.email1 || "info@coffeemanifest.com", settings?.email2 || "orders@coffeemanifest.com"],
+      details: [primaryEmail],
       description: pick(settings?.email_desc_ua, settings?.email_desc_ru, t('contact.emailDesc'))
-    },
-    {
-      icon: <Clock className="w-8 h-8" />,
-      title: pick(settings?.hours_title_ua, settings?.hours_title_ru, t('contact.hours')),
-      details: [pick(settings?.hours_details_ua, settings?.hours_details_ru, t('contact.hoursDetails'))],
-      description: pick(settings?.hours_desc_ua, settings?.hours_desc_ru, t('contact.hoursDesc'))
     }
   ];
 
@@ -55,6 +53,18 @@ export default function Contact() {
         }
       ]);
 
+  const renderDetail = (detail: string) => {
+    const trimmed = detail.trim();
+    if (/^[+\d][\d\s()-]+$/.test(trimmed)) {
+      const telHref = `tel:${trimmed.replace(/[^+\d]/g, '')}`;
+      return <a href={telHref} className="underline-offset-2 hover:underline" style={{ color: '#361c0c' }}>{trimmed}</a>;
+    }
+    if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
+      return <a href={`mailto:${trimmed}`} className="underline-offset-2 hover:underline" style={{ color: '#361c0c' }}>{trimmed}</a>;
+    }
+    return <span style={{ color: '#361c0c' }}>{trimmed}</span>;
+  };
+
   return (
     <div className="min-h-screen bg-coffee-background">
       {/* Header */}
@@ -71,7 +81,7 @@ export default function Contact() {
             </h2>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
             {contactInfo.map((info, index) => (
               <div key={index} className="text-center group">
                 <div className="inline-flex items-center justify-center w-16 h-16 rounded-full mb-6 transition-all duration-300 group-hover:scale-110" style={{ backgroundColor: '#361c0c' }}>
@@ -84,8 +94,8 @@ export default function Contact() {
                 </h3>
                 <div className="space-y-2 mb-4">
                   {info.details.map((detail, idx) => (
-                    <p key={idx} className="text-lg font-medium" style={{ color: '#361c0c' }}>
-                      {detail}
+                    <p key={idx} className="text-lg font-medium">
+                      {renderDetail(detail)}
                     </p>
                   ))}
                 </div>
@@ -118,32 +128,43 @@ export default function Contact() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-            {tradingPoints.map((point, index) => (
-              <div key={index} className="group relative overflow-hidden shadow-2xl hover:shadow-3xl transition-all duration-500" style={{ backgroundColor: '#fcf4e4' }}>
-                <div className="p-8">
-                  <div className="mb-4">
-                    <h3 className="text-2xl font-black" style={{ color: '#361c0c' }}>
-                      {point.name}
-                    </h3>
-                  </div>
-                  
-                  <div className="space-y-3">
-                    <div className="flex items-center space-x-3">
-                      <MapPin className="w-5 h-5" style={{ color: '#361c0c' }} />
-                      <span className="font-medium" style={{ color: '#361c0c' }}>
-                        {point.address}
-                      </span>
+            {tradingPoints.map((point, index) => {
+              const query = encodeURIComponent(`${point.name} ${point.address}`.trim());
+              const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${query}`;
+              return (
+                <a
+                  key={index}
+                  href={mapsUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="group relative overflow-hidden shadow-2xl hover:shadow-3xl transition-all duration-500 cursor-pointer"
+                  style={{ backgroundColor: '#fcf4e4' }}
+                >
+                  <div className="p-8">
+                    <div className="mb-4">
+                      <h3 className="text-2xl font-black" style={{ color: '#361c0c' }}>
+                        {point.name}
+                      </h3>
                     </div>
-                    <div className="flex items-center space-x-3">
-                      <Clock className="w-5 h-5" style={{ color: '#361c0c' }} />
-                      <span className="font-medium" style={{ color: '#361c0c' }}>
-                        {point.hours}
-                      </span>
+                    
+                    <div className="space-y-3">
+                      <div className="flex items-center space-x-3">
+                        <MapPin className="w-5 h-5" style={{ color: '#361c0c' }} />
+                        <span className="font-medium underline-offset-2 group-hover:underline" style={{ color: '#361c0c' }}>
+                          {point.address}
+                        </span>
+                      </div>
+                      <div className="flex items-center space-x-3">
+                        <Clock className="w-5 h-5" style={{ color: '#361c0c' }} />
+                        <span className="font-medium" style={{ color: '#361c0c' }}>
+                          {point.hours}
+                        </span>
+                      </div>
                     </div>
                   </div>
-                </div>
-              </div>
-            ))}
+                </a>
+              );
+            })}
           </div>
         </div>
       </section>

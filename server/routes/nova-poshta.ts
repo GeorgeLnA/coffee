@@ -78,6 +78,7 @@ export const getWarehouses: RequestHandler = async (req, res) => {
   try {
     const apiKey = process.env.NOVA_POSHTA_API_KEY || "";
     const cityRef = String(req.query.cityRef || "").trim();
+    const type = String(req.query.type || "").trim(); // "postomat" or "department" or empty for all
     
     if (!cityRef) {
       return res.json({ data: [] });
@@ -103,7 +104,41 @@ export const getWarehouses: RequestHandler = async (req, res) => {
     const json = await resp.json();
     
     if (json.success && json.data) {
-      return res.json({ status: "200", data: json.data });
+      let filteredData = json.data;
+      
+      console.log(`Filtering warehouses: type=${type}, total=${json.data.length}`);
+      
+      // Filter by type if specified
+      if (type === "postomat") {
+        // Postomats typically have TypeOfWarehouse = "9" or contain "Поштомат" in description
+        filteredData = json.data.filter((wh: any) => {
+          const typeOfWarehouse = String(wh.TypeOfWarehouse || "");
+          const desc = String(wh.Description || "").toLowerCase();
+          const addr = String(wh.ShortAddress || "").toLowerCase();
+          return (
+            typeOfWarehouse === "9" ||
+            desc.includes("поштомат") ||
+            addr.includes("поштомат")
+          );
+        });
+        console.log(`Postomats filtered: ${filteredData.length}`);
+      } else if (type === "department") {
+        // Departments are everything that is NOT a postomat
+        filteredData = json.data.filter((wh: any) => {
+          const typeOfWarehouse = String(wh.TypeOfWarehouse || "");
+          const desc = String(wh.Description || "").toLowerCase();
+          const addr = String(wh.ShortAddress || "").toLowerCase();
+          // Exclude postomats (TypeOfWarehouse "9" or contains "поштомат")
+          return (
+            typeOfWarehouse !== "9" &&
+            !desc.includes("поштомат") &&
+            !addr.includes("поштомат")
+          );
+        });
+        console.log(`Departments filtered: ${filteredData.length}`);
+      }
+      
+      return res.json({ status: "200", data: filteredData });
     } else {
       console.error("Nova Poshta API error:", json);
       // Fallback to mock data if API fails

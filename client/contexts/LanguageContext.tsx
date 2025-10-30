@@ -103,7 +103,7 @@ const translations = {
     'coffee.tryAdjustingFilters': 'Спробуйте налаштувати фільтри для отримання більшої кількості результатів',
     'coffee.strength': 'Міцність',
     'coffee.acidity': 'Кислотність',
-    'coffee.roast': 'Обробка',
+    'coffee.roast': 'Обсмаження',
     'coffee.body': 'Насиченість',
     'coffee.sort.default': 'За замовчуванням',
     'coffee.sort.priceLow': 'Ціна: від низької',

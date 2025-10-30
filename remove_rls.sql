@@ -404,22 +404,22 @@ begin
   if not exists (
     select 1 from pg_constraint where conname = 'coffee_strength_level_check' and conrelid = 'public.coffee_products'::regclass
   ) then
-    alter table public.coffee_products add constraint coffee_strength_level_check check (strength_level is null or (strength_level between 1 and 5));
+    alter table public.coffee_products add constraint coffee_strength_level_check check (strength_level is null or (strength_level between 0 and 5));
   end if;
   if not exists (
     select 1 from pg_constraint where conname = 'coffee_acidity_level_check' and conrelid = 'public.coffee_products'::regclass
   ) then
-    alter table public.coffee_products add constraint coffee_acidity_level_check check (acidity_level is null or (acidity_level between 1 and 5));
+    alter table public.coffee_products add constraint coffee_acidity_level_check check (acidity_level is null or (acidity_level between 0 and 5));
   end if;
   if not exists (
     select 1 from pg_constraint where conname = 'coffee_roast_level_check' and conrelid = 'public.coffee_products'::regclass
   ) then
-    alter table public.coffee_products add constraint coffee_roast_level_check check (roast_level is null or (roast_level between 1 and 5));
+    alter table public.coffee_products add constraint coffee_roast_level_check check (roast_level is null or (roast_level between 0 and 5));
   end if;
   if not exists (
     select 1 from pg_constraint where conname = 'coffee_body_level_check' and conrelid = 'public.coffee_products'::regclass
   ) then
-    alter table public.coffee_products add constraint coffee_body_level_check check (body_level is null or (body_level between 1 and 5));
+    alter table public.coffee_products add constraint coffee_body_level_check check (body_level is null or (body_level between 0 and 5));
   end if;
 end $$;
 commit;

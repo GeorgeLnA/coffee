@@ -206,6 +206,49 @@ export interface ContactPoint {
   hours_ru: string | null;
 }
 
+export interface FooterSettings {
+  id: number;
+  description_ua: string | null;
+  description_ru: string | null;
+  facebook_url: string | null;
+  instagram_url: string | null;
+  telegram_url: string | null;
+  viber_url: string | null;
+  whatsapp_url: string | null;
+  show_facebook: boolean | null;
+  show_instagram: boolean | null;
+  show_telegram: boolean | null;
+  show_viber: boolean | null;
+  show_whatsapp: boolean | null;
+  quick_links_title_ua: string | null;
+  quick_links_title_ru: string | null;
+  contact_title_ua: string | null;
+  contact_title_ru: string | null;
+  phone_label_ua: string | null;
+  phone_label_ru: string | null;
+  phone_number: string | null;
+  phone_desc_ua: string | null;
+  phone_desc_ru: string | null;
+  email_label_ua: string | null;
+  email_label_ru: string | null;
+  email_address: string | null;
+  email_desc_ua: string | null;
+  email_desc_ru: string | null;
+  address_label_ua: string | null;
+  address_label_ru: string | null;
+  address_text_ua: string | null;
+  address_text_ru: string | null;
+  address_desc_ua: string | null;
+  address_desc_ru: string | null;
+  show_phone: boolean | null;
+  show_email: boolean | null;
+  show_address: boolean | null;
+  copyright_text_ua: string | null;
+  copyright_text_ru: string | null;
+  made_by_text: string | null;
+  made_by_url: string | null;
+}
+
 export function useContactSettings() {
   return useQuery({
     queryKey: ['contact-settings'],
@@ -231,6 +274,66 @@ export function useContactPoints() {
         .order('sort', { ascending: true, nullsFirst: true });
       if (error) throw error;
       return (data || []) as ContactPoint[];
+    },
+  });
+}
+
+export function useFooterSettings() {
+  return useQuery({
+    queryKey: ['footer-settings'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('footer_settings')
+        .select('*')
+        .eq('id', 1)
+        .single();
+      if (error && error.code !== 'PGRST116') throw error;
+      return data as FooterSettings | null;
+    },
+  });
+}
+
+export interface LegalPage {
+  id: number;
+  page_type: 'delivery' | 'terms' | 'returns';
+  title_ua: string | null;
+  title_ru: string | null;
+  content_ua: string | null;
+  content_ru: string | null;
+}
+
+export function useLegalPage(pageType: 'delivery' | 'terms' | 'returns') {
+  return useQuery({
+    queryKey: ['legal-page', pageType],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('legal_pages')
+        .select('*')
+        .eq('page_type', pageType)
+        .single();
+      if (error && error.code !== 'PGRST116') throw error;
+      return data as LegalPage | null;
+    },
+  });
+}
+
+export interface DeliverySettings {
+  id: number;
+  courier_price: number | null;
+  free_delivery_threshold: number | null;
+}
+
+export function useDeliverySettings() {
+  return useQuery({
+    queryKey: ['delivery-settings'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('delivery_settings')
+        .select('*')
+        .eq('id', 1)
+        .single();
+      if (error && error.code !== 'PGRST116') throw error;
+      return data as DeliverySettings | null;
     },
   });
 }

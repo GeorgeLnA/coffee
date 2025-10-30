@@ -25,7 +25,7 @@ import { cn } from "../lib/utils";
 import { useLanguage } from "../contexts/LanguageContext";
 import { useCart } from "../contexts/CartContext";
 import { useToast } from "../hooks/use-toast";
-import { useCoffeeProduct } from "../hooks/use-supabase";
+import { useCoffeeProduct, useFilterOptions } from "../hooks/use-supabase";
 
 // Helper function to get translated description
 const getCoffeeDescription = (coffeeId: string, language: string) => {
@@ -342,6 +342,7 @@ export default function Product() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { t, language } = useLanguage();
+  const { data: filterOptions } = useFilterOptions(language);
   const { addItem } = useCart();
   const { toast } = useToast();
   
@@ -490,7 +491,15 @@ export default function Product() {
                 </h1>
                 {!notFound && (
                   <p className="text-lg text-gray-600">
-                    {translateOrigin(product!.origin, language)} • {product!.roast === 'light' ? t('product.roastLight') : product!.roast === 'medium' ? t('product.roastMedium') : t('product.roastDark')} {t('coffee.roast')}
+                    {translateOrigin(product!.origin, language)} • {
+                      (() => {
+                        const { roasts = [] } = filterOptions || {};
+                        const roastCode = product!.roast && typeof product!.roast === 'string' ? product!.roast.toLowerCase() : '';
+                        // Try to find human-friendly label in filter options
+                        const label = roasts.find(r => r.toLowerCase().includes(roastCode)) || roasts.find(r => roastCode.includes(r.toLowerCase()));
+                        return label || product!.roast || '-';
+                      })()
+                    }
                   </p>
                 )}
               </div>
@@ -541,73 +550,33 @@ export default function Product() {
               </div>
 
               {/* Coffee Characteristics */}
+              {!notFound && product && (
               <div>
                 <h3 className="text-lg font-bold mb-4" style={{ color: '#361c0c' }}>
                   {t('product.characteristics')}
                 </h3>
                 
+                {/* metric rows */}
                 <div className="space-y-4">
-                  {/* Strength */}
-                  <div className="flex items-center justify-between py-2 border-b border-gray-100">
-                    <span className="text-gray-700 font-medium">{t('coffee.strength')}:</span>
-                    <div className="flex space-x-2">
-                      {[1, 2, 3, 4, 5].map((level) => {
-                        const isActive = level <= (product?.strength_level || 3);
-                        return (
-                          <div key={level} className={`${isActive ? 'text-[#361c0c]' : 'text-gray-300'}`}>
-                            <CoffeeBeanIcon />
-                          </div>
-                        );
-                      })}
+                  {[{label: t('coffee.strength'), value: product.strength_level ?? 3}, {label: t('coffee.acidity'), value: product.acidity_level ?? 3}, {label: 'Обробка', value: product.roast_level ?? 3}, {label: t('coffee.body'), value: product.body_level ?? 3}].map((metric, idx) => (
+                    <div key={idx} className={`flex items-center justify-between py-2 ${idx < 3 ? 'border-b border-gray-100' : ''}`}>
+                      <span className="text-gray-700 font-medium">{metric.label}:</span>
+                      <div className="flex space-x-2">
+                        {[1,2,3,4,5].map(level => (
+                          <CoffeeBeanIcon
+                            key={level}
+                            className={level <= (typeof metric.value === 'number' ? metric.value : 0) 
+                              ? "text-[#361c0c]" 
+                              : "text-gray-300"
+                            }
+                          />
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                  
-                  {/* Acidity */}
-                  <div className="flex items-center justify-between py-2 border-b border-gray-100">
-                    <span className="text-gray-700 font-medium">{t('coffee.acidity')}:</span>
-                    <div className="flex space-x-2">
-                      {[1, 2, 3, 4, 5].map((level) => {
-                        const isActive = level <= (product?.acidity_level || 3);
-                        return (
-                          <div key={level} className={`${isActive ? 'text-[#361c0c]' : 'text-gray-300'}`}>
-                            <CoffeeBeanIcon />
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                  
-                  {/* Roast Level */}
-                  <div className="flex items-center justify-between py-2 border-b border-gray-100">
-                    <span className="text-gray-700 font-medium">{t('coffee.roast')}:</span>
-                    <div className="flex space-x-2">
-                      {[1, 2, 3, 4, 5].map((level) => {
-                        const isActive = level <= (product?.roast_level || 3);
-                        return (
-                          <div key={level} className={`${isActive ? 'text-[#361c0c]' : 'text-gray-300'}`}>
-                            <CoffeeBeanIcon />
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                  
-                  {/* Body */}
-                  <div className="flex items-center justify-between py-2">
-                    <span className="text-gray-700 font-medium">{t('coffee.body')}:</span>
-                    <div className="flex space-x-2">
-                      {[1, 2, 3, 4, 5].map((level) => {
-                        const isActive = level <= (product?.body_level || 3);
-                        return (
-                          <div key={level} className={`${isActive ? 'text-[#361c0c]' : 'text-gray-300'}`}>
-                            <CoffeeBeanIcon />
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
+                  ))}
                 </div>
               </div>
+              )}
 
               {/* Size Selection (from Supabase) or fallback weight selection */}
               <div>

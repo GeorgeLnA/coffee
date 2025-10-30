@@ -11,15 +11,27 @@ function sign(data: string, privateKey: string) {
 
 export const prepareOrder: RequestHandler = async (req, res) => {
   try {
-    console.log('prepareOrder received:', JSON.stringify(req.body, null, 2));
-    const { customer, shipping, items, notes } = req.body as any;
-    console.log('Parsed:', { customer, shipping, itemsCount: items?.length, notes });
-    
+    const { customer, shipping, payment, items, notes } = req.body as any;
     if (!customer || !items || !Array.isArray(items) || items.length === 0) {
-      console.error('Invalid payload - missing customer, items, or empty items array');
       return res.status(400).json({ error: 'Invalid order payload' });
     }
 
+    const paymentMethod = payment?.method || 'liqpay';
+    
+    // For cash payments, we don't need LiqPay - just create order and return success
+    if (paymentMethod === 'cash') {
+      // TODO: Save order to database here
+      // For now, just return success response
+      const orderId = `cm-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+      return res.json({ 
+        success: true, 
+        orderId,
+        paymentMethod: 'cash',
+        message: 'Order created successfully. Payment will be collected upon delivery.'
+      });
+    }
+
+    // For online payments, prepare LiqPay payment
     const publicKey = process.env.LIQPAY_PUBLIC_KEY || process.env.VITE_LIQPAY_PUBLIC_KEY;
     const privateKey = process.env.LIQPAY_PRIVATE_KEY;
     
@@ -39,6 +51,14 @@ export const prepareOrder: RequestHandler = async (req, res) => {
     const description = items.map((it: any) => `${it.name}${it.variant ? ` (${it.variant})` : ''} x${it.quantity}`).join(', ');
     const amount = Number((items.reduce((sum: number, it: any) => sum + it.price * it.quantity, 0) + (shipping?.price || 0)).toFixed(2));
 
+    // Determine paytypes based on payment method
+    let paytypes = 'card';
+    if (paymentMethod === 'apple_pay') {
+      paytypes = 'applepay';
+    } else if (paymentMethod === 'google_pay') {
+      paytypes = 'googlepay';
+    }
+
     const params = {
       version: 3,
       public_key: publicKey,
@@ -49,7 +69,7 @@ export const prepareOrder: RequestHandler = async (req, res) => {
       order_id: orderId,
       result_url: `${req.protocol}://${req.get('host')}/basket?payment=return`,
       language: 'uk',
-      paytypes: 'card',
+      paytypes,
       sandbox: process.env.VITE_LIQPAY_SANDBOX === 'true' ? 1 : undefined,
       info: description,
     } as Record<string, any>;
@@ -59,7 +79,7 @@ export const prepareOrder: RequestHandler = async (req, res) => {
     const data = base64(JSON.stringify(params));
     const signature = sign(data, privateKey);
 
-    res.json({ data, signature, orderId });
+    res.json({ data, signature, orderId, paymentMethod });
   } catch (err: any) {
     console.error('prepareOrder error', err);
     res.status(500).json({ error: err?.message || 'Failed to prepare order' });
