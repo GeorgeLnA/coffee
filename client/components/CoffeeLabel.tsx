@@ -230,7 +230,7 @@ export function CoffeeLabel({
     const metrics = [
       { label: 'Міцність', value: strength },
       { label: 'Кислотність', value: acidity },
-      { label: 'Обробка', value: roast },
+      { label: 'Обсмаження', value: roast },
       { label: 'Насиченість', value: body },
     ];
 
@@ -301,7 +301,7 @@ export function CoffeeLabel({
     const metrics = [
       { label: 'Міцність', value: strength },
       { label: 'Кислотність', value: acidity },
-      { label: 'Обробка', value: roast },
+      { label: 'Обсмаження', value: roast },
       { label: 'Насиченість', value: body },
     ];
 
@@ -637,7 +637,7 @@ export function CoffeeLabel({
     const metrics = [
       { label: 'Міцність', value: strength },
       { label: 'Кислотність', value: acidity },
-      { label: 'Обробка', value: roast },
+      { label: 'Обсмаження', value: roast },
       { label: 'Насиченість', value: body },
     ];
 

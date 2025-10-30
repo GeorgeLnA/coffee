@@ -402,7 +402,7 @@ export function CoffeeLabelGenerator({
     const metrics = [
       { label: 'Міцність', value: labelData.strength },
       { label: 'Кислотність', value: labelData.acidity },
-      { label: 'Обробка', value: labelData.roast },
+      { label: 'Обсмаження', value: labelData.roast },
       { label: 'Насиченість', value: labelData.body },
     ];
 
@@ -702,7 +702,7 @@ export function CoffeeLabelGenerator({
             {[
               { key: 'strength', label: 'Міцність', value: labelData.strength },
               { key: 'acidity', label: 'Кислотність', value: labelData.acidity },
-              { key: 'roast', label: 'Обробка', value: labelData.roast },
+              { key: 'roast', label: 'Обсмаження', value: labelData.roast },
               { key: 'body', label: 'Насиченість', value: labelData.body },
             ].map((metric) => (
               <div key={metric.key} className="space-y-2">

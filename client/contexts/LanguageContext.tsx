@@ -91,7 +91,7 @@ const translations = {
     'coffee.search': 'Пошук кави...',
     'coffee.priceRange': 'Діапазон цін',
     'coffee.origins': 'Походження',
-    'coffee.roastLevel': 'Обробка',
+    'coffee.roastLevel': 'Обсмаження',
     'coffee.availability': 'Доступність',
     'coffee.inStockOnly': 'Тільки в наявності',
     'coffee.showFilters': 'Показати',
