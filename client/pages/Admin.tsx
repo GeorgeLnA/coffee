@@ -60,10 +60,18 @@ export default function Admin() {
       setError("Невірний пароль");
     }
   };
+  
+  const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      handleLogin();
+    }
+  };
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
     setIsAuthed(false);
+    setPassword("");
+    setError("");
   };
 
   if (loading) {
@@ -87,7 +95,7 @@ export default function Admin() {
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
+                  onKeyPress={handleKeyPress}
                   className="mt-1"
                 />
               </div>

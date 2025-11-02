@@ -1,4 +1,4 @@
-import { ChevronRight, MapPin, ArrowRight, Coffee, Heart } from "lucide-react";
+import { ChevronRight, MapPin, ArrowRight, Coffee, Heart, ExternalLink } from "lucide-react";
 import { Link } from "react-router-dom";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
@@ -517,6 +517,18 @@ export default function Index() {
                     {cafe.address}
                   </p>
                 </div>
+                
+                {/* Google Maps Link */}
+                <a
+                  href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${cafe.name} ${cafe.address}`.trim())}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={(e) => e.stopPropagation()}
+                  className="inline-flex items-center gap-2 mt-4 px-3 py-2 bg-white/20 hover:bg-white/30 transition-all duration-300 rounded-lg text-white text-sm font-medium"
+                >
+                  <ExternalLink className="w-4 h-4" />
+                  Відкрити в Google Maps
+                </a>
                 
                 {/* Selection Indicator */}
                 {selectedTradePoint === index && (

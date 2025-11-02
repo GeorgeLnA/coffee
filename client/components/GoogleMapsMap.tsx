@@ -104,6 +104,8 @@ const GoogleMapsMap: React.FC<GoogleMapsMapProps> = ({
       });
 
       // Create info window
+      const query = encodeURIComponent(`${point.name} ${point.address}`.trim());
+      const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${query}`;
       const infoWindow = new window.google.maps.InfoWindow({
         content: `
           <div style="padding: 8px; min-width: 200px;">
@@ -113,6 +115,9 @@ const GoogleMapsMap: React.FC<GoogleMapsMapProps> = ({
             <p style="margin: 4px 0 0 0; color: ${point.active ? '#10b981' : '#6b7280'}; font-size: 12px; font-weight: bold;">
               ${point.active ? 'Відкрито' : 'Закрито'}
             </p>
+            <a href="${mapsUrl}" target="_blank" rel="noopener noreferrer" style="display: inline-block; margin-top: 8px; padding: 4px 12px; background: #361c0c; color: white; text-decoration: none; border-radius: 4px; font-size: 12px; font-weight: bold;">
+              Відкрити в Google Maps
+            </a>
           </div>
         `,
       });
