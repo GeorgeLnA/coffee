@@ -20,6 +20,17 @@ export function createServer() {
     res.json({ message: ping });
   });
 
+  app.get("/api/env-check", (_req, res) => {
+    res.json({
+      hasLiqPayPublic: !!process.env.LIQPAY_PUBLIC_KEY,
+      hasLiqPayPrivate: !!process.env.LIQPAY_PRIVATE_KEY,
+      hasNovaPoshta: !!process.env.NOVA_POSHTA_API_KEY,
+      hasGoogleMaps: !!process.env.VITE_GOOGLE_MAPS_API_KEY,
+      publicKeyLength: process.env.LIQPAY_PUBLIC_KEY?.length || 0,
+      privateKeyLength: process.env.LIQPAY_PRIVATE_KEY?.length || 0,
+    });
+  });
+
   app.get("/api/demo", handleDemo);
   app.post("/api/liqpay-signature", handleLiqPaySignature);
   app.post("/api/orders/prepare", prepareOrder);

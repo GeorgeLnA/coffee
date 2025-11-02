@@ -12,7 +12,19 @@ function sign(data: string, privateKey: string) {
 export const prepareOrder: RequestHandler = async (req, res) => {
   try {
     const { customer, shipping, payment, items, notes } = req.body as any;
+    
+    // Debug logging
+    console.log('prepareOrder received:', {
+      hasCustomer: !!customer,
+      hasItems: !!items,
+      itemsIsArray: Array.isArray(items),
+      itemsLength: items?.length,
+      customerKeys: customer ? Object.keys(customer) : [],
+      itemsPreview: items?.map((it: any) => ({ name: it.name, quantity: it.quantity }))
+    });
+    
     if (!customer || !items || !Array.isArray(items) || items.length === 0) {
+      console.log('Validation failed:', { customer: !!customer, items: !!items, isArray: Array.isArray(items), length: items?.length });
       return res.status(400).json({ error: 'Invalid order payload' });
     }
 
