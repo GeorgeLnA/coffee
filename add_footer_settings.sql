@@ -149,7 +149,7 @@ INSERT INTO footer_settings (
   false,
   '© 2025 THE COFFEE MANIFEST. Усі права захищені.',
   '© 2025 THE COFFEE MANIFEST. Все права защищены.',
-  'Made by LA',
+  'Site Credit - Lead and Allure',
   'https://leadandallure.com'
 )
 ON CONFLICT (id) DO NOTHING;
@@ -187,7 +187,7 @@ UPDATE footer_settings SET
   show_address = COALESCE(show_address, false),
   copyright_text_ua = COALESCE(copyright_text_ua, '© 2025 THE COFFEE MANIFEST. Усі права захищені.'),
   copyright_text_ru = COALESCE(copyright_text_ru, '© 2025 THE COFFEE MANIFEST. Все права защищены.'),
-  made_by_text = COALESCE(made_by_text, 'Made by LA'),
+  made_by_text = COALESCE(made_by_text, 'Site Credit - Lead and Allure'),
   made_by_url = COALESCE(made_by_url, 'https://leadandallure.com')
 WHERE id = 1;
 

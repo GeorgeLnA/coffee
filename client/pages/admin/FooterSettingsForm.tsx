@@ -59,7 +59,7 @@ export function FooterSettingsForm() {
           show_address: false,
           copyright_text_ua: '© 2025 THE COFFEE MANIFEST. Усі права захищені.',
           copyright_text_ru: '© 2025 THE COFFEE MANIFEST. Все права защищены.',
-          made_by_text: 'Made by LA',
+          made_by_text: 'Site Credit - Lead and Allure',
           made_by_url: 'https://leadandallure.com',
         }
       );
