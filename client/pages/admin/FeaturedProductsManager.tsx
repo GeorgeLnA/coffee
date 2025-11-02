@@ -18,6 +18,11 @@ type FP = {
   image_url: string | null;
   hover_image_url: string | null;
   link_url: string | null;
+  custom_label_ua?: string | null;
+  custom_label_ru?: string | null;
+  custom_label_color?: string | null;
+  custom_label_text_color?: string | null;
+  label_image_url?: string | null;
 };
 
 export function FeaturedProductsManager() {
@@ -116,6 +121,11 @@ export function FeaturedProductsManager() {
         link_url: '',
         sort: getNextSort(),
         status: 'published',
+        custom_label_ua: null,
+        custom_label_ru: null,
+        custom_label_color: '#f59e0b',
+        custom_label_text_color: '#92400e',
+        label_image_url: null,
       },
     ]);
   };
@@ -133,6 +143,11 @@ export function FeaturedProductsManager() {
       image_url: base.image_url ?? '',
       hover_image_url: base.hover_image_url ?? '',
       link_url: base.link_url ?? '',
+      custom_label_ua: base.custom_label_ua ?? null,
+      custom_label_ru: base.custom_label_ru ?? null,
+      custom_label_color: base.custom_label_color ?? '#f59e0b',
+      custom_label_text_color: base.custom_label_text_color ?? '#92400e',
+      label_image_url: base.label_image_url ?? null,
     };
     setItems([...items, copy]);
   };
@@ -262,6 +277,39 @@ export function FeaturedProductsManager() {
               <div>
                 <Label>Посилання</Label>
                 <Input placeholder="/coffee" value={item.link_url ?? ''} onChange={(e) => updateField(idx, 'link_url', e.target.value)} />
+              </div>
+
+              {/* Label Section */}
+              <div className="border-t pt-4 space-y-4">
+                <div className="font-semibold">Мітка</div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label>Текст мітки (UA)</Label>
+                    <Input value={item.custom_label_ua ?? ''} onChange={(e) => updateField(idx, 'custom_label_ua', e.target.value)} />
+                  </div>
+                  <div>
+                    <Label>Текст мітки (RU)</Label>
+                    <Input value={item.custom_label_ru ?? ''} onChange={(e) => updateField(idx, 'custom_label_ru', e.target.value)} />
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label>Колір фону</Label>
+                    <Input type="color" value={item.custom_label_color ?? '#f59e0b'} onChange={(e) => updateField(idx, 'custom_label_color', e.target.value)} />
+                  </div>
+                  <div>
+                    <Label>Колір тексту</Label>
+                    <Input type="color" value={item.custom_label_text_color ?? '#92400e'} onChange={(e) => updateField(idx, 'custom_label_text_color', e.target.value)} />
+                  </div>
+                </div>
+                <MediaUploader
+                  label="Зображення мітки"
+                  value={item.label_image_url}
+                  onChange={(url) => updateField(idx, 'label_image_url', url)}
+                  accept="image/*"
+                  folder="featured"
+                  placeholder="https://...png"
+                />
               </div>
 
               <div className="flex justify-between">

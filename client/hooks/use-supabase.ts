@@ -41,6 +41,11 @@ export interface FeaturedSlide {
   image_url: string | null;
   hover_image_url: string | null;
   link_url: string | null;
+  custom_label_ua: string | null;
+  custom_label_ru: string | null;
+  custom_label_color: string | null;
+  custom_label_text_color: string | null;
+  label_image_url: string | null;
 }
 
 export interface OfficeSettings {
@@ -260,6 +265,50 @@ export function useContactSettings() {
         .single();
       if (error && error.code !== 'PGRST116') throw error;
       return data as ContactSettings | null;
+    },
+  });
+}
+
+export interface WaterSettings {
+  id: number;
+  why_title_ua: string | null;
+  why_title_ru: string | null;
+  why_desc_ua: string | null;
+  why_desc_ru: string | null;
+  benefit_natural_title_ua: string | null;
+  benefit_natural_title_ru: string | null;
+  benefit_natural_desc_ua: string | null;
+  benefit_natural_desc_ru: string | null;
+  benefit_tested_title_ua: string | null;
+  benefit_tested_title_ru: string | null;
+  benefit_tested_desc_ua: string | null;
+  benefit_tested_desc_ru: string | null;
+  benefit_quality_title_ua: string | null;
+  benefit_quality_title_ru: string | null;
+  benefit_quality_desc_ua: string | null;
+  benefit_quality_desc_ru: string | null;
+  cta_title_ua: string | null;
+  cta_title_ru: string | null;
+  cta_desc_ua: string | null;
+  cta_desc_ru: string | null;
+  cta_view_coffee_ua: string | null;
+  cta_view_coffee_ru: string | null;
+  cta_contact_ua: string | null;
+  cta_contact_ru: string | null;
+  test_pdf_url: string | null;
+}
+
+export function useWaterSettings() {
+  return useQuery({
+    queryKey: ['water-settings'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('water_settings')
+        .select('*')
+        .eq('id', 1)
+        .single();
+      if (error && error.code !== 'PGRST116') throw error;
+      return data as WaterSettings | null;
     },
   });
 }

@@ -150,7 +150,11 @@ export default function Index() {
     desc: language === 'ru' ? (slide.description_ru || slide.description_ua || '') : (slide.description_ua || slide.description_ru || ''),
     image: slide.image_url || '/250-g_Original.PNG',
     hoverImage: slide.hover_image_url || '/woocommerce-placeholder_Original.PNG',
-    href: slide.link_url || '/coffee'
+    href: slide.link_url || '/coffee',
+    customLabel: language === 'ru' ? slide.custom_label_ru : slide.custom_label_ua,
+    customLabelColor: slide.custom_label_color,
+    customLabelTextColor: slide.custom_label_text_color,
+    labelImageUrl: slide.label_image_url
   })) : [
     {
       id: 'colombia',
@@ -260,19 +264,43 @@ export default function Index() {
           <div className={`hidden md:grid ${gridCols} ${gridGap} ${gridJustify} max-w-8xl mx-auto`}>
             {seasonItems.map((item) => (
               <Link key={item.id} to={item.href} className={`group block ${cardWidthClass}`}>
-                <div className="relative aspect-[4/5] bg-gray-100 overflow-hidden mb-6">
-                  <div className="absolute inset-0 ">
+                <div className="relative aspect-[4/5] bg-gray-100 overflow-hidden mb-6" style={{ backgroundColor: '#fcf4e4' }}>
+                  <div className="absolute inset-0">
                     <img
                       src={item.image}
                       alt={item.title}
-                      className="w-full h-full object-cover group-hover:opacity-0 transition-opacity duration-700"
+                      className="object-cover group-hover:opacity-0 transition-opacity duration-700 absolute bottom-0 left-0"
+                      style={{ width: '80%', height: '80%' }}
                     />
                     <img
                       src={item.hoverImage}
                       alt={item.title}
-                      className="w-full h-full object-cover absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700"
+                      className="object-cover absolute bottom-0 left-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700"
+                      style={{ width: '80%', height: '80%' }}
                     />
                   </div>
+                  
+                  {/* External Label Image (preferred) */}
+                  {item.labelImageUrl && (
+                    <div className="absolute top-2 right-2" style={{ width: 'clamp(120px, 30%, 250px)' }}>
+                      <img src={item.labelImageUrl} alt="label" className="w-full h-auto" />
+                    </div>
+                  )}
+                  
+                  {/* Custom Label Text (if no image and has text) */}
+                  {!item.labelImageUrl && item.customLabel && (
+                    <div className="absolute left-4 top-4">
+                      <span 
+                        className="px-3 py-1 text-sm font-bold rounded-full shadow-lg"
+                        style={{
+                          backgroundColor: item.customLabelColor || '#f59e0b',
+                          color: item.customLabelTextColor || '#92400e'
+                        }}
+                      >
+                        {item.customLabel}
+                      </span>
+                    </div>
+                  )}
                 </div>
                 <div>
                   <h3 className="text-4xl font-black font-coolvetica tracking-wider uppercase mb-4" style={{ color: '#fcf4e4' }}>

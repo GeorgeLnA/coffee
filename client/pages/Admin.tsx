@@ -15,6 +15,7 @@ import { LegalPagesForm } from "@/pages/admin/LegalPagesForm";
 import { DeliverySettingsForm } from "@/pages/admin/DeliverySettingsForm";
 import { CoffeeProductsManager } from "@/pages/admin/CoffeeProductsManager";
 import { WaterProductsManager } from "@/pages/admin/WaterProductsManager";
+import { WaterSettingsForm } from "@/pages/admin/WaterSettingsForm";
 import { CustomSectionsManager } from "@/pages/admin/CustomSectionsManager";
 import { FilterOptionsManager } from "@/pages/admin/FilterOptionsManager";
 import {
@@ -156,6 +157,7 @@ export default function Admin() {
                 <TabsTrigger value="contact">Контакти</TabsTrigger>
                 <TabsTrigger value="trade-points">Точки продажу</TabsTrigger>
                 <TabsTrigger value="footer">Футер</TabsTrigger>
+                <TabsTrigger value="water-settings">Вода</TabsTrigger>
                 <TabsTrigger value="delivery-settings">Доставка</TabsTrigger>
                 <TabsTrigger value="legal">Юридичні сторінки</TabsTrigger>
                 <TabsTrigger value="custom-sections">Кастомні секції</TabsTrigger>
@@ -174,6 +176,9 @@ export default function Admin() {
               </TabsContent>
               <TabsContent value="footer">
                 <FooterSettingsForm />
+              </TabsContent>
+              <TabsContent value="water-settings">
+                <WaterSettingsForm />
               </TabsContent>
               <TabsContent value="delivery-settings">
                 <DeliverySettingsForm />

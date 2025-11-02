@@ -10,6 +10,10 @@ export type SeasonItem = {
   image: string;
   hoverImage: string;
   href: string;
+  customLabel?: string | null;
+  customLabelColor?: string | null;
+  customLabelTextColor?: string | null;
+  labelImageUrl?: string | null;
 };
 
 type SeasonCarouselProps = {
@@ -165,19 +169,43 @@ export default function SeasonCarousel({ items, intervalMs = 3000 }: SeasonCarou
           {extendedItems.map((item, index) => (
             <div key={`${item.id}-${index}`} className="w-full flex-shrink-0 px-4">
               <Link to={item.href} className="group block">
-                <div className="relative aspect-[4/5] bg-gray-100 overflow-hidden mb-6">
+                <div className="relative aspect-[4/5] bg-gray-100 overflow-hidden mb-6" style={{ backgroundColor: '#fcf4e4' }}>
                   <div className="absolute inset-0">
                     <img
                       src={item.image}
                       alt={item.title}
-                      className="w-full h-full object-cover group-hover:opacity-0 transition-opacity duration-700"
+                      className="object-cover group-hover:opacity-0 transition-opacity duration-700 absolute bottom-0 left-0"
+                      style={{ width: '80%', height: '80%' }}
                     />
                     <img
                       src={item.hoverImage}
                       alt={item.title}
-                      className="w-full h-full object-cover absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700"
+                      className="object-cover absolute bottom-0 left-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700"
+                      style={{ width: '80%', height: '80%' }}
                     />
                   </div>
+                  
+                  {/* External Label Image (preferred) */}
+                  {item.labelImageUrl && (
+                    <div className="absolute top-2 right-2 z-10" style={{ width: 'clamp(120px, 30%, 250px)' }}>
+                      <img src={item.labelImageUrl} alt="label" className="w-full h-auto" />
+                    </div>
+                  )}
+                  
+                  {/* Custom Label Text (if no image and has text) */}
+                  {!item.labelImageUrl && item.customLabel && (
+                    <div className="absolute left-4 top-4 z-10">
+                      <span 
+                        className="px-3 py-1 text-sm font-bold rounded-full shadow-lg"
+                        style={{
+                          backgroundColor: item.customLabelColor || '#f59e0b',
+                          color: item.customLabelTextColor || '#92400e'
+                        }}
+                      >
+                        {item.customLabel}
+                      </span>
+                    </div>
+                  )}
                   
                   {/* Navigation Arrows - Inside Image Container */}
                   {items.length > 1 && (

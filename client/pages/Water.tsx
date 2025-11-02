@@ -1,19 +1,37 @@
-import { ArrowRight, Droplets, CheckCircle, Star, Plus, Minus, ShoppingCart } from "lucide-react";
+import { ArrowRight, Droplets, CheckCircle, Star, Plus, Minus, ShoppingCart, FileText } from "lucide-react";
 import { Link } from "react-router-dom";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
 import { useLanguage } from "../contexts/LanguageContext";
 import { useCart } from "../contexts/CartContext";
 import { useToast } from "../hooks/use-toast";
-import { useWaterProducts } from "../hooks/use-supabase";
+import { useWaterProducts, useWaterSettings } from "../hooks/use-supabase";
 
 export default function Water() {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const { addItem, items, updateQuantity, removeItem } = useCart();
   const { toast } = useToast();
   const { data: waterProducts = [], isLoading } = useWaterProducts();
+  const { data: settings, isLoading: isSettingsLoading } = useWaterSettings();
 
-  const benefits = [
+  const benefits = settings ? [
+    {
+      icon: <Droplets className="w-8 h-8" />,
+      title: (language === 'ua' ? settings.benefit_natural_title_ua : settings.benefit_natural_title_ru) || t('water.natural'),
+      description: (language === 'ua' ? settings.benefit_natural_desc_ua : settings.benefit_natural_desc_ru) || t('water.naturalDesc')
+    },
+    {
+      icon: <Star className="w-8 h-8" />,
+      title: (language === 'ua' ? settings.benefit_tested_title_ua : settings.benefit_tested_title_ru) || t('water.tested'),
+      description: (language === 'ua' ? settings.benefit_tested_desc_ua : settings.benefit_tested_desc_ru) || t('water.testedDesc'),
+      downloadLink: settings.test_pdf_url || '/water-tests-proof.pdf'
+    },
+    {
+      icon: <CheckCircle className="w-8 h-8" />,
+      title: (language === 'ua' ? settings.benefit_quality_title_ua : settings.benefit_quality_title_ru) || t('water.highQuality'),
+      description: (language === 'ua' ? settings.benefit_quality_desc_ua : settings.benefit_quality_desc_ru) || t('water.highQualityDesc')
+    }
+  ] : [
     {
       icon: <Droplets className="w-8 h-8" />,
       title: t('water.natural'),
@@ -22,7 +40,8 @@ export default function Water() {
     {
       icon: <Star className="w-8 h-8" />,
       title: t('water.tested'),
-      description: t('water.testedDesc')
+      description: t('water.testedDesc'),
+      downloadLink: '/water-tests-proof.pdf'
     },
     {
       icon: <CheckCircle className="w-8 h-8" />,
@@ -207,14 +226,14 @@ export default function Water() {
        {/* Benefits Section */}
        <section className="py-20 relative overflow-hidden" style={{ backgroundColor: '#fcf4e4' }}>
          <div className="max-w-8xl mx-auto px-6 lg:px-8 relative z-10">
-           <div className="text-center mb-16">
-             <h2 className="text-4xl font-black mb-6" style={{ color: '#361c0c' }}>
-               {t('water.whyOurWater')}
-             </h2>
-             <p className="text-lg font-medium max-w-2xl mx-auto" style={{ color: '#361c0c' }}>
-               {t('water.whyOurWaterDesc')}
-             </p>
-           </div>
+          <div className="text-center mb-16">
+            <h2 className="text-4xl font-black mb-6" style={{ color: '#361c0c' }}>
+              {settings ? (language === 'ua' ? settings.why_title_ua : settings.why_title_ru) || t('water.whyOurWater') : t('water.whyOurWater')}
+            </h2>
+            <p className="text-lg font-medium max-w-2xl mx-auto" style={{ color: '#361c0c' }}>
+              {settings ? (language === 'ua' ? settings.why_desc_ua : settings.why_desc_ru) || t('water.whyOurWaterDesc') : t('water.whyOurWaterDesc')}
+            </p>
+          </div>
 
            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
              {benefits.map((benefit, index) => (
@@ -227,12 +246,23 @@ export default function Water() {
                  <h3 className="text-2xl font-black mb-4" style={{ color: '#361c0c' }}>
                    {benefit.title}
                  </h3>
-                 <p className="text-lg font-medium leading-relaxed" style={{ color: '#361c0c' }}>
-                   {benefit.description}
-                 </p>
-               </div>
-             ))}
-           </div>
+                <p className="text-lg font-medium leading-relaxed" style={{ color: '#361c0c' }}>
+                  {benefit.description}
+                </p>
+                {benefit.downloadLink && (
+                  <a 
+                    href={benefit.downloadLink}
+                    download
+                    className="inline-flex items-center gap-2 mt-4 px-4 py-2 text-sm font-bold hover:bg-[#361c0c] transition-all duration-300 border-2 group/btn"
+                    style={{ borderColor: '#361c0c', color: '#361c0c' }}
+                  >
+                    <FileText className="w-4 h-4 group-hover/btn:text-[#fcf4e4]" />
+                    <span className="group-hover/btn:text-[#fcf4e4]">{t('water.downloadProof')}</span>
+                  </a>
+                )}
+              </div>
+            ))}
+          </div>
          </div>
        </section>
 
@@ -241,10 +271,10 @@ export default function Water() {
         <div className="max-w-8xl mx-auto px-6 lg:px-8 relative z-10">
           <div className="text-center">
             <h2 className="text-4xl font-black mb-6" style={{ color: '#361c0c' }}>
-              {t('water.readyToOrder')}
+              {settings ? (language === 'ua' ? settings.cta_title_ua : settings.cta_title_ru) || t('water.readyToOrder') : t('water.readyToOrder')}
             </h2>
             <p className="text-xl font-medium mb-8 max-w-2xl mx-auto" style={{ color: '#361c0c' }}>
-              {t('water.readyToOrderDesc')}
+              {settings ? (language === 'ua' ? settings.cta_desc_ua : settings.cta_desc_ru) || t('water.readyToOrderDesc') : t('water.readyToOrderDesc')}
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link 
@@ -252,13 +282,13 @@ export default function Water() {
                 className="px-8 py-4 bg-transparent border-2 font-black text-lg hover:bg-[#361c0c] hover:text-white transition-all duration-300"
                 style={{ borderColor: '#361c0c', color: '#361c0c' }}
               >
-{t('water.viewCoffee')}
+{settings ? (language === 'ua' ? settings.cta_view_coffee_ua : settings.cta_view_coffee_ru) || t('water.viewCoffee') : t('water.viewCoffee')}
               </Link>
               <a 
                 href="#contacts" 
                 className="px-8 py-4 bg-[#361c0c] text-[#fcf4e4] font-black text-lg hover:bg-[#fcf4e4] hover:text-[#361c0c] hover:border-[#361c0c] border-2 border-transparent transition-all duration-300"
               >
-{t('water.contactUs')}
+{settings ? (language === 'ua' ? settings.cta_contact_ua : settings.cta_contact_ru) || t('water.contactUs') : t('water.contactUs')}
               </a>
             </div>
           </div>

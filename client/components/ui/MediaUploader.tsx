@@ -90,9 +90,8 @@ export function MediaUploader({ label, value, onChange, accept, folder, placehol
         />
       </div>
 
-      {value && (
+      {value && (isImage(value) || isVideo(value)) && (
         <div className="space-y-2">
-          <div className="text-sm text-muted-foreground">Попередній перегляд</div>
           <div className="rounded-md overflow-hidden border">
             {isImage(value) && (
               <img src={value} alt="preview" className="w-full h-48 object-cover" />
@@ -100,13 +99,16 @@ export function MediaUploader({ label, value, onChange, accept, folder, placehol
             {isVideo(value) && (
               <video className="w-full" controls src={value} />
             )}
-            {!isImage(value) && !isVideo(value) && (
-              <div className="p-3 text-sm">{value}</div>
-            )}
           </div>
           <div>
             <Button type="button" variant="destructive" onClick={() => onChange(null)}>Очистити</Button>
           </div>
+        </div>
+      )}
+      
+      {value && !isImage(value) && !isVideo(value) && (
+        <div>
+          <Button type="button" variant="destructive" onClick={() => onChange(null)}>Очистити</Button>
         </div>
       )}
     </div>

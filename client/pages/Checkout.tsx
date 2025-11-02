@@ -435,12 +435,12 @@ export default function Checkout() {
 
                 <div className="space-y-1 text-sm text-gray-700 mb-4">
                   <div className="flex justify-between"><span>Товари</span><span>₴{totalPrice.toFixed(2)}</span></div>
-                  <div className="flex justify-between">
-                    <span>Доставка</span>
-                    <span>
+                  <div className="flex justify-between items-start">
+                    <span className="pr-2">Доставка</span>
+                    <span className="text-right">
                       {shippingMethod === 'own_courier' 
                         ? (shippingPrice === 0 ? 'Безкоштовно' : `₴${shippingPrice.toFixed(2)}`)
-                        : 'Оплата за тарифами перевізника'
+                        : <span className="text-xs leading-tight">Оплата за тарифами<br />перевізника</span>
                       }
                     </span>
                   </div>
