@@ -157,16 +157,24 @@ export default function Footer() {
             <p className="text-white/60 font-bold text-sm md:text-base">
               {pick(settings?.copyright_text_ua, settings?.copyright_text_ru, `© 2025 THE COFFEE MANIFEST. ${t('footer.rightsReserved')}.`)}
             </p>
-            {settings?.made_by_text && (
-              <a
-                href={settings?.made_by_url || '#'}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-white/70 hover:text-white underline-offset-4 hover:underline font-semibold text-sm md:text-base md:ml-auto"
+            <div className="flex items-center gap-4 md:ml-auto">
+              <Link 
+                to="/admin"
+                className="text-white/60 hover:text-white underline-offset-4 hover:underline font-semibold text-sm md:text-base"
               >
-                {settings.made_by_text}
-              </a>
-            )}
+                Admin
+              </Link>
+              {settings?.made_by_text && (
+                <a
+                  href={settings?.made_by_url || '#'}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-white/70 hover:text-white underline-offset-4 hover:underline font-semibold text-sm md:text-base"
+                >
+                  {settings.made_by_text}
+                </a>
+              )}
+            </div>
           </div>
         </div>
       </div>

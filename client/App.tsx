@@ -26,7 +26,6 @@ import { CartProvider } from "./contexts/CartContext";
 import { LoadingProvider } from "./contexts/LoadingContext";
 import LoadingAnimation from "./components/LoadingAnimation";
 import ScrollToTop from "./components/ScrollToTop";
-import { AdminButton } from "./components/AdminButton";
 import ErrorPage from "./pages/ErrorPage";
 
 const queryClient = new QueryClient();
@@ -66,7 +65,6 @@ function App() {
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />
                 </Routes>
-                <AdminButton />
               </BrowserRouter>
           </LoadingProvider>
         </CartProvider>
