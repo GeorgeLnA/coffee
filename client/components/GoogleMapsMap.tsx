@@ -98,11 +98,6 @@ const GoogleMapsMap: React.FC<GoogleMapsMapProps> = ({
         },
       });
 
-      // Add click listener to marker
-      marker.addListener("click", () => {
-        onSelect(index);
-      });
-
       // Create info window
       const query = encodeURIComponent(`${point.name} ${point.address}`.trim());
       const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${query}`;
