@@ -5,6 +5,8 @@ import { supabase } from "@/lib/supabaseClient";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { HomeSettingsForm } from "@/pages/admin/HomeSettingsForm";
 import { FeaturedProductsManager } from "@/pages/admin/FeaturedProductsManager";
 import { OfficeSettingsForm } from "@/pages/admin/OfficeSettingsForm";
@@ -38,6 +40,8 @@ export default function Admin() {
   const [isAuthed, setIsAuthed] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(true);
   const [section, setSection] = useState<"pages" | "cards" | "orders" | "analysis">("pages");
+  const [password, setPassword] = useState<string>("");
+  const [error, setError] = useState<string>("");
 
   useEffect(() => {
     const init = async () => {
@@ -49,8 +53,12 @@ export default function Admin() {
   }, []);
 
   const handleLogin = async () => {
-    // Skip authentication for demo - just set as authenticated
-    setIsAuthed(true);
+    if (password === 'mcroaster') {
+      setIsAuthed(true);
+      setError("");
+    } else {
+      setError("Невірний пароль");
+    }
   };
 
   const handleLogout = async () => {
@@ -71,7 +79,21 @@ export default function Admin() {
           </CardHeader>
           <CardContent>
             <p className="mb-4">Увійдіть, щоб керувати контентом сайту.</p>
-            <Button onClick={handleLogin} variant="default">Увійти як адміністратор</Button>
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="password">Пароль</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
+                  className="mt-1"
+                />
+              </div>
+              {error && <p className="text-red-500 text-sm">{error}</p>}
+              <Button onClick={handleLogin} variant="default" className="w-full">Увійти як адміністратор</Button>
+            </div>
           </CardContent>
         </Card>
       </div>
