@@ -11,6 +11,20 @@
   external_node_modules = ["express"]
   node_bundler = "esbuild"
   
+# Redirect specific API endpoints to dedicated serverless functions
+[[redirects]]
+  force = true
+  from = "/api/liqpay-signature"
+  status = 200
+  to = "/.netlify/functions/liqpay-signature"
+
+[[redirects]]
+  force = true
+  from = "/api/orders/prepare"
+  status = 200
+  to = "/.netlify/functions/prepare-order"
+
+# Redirect other API endpoints to Express wrapper (for backward compatibility)
 [[redirects]]
   force = true
   from = "/api/*"
