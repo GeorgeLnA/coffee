@@ -56,6 +56,26 @@ Add the following environment variables:
 |--------------|-------------|---------|
 | `VITE_LIQPAY_PUBLIC_KEY` | Public key for client-side (optional, if different) | Uses `LIQPAY_PUBLIC_KEY` |
 | `VITE_LIQPAY_SANDBOX` | Enable sandbox mode for testing (`"true"` or `"false"`) | `"false"` |
+| `VITE_GOOGLE_MAPS_API_KEY` | Google Maps API key for displaying interactive maps | Required for map functionality |
+
+### Google Maps API Key Setup
+
+To enable the interactive map on your site:
+
+1. **Get your Google Maps API key:**
+   - Go to [Google Cloud Console](https://console.cloud.google.com/)
+   - Create a new project or select an existing one
+   - Enable the "Maps JavaScript API"
+   - Create credentials (API key)
+   - (Optional) Restrict the API key to your domain for security
+
+2. **Add to Netlify:**
+   - In Netlify dashboard: **Site settings** → **Environment variables** → **Add a variable**
+   - Variable name: `VITE_GOOGLE_MAPS_API_KEY`
+   - Variable value: Your Google Maps API key
+   - Set for: **All contexts** (or as needed)
+
+3. **Redeploy** your site after adding the variable
 
 ### Step 3: Set Environment Variables for Different Contexts
 

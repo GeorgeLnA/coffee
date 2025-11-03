@@ -5,6 +5,7 @@ import { usePageSections } from "@/hooks/use-supabase";
 import { CustomSection } from "@/components/CustomSection";
 import { useLanguage } from "../contexts/LanguageContext";
 import { useContactPoints, useContactSettings } from "../hooks/use-supabase";
+import { useMemo } from "react";
 
 export default function Contact() {
   const { t, language } = useLanguage();
@@ -15,6 +16,22 @@ export default function Contact() {
 
   const primaryPhone = (settings?.phone1 || "+380 67 473 88 86").replace(/\s+/g, ' ').trim();
   const primaryEmail = (settings?.email1 || "manifestcava@gmail.com").trim();
+
+  // Format opening hours dynamically based on day and time
+  const formatOpeningHours = (openDay: number | null, openHour: number, closeHour: number): string => {
+    if (openDay == null) {
+      return language === 'ru' ? 'График работы не указан' : 'Графік роботи не вказано';
+    }
+
+    const dayNames = language === 'ru' 
+      ? ['Воскресенье', 'Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота']
+      : ['Неділя', 'Понеділок', 'Вівторок', 'Середа', 'Четвер', 'П\'ятниця', 'Субота'];
+    
+    const dayName = dayNames[openDay] || '';
+    const formatTime = (hour: number) => `${hour.toString().padStart(2, '0')}:00`;
+    
+    return `${dayName}: ${formatTime(openHour)}-${formatTime(closeHour)}`;
+  };
 
   // Only phone and email cards (removed working hours)
   const contactInfo = [
@@ -32,26 +49,41 @@ export default function Contact() {
     }
   ];
 
-  const tradingPoints = (points && points.length
-    ? points.map((p) => ({
-        name: pick(p.name_ua, p.name_ru, ''),
-        address: p.address || '',
-        hours: pick(p.hours_ua, p.hours_ru, ''),
-      }))
-    : [
-        {
-          name: t('contact.street1'),
-          address: "50°24'24.1\"N 30°38'57.4\"E",
-          hours: t('contact.saturday'),
-          active: true
-        },
-        {
-          name: t('contact.street2'),
-          address: "50°22'56.6\"N 30°27'32.5\"E",
-          hours: t('contact.sunday'),
-          active: false
-        }
-      ]);
+  const tradingPoints = useMemo(() => {
+    if (points && points.length) {
+      return points.map((p) => {
+        const openDay = p.open_day != null ? Number(p.open_day) : null;
+        const openHour = p.open_hour != null ? Number(p.open_hour) : 9;
+        const closeHour = p.close_hour != null ? Number(p.close_hour) : 18;
+        
+        // Use dynamic hours if available, otherwise fallback to static text
+        const dynamicHours = (openDay != null || p.open_hour != null || p.close_hour != null)
+          ? formatOpeningHours(openDay, openHour, closeHour)
+          : pick(p.hours_ua, p.hours_ru, '');
+        
+        return {
+          name: pick(p.name_ua, p.name_ru, ''),
+          address: p.address || '',
+          hours: dynamicHours,
+        };
+      });
+    }
+    
+    return [
+      {
+        name: t('contact.street1'),
+        address: "50°24'24.1\"N 30°38'57.4\"E",
+        hours: t('contact.saturday'),
+        active: true
+      },
+      {
+        name: t('contact.street2'),
+        address: "50°22'56.6\"N 30°27'32.5\"E",
+        hours: t('contact.sunday'),
+        active: false
+      }
+    ];
+  }, [points, language, t]);
 
   const renderDetail = (detail: string) => {
     const trimmed = detail.trim();
@@ -129,7 +161,7 @@ export default function Contact() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
             {tradingPoints.map((point, index) => {
-              const query = encodeURIComponent(`${point.name} ${point.address}`.trim());
+              const query = encodeURIComponent(point.address.trim());
               const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${query}`;
               return (
                 <a

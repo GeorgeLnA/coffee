@@ -14,6 +14,11 @@ type Point = {
   address?: string | null;
   hours_ua?: string | null;
   hours_ru?: string | null;
+  lat?: number | null;
+  lng?: number | null;
+  open_day?: number | null; // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+  open_hour?: number | null; // Opening hour (0-23)
+  close_hour?: number | null; // Closing hour (0-23)
 };
 
 export function ContactTradePointsForm() {
@@ -39,7 +44,19 @@ export function ContactTradePointsForm() {
   const addItem = () => {
     setItems([
       ...items,
-      { name_ua: '', name_ru: '', address: '', hours_ua: '', hours_ru: '', sort: (items.length ? (items[items.length - 1].sort || 0) + 1 : 1) },
+      { 
+        name_ua: '', 
+        name_ru: '', 
+        address: '', 
+        hours_ua: '', 
+        hours_ru: '', 
+        lat: null,
+        lng: null,
+        open_day: null,
+        open_hour: 9,
+        close_hour: 18,
+        sort: (items.length ? (items[items.length - 1].sort || 0) + 1 : 1) 
+      },
     ]);
   };
 
@@ -64,8 +81,10 @@ export function ContactTradePointsForm() {
       }
     }
     await load();
-    try { await queryClient.invalidateQueries({ queryKey: ['contact-points'] }); } catch {}
-    alert('Збережено!');
+    // Invalidate and refetch the query to ensure all pages get live updates
+    await queryClient.invalidateQueries({ queryKey: ['contact-points'] });
+    await queryClient.refetchQueries({ queryKey: ['contact-points'] });
+    alert('Збережено! Зміни відображаються на всіх сторінках.');
   };
 
   const removeItem = async (id?: number) => {
@@ -74,7 +93,9 @@ export function ContactTradePointsForm() {
     const { error } = await supabase.from('contact_trade_points').delete().eq('id', id);
     if (error) return setError(error.message);
     await load();
-    try { await queryClient.invalidateQueries({ queryKey: ['contact-points'] }); } catch {}
+    // Invalidate and refetch the query to ensure all pages get live updates
+    await queryClient.invalidateQueries({ queryKey: ['contact-points'] });
+    await queryClient.refetchQueries({ queryKey: ['contact-points'] });
   };
 
   if (loading) return <div>Завантаження…</div>;
@@ -116,6 +137,59 @@ export function ContactTradePointsForm() {
               <div>
                 <Label>Часы (RU)</Label>
                 <Input value={item.hours_ru || ''} onChange={(e) => updateField(idx, 'hours_ru', e.target.value)} />
+              </div>
+              <div>
+                <Label>Широта (Lat)</Label>
+                <Input 
+                  type="number" 
+                  step="any"
+                  value={item.lat ?? ''} 
+                  onChange={(e) => updateField(idx, 'lat', e.target.value ? parseFloat(e.target.value) : null)} 
+                  placeholder="50.4067"
+                />
+              </div>
+              <div>
+                <Label>Довгота (Lng)</Label>
+                <Input 
+                  type="number" 
+                  step="any"
+                  value={item.lng ?? ''} 
+                  onChange={(e) => updateField(idx, 'lng', e.target.value ? parseFloat(e.target.value) : null)} 
+                  placeholder="30.6493"
+                />
+              </div>
+              <div>
+                <Label>День тижня (0=Нед, 1=Пон, ..., 6=Суб)</Label>
+                <Input 
+                  type="number" 
+                  min="0"
+                  max="6"
+                  value={item.open_day ?? ''} 
+                  onChange={(e) => updateField(idx, 'open_day', e.target.value ? parseInt(e.target.value) : null)} 
+                  placeholder="6"
+                />
+              </div>
+              <div>
+                <Label>Година відкриття (0-23)</Label>
+                <Input 
+                  type="number" 
+                  min="0"
+                  max="23"
+                  value={item.open_hour ?? ''} 
+                  onChange={(e) => updateField(idx, 'open_hour', e.target.value ? parseInt(e.target.value) : null)} 
+                  placeholder="9"
+                />
+              </div>
+              <div>
+                <Label>Година закриття (0-23)</Label>
+                <Input 
+                  type="number" 
+                  min="0"
+                  max="23"
+                  value={item.close_hour ?? ''} 
+                  onChange={(e) => updateField(idx, 'close_hour', e.target.value ? parseInt(e.target.value) : null)} 
+                  placeholder="18"
+                />
               </div>
               <div className="md:col-span-3 flex justify-end">
                 <Button variant="destructive" onClick={() => removeItem(item.id)}>Видалити</Button>

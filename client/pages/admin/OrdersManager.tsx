@@ -6,6 +6,18 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Trash2 } from "lucide-react";
 import { format, differenceInDays } from "date-fns";
 
 type Order = {
@@ -54,6 +66,9 @@ export function OrdersManager() {
   const [selectedTab, setSelectedTab] = useState<string>("orders");
   const [selectedClientEmail, setSelectedClientEmail] = useState<string | null>(null);
   const [clientSearchQuery, setClientSearchQuery] = useState<string>("");
+  const [deleteOrderId, setDeleteOrderId] = useState<number | null>(null);
+  const [deleteClientEmail, setDeleteClientEmail] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -99,6 +114,60 @@ export function OrdersManager() {
       load();
     } catch (e: any) {
       alert('Помилка оновлення статусу: ' + e.message);
+    }
+  };
+
+  const deleteOrder = async (orderId: number) => {
+    setIsDeleting(true);
+    try {
+      // Delete order (order_items will be deleted via CASCADE)
+      const { error } = await supabase
+        .from('orders')
+        .delete()
+        .eq('id', orderId);
+      
+      if (error) throw error;
+      
+      // If we're viewing a client and this was their last order, go back to clients list
+      if (selectedClientEmail) {
+        const remainingOrders = orders.filter(o => 
+          o.customer_email?.toLowerCase() === selectedClientEmail && o.id !== orderId
+        );
+        if (remainingOrders.length === 0) {
+          setSelectedClientEmail(null);
+          setSelectedTab("clients");
+        }
+      }
+      
+      load();
+      setDeleteOrderId(null);
+    } catch (e: any) {
+      alert('Помилка видалення замовлення: ' + e.message);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const deleteClientOrders = async (email: string) => {
+    setIsDeleting(true);
+    try {
+      // Delete all orders for this client (order_items will be deleted via CASCADE)
+      const { error } = await supabase
+        .from('orders')
+        .delete()
+        .eq('customer_email', email);
+      
+      if (error) throw error;
+      
+      // Go back to clients list
+      setSelectedClientEmail(null);
+      setSelectedTab("clients");
+      load();
+      setDeleteClientEmail(null);
+    } catch (e: any) {
+      alert('Помилка видалення замовлень клієнта: ' + e.message);
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -340,17 +409,30 @@ export function OrdersManager() {
                     <CardTitle className="text-lg">
                       Замовлення #{order.id}
                     </CardTitle>
-                    <Select value={order.status} onValueChange={(v) => updateStatus(order.id, v)} onClick={(e) => e.stopPropagation()}>
-                      <SelectTrigger className={`w-40 ${getStatusColor(order.status)} text-white border-0`}>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="pending">Очікує</SelectItem>
-                        <SelectItem value="processing">В обробці</SelectItem>
-                        <SelectItem value="completed">Виконано</SelectItem>
-                        <SelectItem value="cancelled">Скасовано</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <div className="flex items-center gap-2">
+                      <Select value={order.status} onValueChange={(v) => updateStatus(order.id, v)} onClick={(e) => e.stopPropagation()}>
+                        <SelectTrigger className={`w-40 ${getStatusColor(order.status)} text-white border-0`}>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="pending">Очікує</SelectItem>
+                          <SelectItem value="processing">В обробці</SelectItem>
+                          <SelectItem value="completed">Виконано</SelectItem>
+                          <SelectItem value="cancelled">Скасовано</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setDeleteOrderId(order.id);
+                        }}
+                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
                   </div>
                   <div className="flex items-center gap-2 mt-2">
                     <Badge className={getStatusColor(order.status)}>
@@ -435,15 +517,29 @@ export function OrdersManager() {
                 <CardHeader>
                   <div className="flex items-center justify-between">
                     <CardTitle className="text-xl">{selectedClient.name || selectedClient.email}</CardTitle>
-                    <button
-                      onClick={() => {
-                        setSelectedClientEmail(null);
-                        setClientSearchQuery("");
-                      }}
-                      className="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300"
-                    >
-                      Назад до списку
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setDeleteClientEmail(selectedClient.email);
+                        }}
+                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                      >
+                        <Trash2 className="w-4 h-4 mr-2" />
+                        Видалити всі замовлення
+                      </Button>
+                      <button
+                        onClick={() => {
+                          setSelectedClientEmail(null);
+                          setClientSearchQuery("");
+                        }}
+                        className="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300"
+                      >
+                        Назад до списку
+                      </button>
+                    </div>
                   </div>
                 </CardHeader>
                 <CardContent>
@@ -481,17 +577,30 @@ export function OrdersManager() {
                       <CardHeader>
                         <div className="flex items-center justify-between">
                           <CardTitle className="text-lg">Замовлення #{order.id}</CardTitle>
-                          <Select value={order.status} onValueChange={(v) => updateStatus(order.id, v)}>
-                            <SelectTrigger className={`w-40 ${getStatusColor(order.status)} text-white border-0`}>
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="pending">Очікує</SelectItem>
-                              <SelectItem value="processing">В обробці</SelectItem>
-                              <SelectItem value="completed">Виконано</SelectItem>
-                              <SelectItem value="cancelled">Скасовано</SelectItem>
-                            </SelectContent>
-                          </Select>
+                          <div className="flex items-center gap-2">
+                            <Select value={order.status} onValueChange={(v) => updateStatus(order.id, v)}>
+                              <SelectTrigger className={`w-40 ${getStatusColor(order.status)} text-white border-0`}>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="pending">Очікує</SelectItem>
+                                <SelectItem value="processing">В обробці</SelectItem>
+                                <SelectItem value="completed">Виконано</SelectItem>
+                                <SelectItem value="cancelled">Скасовано</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setDeleteOrderId(order.id);
+                              }}
+                              className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
                         </div>
                         <div className="flex items-center gap-2 mt-2">
                           <Badge className={getStatusColor(order.status)}>
@@ -601,6 +710,50 @@ export function OrdersManager() {
           )}
         </TabsContent>
       </Tabs>
+
+      {/* Delete Order Confirmation Dialog */}
+      <AlertDialog open={deleteOrderId !== null} onOpenChange={(open) => !open && setDeleteOrderId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Видалити замовлення?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Ви впевнені, що хочете видалити замовлення #{deleteOrderId}? Ця дія незворотна і також видалить всі товари в замовленні.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Скасувати</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => deleteOrderId && deleteOrder(deleteOrderId)}
+              className="bg-red-600 hover:bg-red-700"
+              disabled={isDeleting}
+            >
+              {isDeleting ? 'Видалення...' : 'Видалити'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete Client Orders Confirmation Dialog */}
+      <AlertDialog open={deleteClientEmail !== null} onOpenChange={(open) => !open && setDeleteClientEmail(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Видалити всі замовлення клієнта?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Ви впевнені, що хочете видалити всі замовлення для клієнта {deleteClientEmail}? Ця дія незворотна і також видалить всі товари в цих замовленнях. Клієнт буде видалений зі списку після видалення всіх його замовлень.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Скасувати</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => deleteClientEmail && deleteClientOrders(deleteClientEmail)}
+              className="bg-red-600 hover:bg-red-700"
+              disabled={isDeleting}
+            >
+              {isDeleting ? 'Видалення...' : 'Видалити все'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

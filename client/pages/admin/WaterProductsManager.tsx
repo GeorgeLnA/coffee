@@ -235,11 +235,11 @@ export function WaterProductsManager() {
         {products.map((p, pIdx) => (
           <Card key={pIdx} className="relative">
             <CardHeader className="pb-4">
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
                 <CardTitle className="text-lg">
                   {p.name_ua || 'Новий продукт'} {p.sort && `(Позиція: ${p.sort})`}
                 </CardTitle>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   <Button
                     variant="outline"
                     size="sm"
@@ -260,6 +260,7 @@ export function WaterProductsManager() {
                     variant="outline"
                     size="sm"
                     onClick={(e) => duplicateProduct(pIdx, e)}
+                    className="hidden md:inline-flex"
                   >
                     Дублювати
                   </Button>

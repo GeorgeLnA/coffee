@@ -508,7 +508,7 @@ export function AdminAnalytics() {
                 />
               </LineChart>
             </ChartContainer>
-          </CardContent>ggbh12q237
+          </CardContent>
         </Card>
       )}
 

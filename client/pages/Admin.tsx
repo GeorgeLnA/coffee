@@ -32,16 +32,44 @@ import {
   SidebarTrigger,
   SidebarRail,
 } from "@/components/ui/sidebar";
-import { FileText, Boxes, ShoppingCart, BarChart3 } from "lucide-react";
+import { FileText, Boxes, ShoppingCart, BarChart3, Settings } from "lucide-react";
 import { AdminAnalytics } from "@/pages/admin/AdminAnalytics";
 import { OrdersManager } from "@/pages/admin/OrdersManager";
+import { AdminPasswordSettings } from "@/pages/admin/AdminPasswordSettings";
 
 export default function Admin() {
   const [isAuthed, setIsAuthed] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(true);
-  const [section, setSection] = useState<"pages" | "cards" | "orders" | "analysis">("pages");
+  const [section, setSection] = useState<"pages" | "cards" | "orders" | "analysis" | "settings">("pages");
   const [password, setPassword] = useState<string>("");
   const [error, setError] = useState<string>("");
+
+  const ADMIN_PASSWORD_KEY = "admin_password";
+
+  const getStoredPassword = async (): Promise<string> => {
+    try {
+      // Try to get from Supabase
+      const { data, error } = await supabase
+        .from("admin_settings")
+        .select("value")
+        .eq("key", ADMIN_PASSWORD_KEY)
+        .single();
+
+      if (error) {
+        // If table doesn't exist or no record, check localStorage, then default
+        if (error.code === "PGRST116" || error.message.includes("could not find")) {
+          const localPassword = localStorage.getItem(ADMIN_PASSWORD_KEY);
+          return localPassword || "mcroaster"; // Default password
+        }
+        throw error;
+      }
+
+      return data?.value || localStorage.getItem(ADMIN_PASSWORD_KEY) || "mcroaster";
+    } catch (e) {
+      // Fallback to localStorage or default
+      return localStorage.getItem(ADMIN_PASSWORD_KEY) || "mcroaster";
+    }
+  };
 
   useEffect(() => {
     const init = async () => {
@@ -53,7 +81,8 @@ export default function Admin() {
   }, []);
 
   const handleLogin = async () => {
-    if (password === 'mcroaster') {
+    const storedPassword = await getStoredPassword();
+    if (password === storedPassword) {
       setIsAuthed(true);
       setError("");
     } else {
@@ -165,6 +194,18 @@ export default function Admin() {
                   <span>Аналіз</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  isActive={section === "settings"}
+                  onClick={() => setSection("settings")}
+                  tooltip="Налаштування"
+                  size="lg"
+                  className="w-full justify-start h-16 text-lg font-semibold px-4"
+                >
+                  <Settings className="h-8 w-8" />
+                  <span>Налаштування</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
             </SidebarMenu>
           </SidebarContent>
           <SidebarRail />
@@ -266,6 +307,12 @@ export default function Admin() {
 
           {section === "analysis" && (
             <AdminAnalytics />
+          )}
+
+          {section === "settings" && (
+            <div className="space-y-6">
+              <AdminPasswordSettings />
+            </div>
           )}
 
           </div>

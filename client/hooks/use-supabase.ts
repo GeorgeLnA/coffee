@@ -209,6 +209,11 @@ export interface ContactPoint {
   address: string | null;
   hours_ua: string | null;
   hours_ru: string | null;
+  lat?: number | null;
+  lng?: number | null;
+  open_day?: number | null; // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+  open_hour?: number | null; // Opening hour (0-23)
+  close_hour?: number | null; // Closing hour (0-23)
 }
 
 export interface FooterSettings {
@@ -324,6 +329,8 @@ export function useContactPoints() {
       if (error) throw error;
       return (data || []) as ContactPoint[];
     },
+    refetchOnWindowFocus: true, // Refetch when window regains focus
+    staleTime: 0, // Always consider data stale, fetch fresh data
   });
 }
 

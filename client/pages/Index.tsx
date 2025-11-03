@@ -6,13 +6,14 @@ import BlogModal from "../components/BlogModal";
 // import ColorThemePanel from "../components/ColorThemePanel";
 import { Button } from "../components/ui/button";
 import GoogleMapsMap from "../components/GoogleMapsMap";
-import { useRef, useState, useEffect } from "react";
+import { useRef, useState, useEffect, useMemo } from "react";
 import CoffeeBeanAnimation from "../components/CoffeeBeanAnimation";
 import { useLanguage } from "../contexts/LanguageContext";
 import SeasonCarousel from "../components/SeasonCarousel";
 import { useHomepageSettings, useFeaturedSlides } from "../hooks/use-supabase";
 import { usePageSections } from "@/hooks/use-supabase";
 import { CustomSection } from "@/components/CustomSection";
+import { useContactPoints } from "@/hooks/use-supabase";
 
 export default function Index() {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -22,6 +23,7 @@ export default function Index() {
   const { data: homepageSettings } = useHomepageSettings();
   const { data: featuredSlides } = useFeaturedSlides();
   const { data: customSections } = usePageSections('home');
+  const { data: contactPoints } = useContactPoints();
   
   // Trade points state
   const [selectedTradePoint, setSelectedTradePoint] = useState(0);
@@ -54,25 +56,78 @@ export default function Index() {
     return currentDay === dayOfWeek && currentHour >= openHour && currentHour < closeHour;
   };
 
-  // Use hardcoded trade points
-  const tradePoints = [
-    {
-      name: t('cafes.cafe1.name'),
-      address: t('cafes.cafe1.address'),
-      active: isCurrentlyOpen(6, 6, 14), // Saturday, 6:00-14:00
-      hours: t('cafes.cafe1.hours'),
-      lat: 50.4067,
-      lng: 30.6493
-    },
-    {
-      name: t('cafes.cafe2.name'),
-      address: t('cafes.cafe2.address'),
-      active: isCurrentlyOpen(0, 6, 14), // Sunday, 6:00-14:00
-      hours: t('cafes.cafe2.hours'),
-      lat: 50.3824,
-      lng: 30.4590
+  // Load trade points from Supabase
+  const pick = (ua?: string | null, ru?: string | null, fallback: string = "") => 
+    (language === 'ru' ? (ru ?? ua ?? fallback) : (ua ?? ru ?? fallback));
+
+  // Format opening hours dynamically based on day and time
+  const formatOpeningHours = (openDay: number | null, openHour: number, closeHour: number): string => {
+    if (openDay == null) {
+      return language === 'ru' ? 'График работы не указан' : 'Графік роботи не вказано';
     }
-  ];
+
+    const dayNames = language === 'ru' 
+      ? ['Воскресенье', 'Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота']
+      : ['Неділя', 'Понеділок', 'Вівторок', 'Середа', 'Четвер', 'П\'ятниця', 'Субота'];
+    
+    const dayName = dayNames[openDay] || '';
+    const formatTime = (hour: number) => `${hour.toString().padStart(2, '0')}:00`;
+    
+    return `${dayName}: ${formatTime(openHour)}-${formatTime(closeHour)}`;
+  };
+
+  // Load trade points from Supabase or use fallback
+  const tradePoints = useMemo(() => {
+    if (contactPoints && contactPoints.length > 0) {
+      return contactPoints.map((p) => {
+        const openDay = p.open_day != null ? Number(p.open_day) : null;
+        const openHour = p.open_hour != null ? Number(p.open_hour) : 9;
+        const closeHour = p.close_hour != null ? Number(p.close_hour) : 18;
+        const active = openDay != null ? isCurrentlyOpen(openDay, openHour, closeHour) : false;
+        
+        // Use dynamic hours if available, otherwise fallback to static text
+        const dynamicHours = (openDay != null || p.open_hour != null || p.close_hour != null)
+          ? formatOpeningHours(openDay, openHour, closeHour)
+          : pick(p.hours_ua, p.hours_ru, '');
+        
+        return {
+          name: pick(p.name_ua, p.name_ru, ''),
+          address: p.address || '',
+          active,
+          hours: dynamicHours,
+          lat: p.lat != null ? Number(p.lat) : 50.4501, // Default to Kyiv center if not set
+          lng: p.lng != null ? Number(p.lng) : 30.5234, // Default to Kyiv center if not set
+        };
+      });
+    }
+    
+    // Fallback to hardcoded if no data
+    return [
+      {
+        name: t('cafes.cafe1.name'),
+        address: t('cafes.cafe1.address'),
+        active: isCurrentlyOpen(6, 6, 14),
+        hours: t('cafes.cafe1.hours'),
+        lat: 50.4067,
+        lng: 30.6493
+      },
+      {
+        name: t('cafes.cafe2.name'),
+        address: t('cafes.cafe2.address'),
+        active: isCurrentlyOpen(0, 6, 14),
+        hours: t('cafes.cafe2.hours'),
+        lat: 50.3824,
+        lng: 30.4590
+      }
+    ];
+  }, [contactPoints, currentTime, language, t]);
+
+  // Reset selected trade point when trade points change
+  useEffect(() => {
+    if (tradePoints.length > 0 && selectedTradePoint >= tradePoints.length) {
+      setSelectedTradePoint(0);
+    }
+  }, [tradePoints.length, selectedTradePoint]);
 
   // Use hardcoded news articles
   const newsArticles = [
@@ -359,7 +414,7 @@ export default function Index() {
             {/* Text Side - Clean */}
             <div className="space-y-8">
               <div>
-                 <h2 className="text-5xl lg:text-7xl font-black mb-8 leading-tight font-coolvetica tracking-wider">
+                 <h2 className="text-4xl md:text-5xl lg:text-7xl font-black mb-8 leading-tight font-coolvetica tracking-wider">
                    <span style={{ color: '#fcf4e4' }}>{t('video.title1')}</span>
                    <br />
                    <span style={{ color: '#fcf4e4' }}>{t('video.title2')}</span>
@@ -456,7 +511,7 @@ export default function Index() {
       ))}
 
       {/* Our Cafes - Clean & Minimalistic */}
-      {!homepageSettings?.hide_cafes && (
+      {!homepageSettings?.hide_cafes && tradePoints.length > 0 && (
       <section className="py-32 relative overflow-hidden" style={{ backgroundColor: '#361c0c' }}>
         <div className="max-w-8xl mx-auto px-6 lg:px-8 relative z-10">
           {/* Header - Clean */}
@@ -468,19 +523,22 @@ export default function Index() {
           </div>
 
           {/* Map - Google Maps with markers */}
-          <div className="mb-20">
-            <div className="h-[600px] relative overflow-hidden rounded-lg bg-gray-200">
-              <GoogleMapsMap
-                tradePoints={tradePoints}
-                selectedIndex={selectedTradePoint}
-                onSelect={setSelectedTradePoint}
-              />
+          {tradePoints.filter(p => p.lat != null && p.lng != null && !isNaN(p.lat) && !isNaN(p.lng)).length > 0 && (
+            <div className="mb-20">
+              <div className="h-[600px] relative overflow-hidden rounded-lg bg-gray-200">
+                <GoogleMapsMap
+                  tradePoints={tradePoints.filter(p => p.lat != null && p.lng != null && !isNaN(p.lat) && !isNaN(p.lng))}
+                  selectedIndex={selectedTradePoint}
+                  onSelect={setSelectedTradePoint}
+                />
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Cafe List - Clean Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12 mb-16 max-w-8xl mx-auto">
-            {tradePoints.map((cafe, index) => (
+          {tradePoints.length > 0 && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12 mb-16 max-w-8xl mx-auto">
+              {tradePoints.map((cafe, index) => (
               <div 
                 key={index} 
                 onClick={() => {
@@ -520,7 +578,7 @@ export default function Index() {
                 
                 {/* Google Maps Link */}
                 <a
-                  href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${cafe.name} ${cafe.address}`.trim())}`}
+                  href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(cafe.address.trim())}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   onClick={(e) => e.stopPropagation()}
@@ -530,16 +588,16 @@ export default function Index() {
                   Відкрити в Google Maps
                 </a>
                 
-                {/* Selection Indicator */}
+                {/* Selection Indicator - Hidden on mobile, shown on desktop */}
                 {selectedTradePoint === index && (
-                  <div className="absolute top-4 right-4 w-6 h-6 bg-white/30 rounded-full flex items-center justify-center">
+                  <div className="hidden md:flex absolute top-4 right-4 w-6 h-6 bg-white/30 rounded-full items-center justify-center">
                     <div className="w-2 h-2 bg-white rounded-full"></div>
                   </div>
                 )}
               </div>
             ))}
-          </div>
-
+            </div>
+          )}
 
         </div>
       </section>
