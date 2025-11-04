@@ -66,6 +66,18 @@ export const handler: Handler = async (event, context) => {
       itemsIsArray: Array.isArray(items),
       itemsLength: items?.length,
       customerKeys: customer ? Object.keys(customer) : [],
+      itemsWithVariants: items?.map((it: any) => ({ 
+        name: it.name, 
+        variant: it.variant, 
+        hasVariant: !!it.variant 
+      })),
+      shipping: {
+        method: shipping?.method,
+        city: shipping?.city,
+        department: shipping?.department,
+        warehouseRef: shipping?.warehouseRef,
+      },
+      paymentMethod: payment?.method,
     });
 
     // Validation
@@ -83,7 +95,7 @@ export const handler: Handler = async (event, context) => {
     }
 
     const paymentMethod = payment?.method || "liqpay";
-    const orderId = `cm-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+    const orderId = `${Date.now()}${Math.floor(Math.random() * 10000).toString().padStart(4, '0')}`;
     const amount = Number(
       (
         items.reduce((sum: number, it: any) => sum + it.price * it.quantity, 0) +
@@ -91,7 +103,7 @@ export const handler: Handler = async (event, context) => {
       ).toFixed(2)
     );
 
-    // Build shipping address string
+    // Build shipping address string (for backward compatibility)
     let shippingAddress = "";
     if (shipping?.address) {
       shippingAddress = shipping.address;
@@ -100,25 +112,43 @@ export const handler: Handler = async (event, context) => {
       }
     } else if (shipping?.city && shipping?.warehouseRef) {
       const shippingMethod = shipping.method || "nova_department";
-      shippingAddress = `${shipping.city} (${shippingMethod === 'nova_department' ? 'Відділення' : 'Поштомат'})`;
+      const departmentText = shipping.department ? `, №${shipping.department}` : '';
+      shippingAddress = `${shipping.city} (${shippingMethod === 'nova_department' ? 'Відділення' : 'Поштомат'}${departmentText})`;
     }
+    
 
     // For cash payments, save order immediately (no payment gateway callback)
     if (paymentMethod === "cash") {
       const supabase = getSupabaseClient();
+      const orderToInsert = {
+        status: "pending",
+        customer_name: customer.fullName,
+        customer_email: customer.email,
+        customer_phone: customer.phone,
+        shipping_address: shippingAddress, // Keep for backward compatibility
+        shipping_city: shipping?.city || null,
+        shipping_city_ref: shipping?.cityRef || null,
+        shipping_street_address: shipping?.address || null, // Detailed street address
+        shipping_warehouse_ref: shipping?.warehouseRef || null,
+        shipping_department: shipping?.department || null,
+        shipping_method: shipping?.method || null,
+        payment_method: paymentMethod || null,
+        total_price: amount,
+        currency: "UAH",
+        order_id: orderId,
+        notes: notes || null,
+      };
+      
+      console.log('Saving cash order with:', {
+        shipping_department: orderToInsert.shipping_department,
+        shipping_method: orderToInsert.shipping_method,
+        payment_method: orderToInsert.payment_method,
+        order_id: orderToInsert.order_id,
+      });
+
       const { data: orderData, error: orderError } = await supabase
         .from("orders")
-        .insert({
-          status: "pending",
-          customer_name: customer.fullName,
-          customer_email: customer.email,
-          customer_phone: customer.phone,
-          shipping_address: shippingAddress,
-          total_price: amount,
-          currency: "UAH",
-          order_id: orderId,
-          notes: notes || null,
-        })
+        .insert(orderToInsert)
         .select()
         .single();
 
@@ -134,23 +164,50 @@ export const handler: Handler = async (event, context) => {
         };
       }
 
-      // Save order items
+      // Save order items with all details including variant
       if (orderData) {
-        const orderItems = items.map((item: any) => ({
-          order_id: orderData.id,
-          product_id: item.id?.toString() || item.product_id || "unknown",
-          product_name: item.name || "Unknown Product",
-          product_image: item.image || item.image_url || null,
-          quantity: item.quantity || 1,
-          price: item.price || 0,
-        }));
+        const orderItems = items.map((item: any) => {
+          const itemToSave = {
+            order_id: orderData.id,
+            product_id: item.id?.toString() || item.product_id || "unknown",
+            product_name: item.name || "Unknown Product",
+            product_image: item.image || item.image_url || null,
+            quantity: item.quantity || 1,
+            price: item.price || 0,
+            variant: item.variant || null, // Store grind type, size, etc.
+          };
+          console.log('Saving order item:', {
+            name: itemToSave.product_name,
+            variant: itemToSave.variant,
+            hasVariant: !!itemToSave.variant,
+          });
+          return itemToSave;
+        });
 
-        const { error: itemsError } = await supabase
+        console.log('Inserting order items:', orderItems.map((it: any) => ({ 
+          name: it.product_name,
+          variant: it.variant,
+          hasVariant: !!it.variant,
+          variantType: typeof it.variant,
+        })));
+        
+        const { data: insertedItems, error: itemsError } = await supabase
           .from("order_items")
-          .insert(orderItems);
+          .insert(orderItems)
+          .select();
 
         if (itemsError) {
-          console.error("Error saving order items to Supabase:", itemsError);
+          console.error("✗ ERROR saving order items to Supabase:", itemsError);
+          console.error("Error details:", {
+            code: itemsError.code,
+            message: itemsError.message,
+            details: itemsError.details,
+            hint: itemsError.hint,
+          });
+          console.error("Attempted to insert:", JSON.stringify(orderItems, null, 2));
+        } else {
+          console.log(`✓ Successfully saved ${orderItems.length} order items`);
+          console.log("Inserted items:", insertedItems?.map((it: any) => ({ id: it.id, variant: it.variant })));
         }
       }
 
@@ -212,6 +269,17 @@ export const handler: Handler = async (event, context) => {
     const protocol = event.headers["x-forwarded-proto"] || "https";
     const baseUrl = `${protocol}://${host}`;
 
+    // Get Supabase project reference for Edge Function URL
+    const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || "https://umynzgzlqdphgrzixhsc.supabase.co";
+    const supabaseProjectRef = supabaseUrl.match(/https:\/\/([^.]+)\.supabase\.co/)?.[1] || "umynzgzlqdphgrzixhsc";
+    const supabaseWebhookUrl = `https://${supabaseProjectRef}.functions.supabase.co/liqpay-webhook`;
+    
+    console.log("=== WEBHOOK URL DEBUG ===");
+    console.log("Supabase URL:", supabaseUrl);
+    console.log("Project Ref:", supabaseProjectRef);
+    console.log("Webhook URL:", supabaseWebhookUrl);
+    console.log("=========================");
+
     // Store order data temporarily in Supabase pending_orders table
     // This allows us to retrieve it when payment is confirmed
     const orderData = {
@@ -219,9 +287,16 @@ export const handler: Handler = async (event, context) => {
       customer,
       shipping: {
         ...shipping,
-        address: shippingAddress,
+        address: shippingAddress, // Keep for backward compatibility
+        department: shipping?.department || null,
       },
-      items,
+      payment: {
+        method: paymentMethod,
+      },
+      items: items.map((item: any) => ({
+        ...item,
+        variant: item.variant || null, // Ensure variant is included
+      })),
       notes,
       amount,
     };
@@ -231,17 +306,17 @@ export const handler: Handler = async (event, context) => {
     const supabase = getSupabaseClient();
     const { error: pendingError } = await supabase
       .from("pending_orders")
-      .insert({
-        order_id: orderId,
-        customer_name: customer.fullName,
-        customer_email: customer.email,
-        customer_phone: customer.phone,
-        shipping_address: shippingAddress,
-        total_price: amount,
-        currency: "UAH",
-        notes: notes || null,
-        order_data: orderData, // Store full order data as JSON
-      });
+        .insert({
+          order_id: orderId,
+          customer_name: customer.fullName,
+          customer_email: customer.email,
+          customer_phone: customer.phone,
+          shipping_address: shippingAddress, // Keep for backward compatibility
+          total_price: amount,
+          currency: "UAH",
+          notes: notes || null,
+          order_data: orderData, // Store full order data as JSON
+        });
 
     if (pendingError) {
       console.error("Error saving to pending_orders:", pendingError);
@@ -270,6 +345,7 @@ export const handler: Handler = async (event, context) => {
       description: `Замовлення ${orderId} — THE COFFEE MANIFEST`,
       order_id: orderId,
       result_url: `${baseUrl}/basket?payment=return`,
+      // Use Netlify function instead - it's more reliable
       server_url: `${baseUrl}/.netlify/functions/liqpay-callback`,
       language: "uk",
       paytypes,
@@ -284,6 +360,14 @@ export const handler: Handler = async (event, context) => {
 
     const data = base64(JSON.stringify(params));
     const signature = sign(data, privateKey);
+
+    // CRITICAL DEBUG: Log what we're sending to LiqPay
+    console.log("=== LIQPAY PAYMENT DATA ===");
+    console.log("Order ID:", orderId);
+    console.log("Server URL (webhook):", supabaseWebhookUrl);
+    console.log("Payment params include server_url:", !!params.server_url);
+    console.log("Full params keys:", Object.keys(params));
+    console.log("===========================");
 
     return {
       statusCode: 200,

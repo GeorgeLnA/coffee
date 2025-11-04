@@ -24,6 +24,12 @@
   status = 200
   to = "/.netlify/functions/prepare-order"
 
+[[redirects]]
+  force = true
+  from = "/.netlify/functions/liqpay-callback"
+  status = 200
+  to = "/.netlify/functions/liqpay-callback"
+
 # Redirect other API endpoints to Express wrapper (for backward compatibility)
 [[redirects]]
   force = true

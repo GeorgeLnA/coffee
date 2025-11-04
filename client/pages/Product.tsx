@@ -724,7 +724,7 @@ export default function Product() {
                       image: product!.image,
                       price: finalPrice / quantity, // unit price
                       quantity: quantity,
-                      variant: `${sizesOptions.length ? (sizesOptions[selectedSizeIdx]?.label || '') : selectedWeight} ${selectedGrind === 'beans' ? t('product.grindBeans') : t('product.grindGround')}`,
+                      variant: `${sizesOptions.length ? (sizesOptions[selectedSizeIdx]?.label || '') : selectedWeight} ${(selectedGrind || 'beans') === 'beans' ? t('product.grindBeans') : t('product.grindGround')}`,
                       type: 'coffee'
                     });
                     

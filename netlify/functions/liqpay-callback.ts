@@ -15,6 +15,13 @@ function getSupabaseClient() {
  * Helper function to save order from order data object
  */
 async function saveOrderFromData(supabase: any, orderData: any, orderId: string, amount: number) {
+  const shipping = orderData.shipping || {};
+  const payment = orderData.payment || {};
+  const shippingAddress = shipping.address || 
+                          (shipping.city ? `${shipping.city}${shipping.address ? `, ${shipping.address}` : ''}` : '') ||
+                          "";
+  const paymentMethod = payment?.method || "liqpay";
+  
   const { data: orderDataResult, error: orderError } = await supabase
     .from("orders")
     .insert({
@@ -22,7 +29,14 @@ async function saveOrderFromData(supabase: any, orderData: any, orderId: string,
       customer_name: orderData.customer?.fullName,
       customer_email: orderData.customer?.email,
       customer_phone: orderData.customer?.phone,
-      shipping_address: orderData.shipping?.address || "",
+      shipping_address: shippingAddress, // Keep for backward compatibility
+      shipping_city: shipping?.city || null,
+      shipping_city_ref: shipping?.cityRef || null,
+      shipping_street_address: shipping?.address || null,
+      shipping_warehouse_ref: shipping?.warehouseRef || null,
+      shipping_department: shipping?.department || null,
+      shipping_method: shipping?.method || null,
+      payment_method: paymentMethod,
       total_price: orderData.amount || amount || 0,
       currency: "UAH",
       order_id: orderId,
@@ -44,6 +58,7 @@ async function saveOrderFromData(supabase: any, orderData: any, orderId: string,
       product_image: item.image || item.image_url || null,
       quantity: item.quantity || 1,
       price: item.price || 0,
+      variant: item.variant || null, // Store grind type, size, etc.
     }));
 
     await supabase.from("order_items").insert(orderItems);
@@ -147,24 +162,21 @@ export const handler: Handler = async (event, context) => {
       };
     }
 
-    console.log("Signature verified successfully - callback is authentic from LiqPay");
+    console.log("✓ Signature verified successfully - callback is authentic from LiqPay");
 
     // Decode base64 data
     const decodedData = Buffer.from(data, "base64").toString("utf-8");
     const callbackData: LiqPayCallbackData = JSON.parse(decodedData);
 
     console.log("=== LIQPAY CALLBACK RECEIVED ===");
-    console.log("LiqPay callback received:", {
-      status: callbackData.status,
-      order_id: callbackData.order_id,
-      transaction_id: callbackData.transaction_id,
-      amount: callbackData.amount,
-      currency: callbackData.currency,
-      hasInfo: !!callbackData.info,
-      infoLength: callbackData.info?.length || 0,
-      allKeys: Object.keys(callbackData),
-    });
+    console.log("Status:", callbackData.status);
+    console.log("Order ID:", callbackData.order_id);
+    console.log("Transaction ID:", callbackData.transaction_id);
+    console.log("Amount:", callbackData.amount);
+    console.log("Currency:", callbackData.currency);
+    console.log("Has Info:", !!callbackData.info);
     console.log("Full callback data:", JSON.stringify(callbackData, null, 2));
+    console.log("================================");
 
     const supabase = getSupabaseClient();
 
@@ -187,13 +199,27 @@ export const handler: Handler = async (event, context) => {
       amount: callbackData.amount,
     });
 
+    console.log("=== PAYMENT STATUS CHECK ===");
+    console.log("Status:", callbackData.status);
+    console.log("Is Payment Confirmed:", isPaymentConfirmed);
+    console.log("Will save order:", isPaymentConfirmed);
+    console.log("============================");
+
     if (isPaymentConfirmed) {
+      console.log("✓ Payment confirmed - proceeding to save order");
+      
       // Check if order already exists
+      console.log("Checking if order already exists in database...");
       const { data: existingOrder, error: existingOrderError } = await supabase
         .from("orders")
         .select("id")
         .eq("order_id", callbackData.order_id)
         .single();
+
+      console.log("Existing order check result:", {
+        found: !!existingOrder,
+        error: existingOrderError?.message || null,
+      });
 
       if (existingOrder && !existingOrderError) {
         // Order already exists, just update status
@@ -306,20 +332,30 @@ export const handler: Handler = async (event, context) => {
         }
 
         // We have order data - save it
-        console.log("Saving order with data:", {
+        console.log("=== SAVING ORDER TO DATABASE ===");
+        console.log("Order Data:", {
           hasCustomer: !!orderData?.customer,
+          customerName: orderData?.customer?.fullName,
           hasItems: !!orderData?.items,
           itemsCount: orderData?.items?.length || 0,
           amount: orderData?.amount,
+          shipping: orderData?.shipping?.method,
+          payment: orderData?.payment?.method,
         });
+        console.log("Full order data:", JSON.stringify(orderData, null, 2));
 
-        // Build shipping address
+        // Build shipping address (for backward compatibility)
         const shippingAddress = pendingOrder?.shipping_address || 
                                orderData?.shipping?.address || 
                                (orderData?.shipping?.city ? `${orderData.shipping.city}${orderData.shipping.address ? `, ${orderData.shipping.address}` : ''}` : '') ||
                                "";
+        
+        // Extract detailed shipping info and payment method
+        const shipping = orderData?.shipping || {};
+        const payment = orderData?.payment || {};
+        const paymentMethod = payment?.method || "liqpay"; // Default to liqpay for online payments
 
-        // Save order to orders table
+        // Save order to orders table with all shipping details
         const { data: orderDataResult, error: orderError } = await supabase
           .from("orders")
           .insert({
@@ -327,7 +363,14 @@ export const handler: Handler = async (event, context) => {
             customer_name: pendingOrder?.customer_name || orderData?.customer?.fullName || null,
             customer_email: pendingOrder?.customer_email || orderData?.customer?.email || null,
             customer_phone: pendingOrder?.customer_phone || orderData?.customer?.phone || null,
-            shipping_address: shippingAddress,
+            shipping_address: shippingAddress, // Keep for backward compatibility
+            shipping_city: shipping?.city || null,
+            shipping_city_ref: shipping?.cityRef || null,
+            shipping_street_address: shipping?.address || null,
+            shipping_warehouse_ref: shipping?.warehouseRef || null,
+            shipping_department: shipping?.department || null,
+            shipping_method: shipping?.method || null,
+            payment_method: paymentMethod,
             total_price: pendingOrder?.total_price || orderData?.amount || callbackData.amount || 0,
             currency: pendingOrder?.currency || "UAH",
             order_id: callbackData.order_id,
@@ -337,15 +380,28 @@ export const handler: Handler = async (event, context) => {
           .single();
 
         if (orderError) {
-          console.error("✗ Error saving order to Supabase:", orderError);
-          console.error("Error details:", {
-            code: orderError.code,
-            message: orderError.message,
-            details: orderError.details,
-            hint: orderError.hint,
-          });
+          console.error("✗✗✗ CRITICAL ERROR SAVING ORDER ✗✗✗");
+          console.error("Order Error:", JSON.stringify(orderError, null, 2));
+          console.error("Error Code:", orderError.code);
+          console.error("Error Message:", orderError.message);
+          console.error("Error Details:", orderError.details);
+          console.error("Error Hint:", orderError.hint);
+          console.error("Attempted Insert:", JSON.stringify({
+            order_id: callbackData.order_id,
+            customer_name: pendingOrder?.customer_name || orderData?.customer?.fullName,
+            shipping_department: shipping?.department,
+            shipping_method: shipping?.method,
+            payment_method: paymentMethod,
+            total_price: pendingOrder?.total_price || orderData?.amount || callbackData.amount,
+          }, null, 2));
+          console.error("✗✗✗ END ERROR ✗✗✗");
         } else if (orderDataResult) {
-          console.log("✓ Order saved successfully, ID:", orderDataResult.id);
+          console.log("✓✓✓ ORDER SAVED SUCCESSFULLY ✓✓✓");
+          console.log("Database ID:", orderDataResult.id);
+          console.log("Order ID:", orderDataResult.order_id);
+          console.log("Customer:", orderDataResult.customer_name);
+          console.log("Total:", orderDataResult.total_price);
+          console.log("✓✓✓ END SUCCESS ✓✓✓");
           
           // Save order items
           const itemsToSave = orderData?.items || [];
@@ -357,17 +413,33 @@ export const handler: Handler = async (event, context) => {
               product_image: item.image || item.image_url || null,
               quantity: item.quantity || 1,
               price: item.price || 0,
+              variant: item.variant || null, // Store grind type, size, etc.
             }));
 
             console.log(`Saving ${orderItems.length} order items...`);
-            const { error: itemsError } = await supabase
+            console.log("Order items to save:", orderItems.map((it: any) => ({
+              name: it.product_name,
+              variant: it.variant,
+              hasVariant: !!it.variant,
+            })));
+            
+            const { data: insertedItems, error: itemsError } = await supabase
               .from("order_items")
-              .insert(orderItems);
+              .insert(orderItems)
+              .select();
 
             if (itemsError) {
-              console.error("✗ Error saving order items:", itemsError);
+              console.error("✗ ERROR saving order items:", itemsError);
+              console.error("Error details:", {
+                code: itemsError.code,
+                message: itemsError.message,
+                details: itemsError.details,
+                hint: itemsError.hint,
+              });
+              console.error("Attempted to insert:", JSON.stringify(orderItems, null, 2));
             } else {
               console.log(`✓ Order ${callbackData.order_id} saved successfully with ${orderItems.length} items`);
+              console.log("Inserted items:", insertedItems?.map((it: any) => ({ id: it.id, variant: it.variant })));
             }
           } else {
             console.warn("⚠ No items to save for order");

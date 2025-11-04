@@ -21,13 +21,21 @@ import { format, differenceInDays } from "date-fns";
 
 type Order = {
   id: number;
+  order_id: string | null; // Order number (e.g., "cm-1234567890-abc123")
   created_at: string;
   updated_at: string;
   status: string;
   customer_name: string | null;
   customer_email: string | null;
   customer_phone: string | null;
-  shipping_address: string | null;
+  shipping_address: string | null; // Legacy field for backward compatibility
+  shipping_city: string | null;
+  shipping_city_ref: string | null;
+  shipping_street_address: string | null;
+  shipping_warehouse_ref: string | null;
+  shipping_department: string | null;
+  shipping_method: string | null;
+  payment_method: string | null;
   total_price: number;
   currency: string | null;
   notes: string | null;
@@ -41,6 +49,7 @@ type OrderItem = {
   product_image: string | null;
   quantity: number;
   price: number;
+  variant: string | null; // Grind type, size, etc.
 };
 
 type Client = {
@@ -68,6 +77,32 @@ export function OrdersManager() {
   const [deleteClientEmail, setDeleteClientEmail] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
+  // Helper function to format variant display (grams + grind type)
+  const formatVariantDisplay = (variant: string | null): string => {
+    if (!variant) return 'В зернах';
+    
+    // Extract grams (e.g., "250g", "500g")
+    const gramsMatch = variant.match(/(\d+g)/);
+    const grams = gramsMatch ? gramsMatch[1] : '';
+    
+    // Extract grind type
+    const isBeans = variant.includes('В зернах') || variant.includes('beans') || variant.toLowerCase().includes('зерн');
+    const isGround = variant.includes('Мелена') || variant.includes('ground') || variant.toLowerCase().includes('мелен');
+    
+    const grindType = isBeans ? 'В зернах' : isGround ? 'Мелена' : '';
+    
+    // Combine grams and grind type
+    if (grams && grindType) {
+      return `${grams} ${grindType}`;
+    } else if (grams) {
+      return grams;
+    } else if (grindType) {
+      return grindType;
+    } else {
+      return variant; // Fallback to full variant if parsing fails
+    }
+  };
+
   const load = async () => {
     setLoading(true);
     setError(null);
@@ -82,16 +117,37 @@ export function OrdersManager() {
       
       const ordersList = (oData || []) as Order[];
       
-      // Load items for each order
+      // Load items for each order with all fields including variant
       const ordersWithItems = await Promise.all(
         ordersList.map(async (order) => {
-          const { data: items } = await supabase
+          const { data: items, error: itemsError } = await supabase
             .from('order_items')
-            .select('*')
+            .select('id, order_id, product_id, product_name, product_image, quantity, price, variant')
             .eq('order_id', order.id);
+          if (itemsError) {
+            console.error('Error loading order items:', itemsError);
+          } else {
+            // Debug: Log what we're getting from database
+            console.log(`Order #${order.id} items:`, items?.map((it: any) => ({
+              name: it.product_name,
+              variant: it.variant,
+              hasVariant: !!it.variant,
+            })));
+          }
           return { ...order, items: items || [] };
         })
       );
+      
+      // Debug: Log order data to verify what we're getting
+      console.log('Loaded orders sample:', ordersWithItems.slice(0, 2).map((o: any) => ({
+        id: o.id,
+        order_id: o.order_id,
+        shipping_department: o.shipping_department,
+        shipping_method: o.shipping_method,
+        payment_method: o.payment_method,
+        itemsCount: o.items?.length,
+        firstItemVariant: o.items?.[0]?.variant,
+      })));
       
       setOrders(ordersWithItems);
     } catch (e: any) {
@@ -351,9 +407,16 @@ export function OrdersManager() {
               <Card key={order.id} className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => handleOrderClick(order)}>
                 <CardHeader>
                   <div className="flex items-center justify-between">
-                    <CardTitle className="text-lg">
-                      Замовлення #{order.id}
-                    </CardTitle>
+                    <div>
+                      <CardTitle className="text-lg">
+                        Замовлення #{order.id}
+                      </CardTitle>
+                      {order.order_id && (
+                        <p className="text-sm text-gray-600 mt-1 font-mono">
+                          Номер замовлення: <span className="font-semibold text-blue-600">{order.order_id}</span>
+                        </p>
+                      )}
+                    </div>
                     <div className="flex items-center gap-2">
                       <Button
                         variant="outline"
@@ -381,7 +444,49 @@ export function OrdersManager() {
                       <p className="text-sm"><strong>Ім'я:</strong> {order.customer_name || '—'}</p>
                       <p className="text-sm"><strong>Email:</strong> {order.customer_email || '—'}</p>
                       <p className="text-sm"><strong>Телефон:</strong> {order.customer_phone || '—'}</p>
-                      <p className="text-sm mt-2"><strong>Адреса:</strong> {order.shipping_address || '—'}</p>
+                      <div className="text-sm mt-2">
+                        <strong>Адреса доставки:</strong>
+                        <div className="ml-4 mt-1 space-y-1">
+                          {order.shipping_city && <p>Місто: {order.shipping_city}</p>}
+                          {order.shipping_street_address && <p>Адреса: {order.shipping_street_address}</p>}
+                          {order.shipping_method && (
+                            <p>Спосіб: {
+                              order.shipping_method === 'nova_department' ? 'Нова Пошта (Відділення)' :
+                              order.shipping_method === 'nova_postomat' ? 'Нова Пошта (Поштомат)' :
+                              order.shipping_method === 'nova_courier' ? 'Нова Пошта (Кур\'єр)' :
+                              order.shipping_method === 'own_courier' ? 'Власний кур\'єр' :
+                              order.shipping_method
+                            }</p>
+                          )}
+                          {(order.shipping_department || order.shipping_warehouse_ref) && (
+                            <>
+                              {order.shipping_department ? (
+                                <p><strong>Відділення:</strong> №{order.shipping_department}</p>
+                              ) : (
+                                order.shipping_method === 'nova_postomat' ? (
+                                  <p><strong>Поштомат:</strong> {order.shipping_warehouse_ref}</p>
+                                ) : (
+                                  order.shipping_warehouse_ref && <p><strong>Warehouse Ref:</strong> {order.shipping_warehouse_ref}</p>
+                                )
+                              )}
+                            </>
+                          )}
+                          {!order.shipping_city && !order.shipping_street_address && order.shipping_address && (
+                            <p className="text-gray-500">{order.shipping_address}</p>
+                          )}
+                        </div>
+                      </div>
+                      <p className="text-sm mt-2">
+                        <strong>Спосіб оплати:</strong> {
+                          order.payment_method ? (
+                            order.payment_method === 'liqpay' ? 'Онлайн оплата (LiqPay)' :
+                            order.payment_method === 'apple_pay' ? 'Apple Pay' :
+                            order.payment_method === 'google_pay' ? 'Google Pay' :
+                            order.payment_method === 'cash' ? 'Готівка' :
+                            order.payment_method
+                          ) : '—'
+                        }
+                      </p>
                       {order.notes && (
                         <p className="text-sm mt-2"><strong>Примітки:</strong> {order.notes}</p>
                       )}
@@ -397,6 +502,9 @@ export function OrdersManager() {
                               )}
                               <div className="flex-1">
                                 <p className="font-medium">{item.product_name}</p>
+                                <p className="text-xs font-semibold text-blue-600 mt-1">
+                                  {formatVariantDisplay(item.variant)}
+                                </p>
                                 <p className="text-gray-500">×{item.quantity} • ₴{item.price.toFixed(2)}</p>
                               </div>
                             </div>
@@ -507,7 +615,14 @@ export function OrdersManager() {
                     <Card key={order.id}>
                       <CardHeader>
                         <div className="flex items-center justify-between">
-                          <CardTitle className="text-lg">Замовлення #{order.id}</CardTitle>
+                          <div>
+                            <CardTitle className="text-lg">Замовлення #{order.id}</CardTitle>
+                            {order.order_id && (
+                              <p className="text-sm text-gray-600 mt-1 font-mono">
+                                Номер замовлення: <span className="font-semibold text-blue-600">{order.order_id}</span>
+                              </p>
+                            )}
+                          </div>
                           <div className="flex items-center gap-2">
                             <Button
                               variant="outline"
@@ -532,7 +647,47 @@ export function OrdersManager() {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <div>
                             <h4 className="font-bold mb-2">Адреса доставки</h4>
-                            <p className="text-sm">{order.shipping_address || '—'}</p>
+                            <div className="text-sm space-y-1">
+                              {order.shipping_city && <p>Місто: {order.shipping_city}</p>}
+                              {order.shipping_street_address && <p>Адреса: {order.shipping_street_address}</p>}
+                              {order.shipping_method && (
+                                <p>Спосіб: {
+                                  order.shipping_method === 'nova_department' ? 'Нова Пошта (Відділення)' :
+                                  order.shipping_method === 'nova_postomat' ? 'Нова Пошта (Поштомат)' :
+                                  order.shipping_method === 'nova_courier' ? 'Нова Пошта (Кур\'єр)' :
+                                  order.shipping_method === 'own_courier' ? 'Власний кур\'єр' :
+                                  order.shipping_method
+                                }</p>
+                              )}
+                              {(order.shipping_department || order.shipping_warehouse_ref) && (
+                                <>
+                                  {order.shipping_department ? (
+                                    <p><strong>Відділення:</strong> №{order.shipping_department}</p>
+                                  ) : (
+                                    order.shipping_method === 'nova_postomat' ? (
+                                      <p><strong>Поштомат:</strong> {order.shipping_warehouse_ref}</p>
+                                    ) : (
+                                      order.shipping_warehouse_ref && <p><strong>Warehouse Ref:</strong> {order.shipping_warehouse_ref}</p>
+                                    )
+                                  )}
+                                </>
+                              )}
+                              {!order.shipping_city && !order.shipping_street_address && order.shipping_address && (
+                                <p className="text-gray-500">{order.shipping_address}</p>
+                              )}
+                              {!order.shipping_city && !order.shipping_street_address && !order.shipping_address && <p>—</p>}
+                            </div>
+                            <p className="text-sm mt-2">
+                              <strong>Спосіб оплати:</strong> {
+                                order.payment_method ? (
+                                  order.payment_method === 'liqpay' ? 'Онлайн оплата (LiqPay)' :
+                                  order.payment_method === 'apple_pay' ? 'Apple Pay' :
+                                  order.payment_method === 'google_pay' ? 'Google Pay' :
+                                  order.payment_method === 'cash' ? 'Готівка' :
+                                  order.payment_method
+                                ) : '—'
+                              }
+                            </p>
                             {order.notes && (
                               <p className="text-sm mt-2"><strong>Примітки:</strong> {order.notes}</p>
                             )}
@@ -548,6 +703,9 @@ export function OrdersManager() {
                                     )}
                                     <div className="flex-1">
                                       <p className="font-medium">{item.product_name}</p>
+                                      <p className="text-xs font-semibold text-blue-600 mt-1">
+                                        {formatVariantDisplay(item.variant)}
+                                      </p>
                                       <p className="text-gray-500">×{item.quantity} • ₴{item.price.toFixed(2)}</p>
                                     </div>
                                   </div>

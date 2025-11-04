@@ -36,17 +36,16 @@ export const prepareOrder: RequestHandler = async (req, res) => {
     }
 
     const paymentMethod = payment?.method || 'liqpay';
-    const orderId = `cm-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+    const orderId = `${Date.now()}${Math.floor(Math.random() * 10000).toString().padStart(4, '0')}`;
     const amount = Number((items.reduce((sum: number, it: any) => sum + it.price * it.quantity, 0) + (shipping?.price || 0)).toFixed(2));
 
     // Build shipping address string
     let shippingAddress = "";
     if (shipping?.address) {
+      // For courier options, just use address (no city)
       shippingAddress = shipping.address;
-      if (shipping.city) {
-        shippingAddress = `${shipping.city}, ${shippingAddress}`;
-      }
     } else if (shipping?.city && shipping?.warehouseRef) {
+      // For Nova Poshta (postomat/department), use city + warehouse
       const shippingMethod = shipping.method || "nova_department";
       shippingAddress = `${shipping.city} (${shippingMethod === 'nova_department' ? 'Відділення' : 'Поштомат'})`;
     }
@@ -54,28 +53,55 @@ export const prepareOrder: RequestHandler = async (req, res) => {
     // For cash payments, save order immediately (no payment gateway callback)
     if (paymentMethod === 'cash') {
       const supabase = getSupabaseClient();
+      const orderToInsert = {
+        status: 'pending',
+        customer_name: customer.fullName,
+        customer_email: customer.email,
+        customer_phone: customer.phone,
+        shipping_address: shippingAddress, // Keep for backward compatibility
+        shipping_city: shipping?.city || null,
+        shipping_city_ref: shipping?.cityRef || null,
+        shipping_street_address: shipping?.address || null,
+        shipping_warehouse_ref: shipping?.warehouseRef || null,
+        shipping_department: shipping?.department || null,
+        shipping_method: shipping?.method || null,
+        payment_method: paymentMethod || null,
+        total_price: amount,
+        currency: "UAH",
+        order_id: orderId,
+        notes: notes || null,
+      };
+      
+      console.log('Saving cash order with:', {
+        shipping_department: orderToInsert.shipping_department,
+        shipping_method: orderToInsert.shipping_method,
+        payment_method: orderToInsert.payment_method,
+      });
+
       const { data: orderData, error: orderError } = await supabase
         .from("orders")
-        .insert({
-          status: 'pending',
-          customer_name: customer.fullName,
-          customer_email: customer.email,
-          customer_phone: customer.phone,
-          shipping_address: shippingAddress,
-          total_price: amount,
-          currency: "UAH",
-          order_id: orderId,
-          notes: notes || null,
-        })
+        .insert(orderToInsert)
         .select()
         .single();
 
       if (orderError) {
-        console.error("Error saving order to Supabase:", orderError);
-        return res.status(500).json({ error: 'Failed to save order' });
+        console.error("✗ ERROR saving order to Supabase:", orderError);
+        console.error("Error details:", {
+          code: orderError.code,
+          message: orderError.message,
+          details: orderError.details,
+          hint: orderError.hint,
+        });
+        return res.status(500).json({ error: 'Failed to save order', details: orderError.message });
       }
 
-      // Save order items
+      console.log('✓ Cash order saved:', {
+        orderId: orderData.id,
+        shipping_department: orderData.shipping_department,
+        payment_method: orderData.payment_method,
+      });
+
+      // Save order items with variant
       if (orderData) {
         const orderItems = items.map((item: any) => ({
           order_id: orderData.id,
@@ -84,14 +110,30 @@ export const prepareOrder: RequestHandler = async (req, res) => {
           product_image: item.image || item.image_url || null,
           quantity: item.quantity || 1,
           price: item.price || 0,
+          variant: item.variant || null, // Store grind type, size, etc.
         }));
 
-        const { error: itemsError } = await supabase
+        console.log('Saving order items with variants:', orderItems.map((it: any) => ({
+          name: it.product_name,
+          variant: it.variant,
+        })));
+
+        const { data: insertedItems, error: itemsError } = await supabase
           .from("order_items")
-          .insert(orderItems);
+          .insert(orderItems)
+          .select();
 
         if (itemsError) {
-          console.error("Error saving order items to Supabase:", itemsError);
+          console.error("✗ ERROR saving order items:", itemsError);
+          console.error("Error details:", {
+            code: itemsError.code,
+            message: itemsError.message,
+            details: itemsError.details,
+            hint: itemsError.hint,
+          });
+        } else {
+          console.log(`✓ Saved ${orderItems.length} order items with variants`);
+          console.log("Inserted items:", insertedItems?.map((it: any) => ({ variant: it.variant })));
         }
       }
 

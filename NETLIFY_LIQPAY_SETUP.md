@@ -57,6 +57,7 @@ Add the following environment variables:
 | `VITE_LIQPAY_PUBLIC_KEY` | Public key for client-side (optional, if different) | Uses `LIQPAY_PUBLIC_KEY` |
 | `VITE_LIQPAY_SANDBOX` | Enable sandbox mode for testing (`"true"` or `"false"`) | `"false"` |
 | `VITE_GOOGLE_MAPS_API_KEY` | Google Maps API key for displaying interactive maps | Required for map functionality |
+| `NOVA_POSHTA_API_KEY` | Nova Poshta API key for shipping integration | Required for Nova Poshta shipping options |
 
 ### Google Maps API Key Setup
 
@@ -76,6 +77,31 @@ To enable the interactive map on your site:
    - Set for: **All contexts** (or as needed)
 
 3. **Redeploy** your site after adding the variable
+
+### Nova Poshta API Key Setup
+
+To enable Nova Poshta shipping integration (postomat and department options):
+
+1. **Get your Nova Poshta API key:**
+   - Go to [Nova Poshta API](https://developers.novaposhta.ua/)
+   - Register for an API key
+   - Copy your API key
+
+2. **Add to Netlify:**
+   - In Netlify dashboard: **Site settings** → **Environment variables** → **Add a variable**
+   - Variable name: `NOVA_POSHTA_API_KEY`
+   - Variable value: Your Nova Poshta API key
+   - Set for: **All contexts** (or as needed)
+
+3. **Important:** 
+   - The API key must be set as `NOVA_POSHTA_API_KEY` (NOT `VITE_NOVA_POSHTA_API_KEY`)
+   - The key is used server-side only (in Express routes wrapped by Netlify functions)
+   - After adding the variable, **redeploy** your site
+
+4. **Verify the setup:**
+   - Check Netlify Function logs when using Nova Poshta shipping options
+   - Look for debug logs showing API key status (key length, etc.)
+   - If issues persist, verify the environment variable is set in the correct context (Production/Deploy previews)
 
 ### Step 3: Set Environment Variables for Different Contexts
 

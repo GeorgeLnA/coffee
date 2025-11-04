@@ -73,6 +73,9 @@ export function CoffeeProductsManager() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedProductForLabel, setSelectedProductForLabel] = useState<number | null>(null);
+  // Store raw keyword strings for better typing experience
+  const [rawKeywordsUA, setRawKeywordsUA] = useState<Record<number, string>>({});
+  const [rawKeywordsRU, setRawKeywordsRU] = useState<Record<number, string>>({});
   const queryClient = useQueryClient();
 
   const load = async () => {
@@ -422,24 +425,32 @@ export function CoffeeProductsManager() {
   if (loading) return <div>Завантаження…</div>;
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-6 px-2 sm:px-4 md:px-0">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
         <h2 className="text-xl font-semibold">Кава</h2>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={(e) => addProduct(e)}>Додати продукт</Button>
+          <Button 
+            variant="outline" 
+            onClick={(e) => addProduct(e)}
+            className="w-full sm:w-auto text-sm"
+          >
+            Додати продукт
+          </Button>
         </div>
       </div>
 
       {error && <div className="text-destructive">{error}</div>}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
         {products.map((p, pIdx) => (
           <div key={p.id ?? `new-${pIdx}`} className="space-y-4">
-            <Card className="hover:shadow-md transition-shadow">
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle>Продукт #{pIdx + 1} {p.sort !== null && p.sort !== undefined && `(Позиція: ${p.sort})`}</CardTitle>
-                  <div className="flex gap-1">
+            <Card className="hover:shadow-md transition-shadow overflow-hidden">
+              <CardHeader className="p-4 md:p-6">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                  <CardTitle className="text-lg md:text-2xl break-words">
+                    Продукт #{pIdx + 1} {p.sort !== null && p.sort !== undefined && `(Позиція: ${p.sort})`}
+                  </CardTitle>
+                  <div className="flex gap-1 flex-shrink-0">
                     <Button
                       variant="outline"
                       size="sm"
@@ -461,7 +472,7 @@ export function CoffeeProductsManager() {
                   </div>
                 </div>
               </CardHeader>
-              <CardContent className="space-y-6">
+              <CardContent className="space-y-4 md:space-y-6 p-4 md:p-6">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
                     <Label>Назва (UA)</Label>
@@ -709,9 +720,15 @@ export function CoffeeProductsManager() {
 
                 {/* Sizes */}
                 <div className="space-y-3">
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                     <h3 className="font-semibold">Розміри та ціни</h3>
-                    <Button variant="outline" onClick={(e) => addSize(pIdx, e)}>Додати розмір</Button>
+                    <Button 
+                      variant="outline" 
+                      onClick={(e) => addSize(pIdx, e)}
+                      className="w-full sm:w-auto text-sm"
+                    >
+                      Додати розмір
+                    </Button>
                   </div>
                   <div className="space-y-4">
                     {(p.sizes || []).map((s, sIdx) => (
@@ -763,8 +780,14 @@ export function CoffeeProductsManager() {
                           <Label htmlFor={`special-${pIdx}-${sIdx}`}>Подарункове пакування</Label>
                         </div>
                         
-                        <div className="text-right">
-                          <Button variant="destructive" onClick={(e) => removeSize(pIdx, sIdx, e)}>Видалити</Button>
+                        <div className="flex justify-end">
+                          <Button 
+                            variant="destructive" 
+                            onClick={(e) => removeSize(pIdx, sIdx, e)}
+                            className="w-full sm:w-auto text-sm"
+                          >
+                            Видалити
+                          </Button>
                         </div>
                       </div>
                     ))}
@@ -790,40 +813,76 @@ export function CoffeeProductsManager() {
                 <div>
                   <Label className="text-sm font-medium">SEO ключові слова (UA, через кому)</Label>
                   <Input
+                    type="text"
                     placeholder="кава, арабіка, обсмажування"
-                    value={(p.seo_keywords_ua || []).join(', ')}
+                    value={rawKeywordsUA[pIdx] !== undefined ? rawKeywordsUA[pIdx] : (p.seo_keywords_ua || []).join(', ')}
                     onChange={(e) => {
-                      const raw = e.target.value || '';
-                      const arr = raw.split(',').map(s => s.trim()).filter(Boolean);
-                      updateProductField(pIdx, 'seo_keywords_ua', arr);
+                      const rawValue = e.target.value;
+                      // Store raw string for free typing
+                      setRawKeywordsUA(prev => ({ ...prev, [pIdx]: rawValue }));
+                      // Also update the array immediately for saving
+                      const keywords = rawValue
+                        .split(',')
+                        .map(k => k.trim())
+                        .filter(k => k.length > 0);
+                      updateProductField(pIdx, 'seo_keywords_ua', keywords);
+                    }}
+                    onBlur={() => {
+                      // Clean up raw string on blur to match final array
+                      const finalValue = (p.seo_keywords_ua || []).join(', ');
+                      setRawKeywordsUA(prev => ({ ...prev, [pIdx]: finalValue }));
                     }}
                   />
                 </div>
                 <div>
                   <Label className="text-sm font-medium">SEO ключевые слова (RU, через запятую)</Label>
                   <Input
+                    type="text"
                     placeholder="кофе, арабика, обжарка"
-                    value={(p.seo_keywords_ru || []).join(', ')}
+                    value={rawKeywordsRU[pIdx] !== undefined ? rawKeywordsRU[pIdx] : (p.seo_keywords_ru || []).join(', ')}
                     onChange={(e) => {
-                      const raw = e.target.value || '';
-                      const arr = raw.split(',').map(s => s.trim()).filter(Boolean);
-                      updateProductField(pIdx, 'seo_keywords_ru', arr);
+                      const rawValue = e.target.value;
+                      // Store raw string for free typing
+                      setRawKeywordsRU(prev => ({ ...prev, [pIdx]: rawValue }));
+                      // Also update the array immediately for saving
+                      const keywords = rawValue
+                        .split(',')
+                        .map(k => k.trim())
+                        .filter(k => k.length > 0);
+                      updateProductField(pIdx, 'seo_keywords_ru', keywords);
+                    }}
+                    onBlur={() => {
+                      // Clean up raw string on blur to match final array
+                      const finalValue = (p.seo_keywords_ru || []).join(', ');
+                      setRawKeywordsRU(prev => ({ ...prev, [pIdx]: finalValue }));
                     }}
                   />
                 </div>
               </div>
 
-                <div className="flex justify-between">
-                  <div className="flex gap-2">
-                    <Button variant="outline" onClick={(e) => removeProduct(pIdx, e)}>Видалити продукт</Button>
+                <div className="flex flex-col md:flex-row md:justify-between gap-3 md:gap-2">
+                  <div className="flex flex-wrap gap-2">
+                    <Button 
+                      variant="outline" 
+                      onClick={(e) => removeProduct(pIdx, e)}
+                      className="text-sm md:text-base flex-1 md:flex-none min-w-0"
+                    >
+                      <span className="truncate">Видалити продукт</span>
+                    </Button>
                     <Button 
                       variant="secondary" 
                       onClick={(e) => duplicateProduct(pIdx, e)}
+                      className="text-sm md:text-base flex-1 md:flex-none min-w-0"
                     >
                       Дублювати
                     </Button>
                   </div>
-                  <Button onClick={(e) => saveProduct(pIdx, e)}>Зберегти продукт</Button>
+                  <Button 
+                    onClick={(e) => saveProduct(pIdx, e)}
+                    className="text-sm md:text-base w-full md:w-auto"
+                  >
+                    Зберегти продукт
+                  </Button>
                 </div>
               </CardContent>
             </Card>

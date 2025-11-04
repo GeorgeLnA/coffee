@@ -878,7 +878,7 @@ export default function Coffee() {
                                       image: coffee.image,
                                       price: coffee.price,
                                       quantity: 1,
-                                      variant: `${coffee.weight}g`,
+                                      variant: `${coffee.weight}g ${t('product.grindBeans')}`, // Default to beans if not selected
                                       type: 'coffee'
                                     });
                                     

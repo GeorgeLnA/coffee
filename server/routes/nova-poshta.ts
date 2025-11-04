@@ -6,8 +6,18 @@ const NP_API_URL = "https://api.novaposhta.ua/v2.0/json/";
 // Search settlements (cities) with fallback to getCities
 export const searchSettlements: RequestHandler = async (req, res) => {
   try {
-    const apiKey = process.env.NOVA_POSHTA_API_KEY || "";
+    // Try multiple environment variable names for compatibility
+    const apiKey = process.env.NOVA_POSHTA_API_KEY || process.env.VITE_NOVA_POSHTA_API_KEY || "";
     const cityName = String(req.query.cityName || "").trim();
+    
+    // Debug logging for API key access
+    console.log('Nova Poshta API Key check:', {
+      hasEnvVar: !!process.env.NOVA_POSHTA_API_KEY,
+      hasViteVar: !!process.env.VITE_NOVA_POSHTA_API_KEY,
+      keyLength: apiKey.length,
+      keyPreview: apiKey ? `${apiKey.substring(0, 4)}...` : 'missing',
+      env: process.env.NODE_ENV || 'unknown'
+    });
     
     if (!cityName) {
       return res.json({ data: [] });
@@ -76,8 +86,18 @@ export const searchSettlements: RequestHandler = async (req, res) => {
 // Get warehouses for a city
 export const getWarehouses: RequestHandler = async (req, res) => {
   try {
-    const apiKey = process.env.NOVA_POSHTA_API_KEY || "";
+    // Try multiple environment variable names for compatibility
+    const apiKey = process.env.NOVA_POSHTA_API_KEY || process.env.VITE_NOVA_POSHTA_API_KEY || "";
     const cityRef = String(req.query.cityRef || "").trim();
+    
+    // Debug logging for API key access
+    console.log('Nova Poshta Warehouses API Key check:', {
+      hasEnvVar: !!process.env.NOVA_POSHTA_API_KEY,
+      hasViteVar: !!process.env.VITE_NOVA_POSHTA_API_KEY,
+      keyLength: apiKey.length,
+      keyPreview: apiKey ? `${apiKey.substring(0, 4)}...` : 'missing',
+      env: process.env.NODE_ENV || 'unknown'
+    });
     const type = String(req.query.type || "").trim(); // "postomat" or "department" or empty for all
     
     if (!cityRef) {

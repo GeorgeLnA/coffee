@@ -180,7 +180,8 @@ export default function Checkout() {
       if (shippingMethod === 'nova_department' || shippingMethod === 'nova_postomat') {
         valid = valid && !!cityRef && !!selectedWarehouse;
       } else {
-        valid = valid && !!city && !!address;
+        // For courier options, only address is required (no city)
+        valid = valid && !!address;
       }
     }
     if (!valid) {
@@ -194,16 +195,48 @@ export default function Checkout() {
 
     try {
       setIsSubmitting(true);
+      
+      // Debug: Log what we're sending - VERIFY VARIANT IS IN ITEMS
+      console.log('=== CHECKOUT SUBMIT DEBUG ===');
+      console.log('Items being sent:', items.map((it: any) => ({ 
+        name: it.name, 
+        variant: it.variant, 
+        hasVariant: !!it.variant,
+        variantType: typeof it.variant,
+        fullItem: it
+      })));
+      console.log('Shipping:', {
+        method: shippingMethod,
+        city,
+        cityRef,
+        address,
+        warehouseRef: selectedWarehouse,
+        department: department || null,
+      });
+      console.log('Payment method:', paymentMethod);
+      
+      const orderPayload = {
+        customer: { fullName, phone, email },
+        shipping: { 
+          method: shippingMethod, 
+          city, 
+          cityRef, 
+          address, 
+          warehouseRef: selectedWarehouse, 
+          department: department || null,
+          price: shippingPrice 
+        },
+        payment: { method: paymentMethod },
+        notes,
+        items,
+      };
+      
+      console.log('Full payload items:', JSON.stringify(orderPayload.items, null, 2));
+      
       const res = await fetch("/api/orders/prepare", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            customer: { fullName, phone, email },
-            shipping: { method: shippingMethod, city, cityRef, address, warehouseRef: selectedWarehouse, price: shippingPrice },
-            payment: { method: paymentMethod },
-            notes,
-            items,
-          }),
+        body: JSON.stringify(orderPayload),
       });
 
       const data = await res.json();
@@ -300,45 +333,65 @@ export default function Checkout() {
 
               {!hasWaterItems && (
                 <>
-                  <div className="relative mb-2">
-                    <Input placeholder="Місто" value={cityQuery} onChange={e => { setCityQuery(e.target.value); setCityRef(""); setCity(""); }} />
-                    {showCityDropdown && settlements.length > 0 && (
-                      <div className="absolute left-0 right-0 top-full mt-1 border border-gray-300 rounded bg-white shadow-lg max-h-56 overflow-auto z-50">
-                        {settlements.slice(0, 12).map((s: any, i: number) => (
-                          <button type="button" key={i} onClick={() => handleSelectSettlement(s)} className="w-full text-left px-3 py-2 hover:bg-gray-50 text-sm">
-                            {(s?.Present || s?.Description || s?.MainDescription || s?.City) as string}
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                  {(shippingMethod === 'nova_department' || shippingMethod === 'nova_postomat') && city && !cityRef && (
-                    <div className="text-sm text-orange-600 mb-2">
-                      Оберіть місто зі списку, щоб побачити {shippingMethod === 'nova_postomat' ? 'поштомати' : 'відділення'}
-                    </div>
-                  )}
+                  {/* City field only for Nova Poshta (postomat/department) */}
                   {(shippingMethod === 'nova_department' || shippingMethod === 'nova_postomat') && (
-                    <div className="mb-3">
-                      <Select value={selectedWarehouse} onValueChange={setSelectedWarehouse}>
-                        <SelectTrigger>
-                          <SelectValue placeholder={loadingWarehouses ? "Завантаження..." : shippingMethod === 'nova_postomat' ? "Оберіть поштомат" : "Оберіть відділення"} />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {warehouses.length > 0 ? (
-                            warehouses.map((wh: any) => (
-                              <SelectItem key={wh.Ref} value={wh.Ref}>
-                                {wh.Description} - {wh.ShortAddress}
+                    <>
+                      <div className="relative mb-2">
+                        <Input placeholder="Місто" value={cityQuery} onChange={e => { setCityQuery(e.target.value); setCityRef(""); setCity(""); }} />
+                        {showCityDropdown && settlements.length > 0 && (
+                          <div className="absolute left-0 right-0 top-full mt-1 border border-gray-300 rounded bg-white shadow-lg max-h-56 overflow-auto z-50">
+                            {settlements.slice(0, 12).map((s: any, i: number) => (
+                              <button type="button" key={i} onClick={() => handleSelectSettlement(s)} className="w-full text-left px-3 py-2 hover:bg-gray-50 text-sm">
+                                {(s?.Present || s?.Description || s?.MainDescription || s?.City) as string}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                      {city && !cityRef && (
+                        <div className="text-sm text-orange-600 mb-2">
+                          Оберіть місто зі списку, щоб побачити {shippingMethod === 'nova_postomat' ? 'поштомати' : 'відділення'}
+                        </div>
+                      )}
+                      <div className="mb-3">
+                        <Select value={selectedWarehouse} onValueChange={(value) => {
+                          setSelectedWarehouse(value);
+                          // Extract department number from selected warehouse
+                          const selectedWh = warehouses.find((wh: any) => wh.Ref === value);
+                          if (selectedWh) {
+                            // Extract number from Description (e.g., "Відділення №1" -> "1")
+                            const desc = selectedWh.Description || '';
+                            const match = desc.match(/№\s*(\d+)/i) || desc.match(/(\d+)/);
+                            if (match) {
+                              setDepartment(match[1]);
+                            } else {
+                              setDepartment('');
+                            }
+                          } else {
+                            setDepartment('');
+                          }
+                        }}>
+                          <SelectTrigger>
+                            <SelectValue placeholder={loadingWarehouses ? "Завантаження..." : shippingMethod === 'nova_postomat' ? "Оберіть поштомат" : "Оберіть відділення"} />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {warehouses.length > 0 ? (
+                              warehouses.map((wh: any) => (
+                                <SelectItem key={wh.Ref} value={wh.Ref}>
+                                  {wh.Description} - {wh.ShortAddress}
+                                </SelectItem>
+                              ))
+                            ) : (
+                              <SelectItem value="no-data" disabled>
+                                {cityRef ? (loadingWarehouses ? "Завантаження..." : shippingMethod === 'nova_postomat' ? "Немає доступних поштоматів" : "Немає доступних відділень") : "Спочатку оберіть місто"}
                               </SelectItem>
-                            ))
-                          ) : (
-                            <SelectItem value="no-data" disabled>
-                              {cityRef ? (loadingWarehouses ? "Завантаження..." : shippingMethod === 'nova_postomat' ? "Немає доступних поштоматів" : "Немає доступних відділень") : "Спочатку оберіть місто"}
-                            </SelectItem>
-                          )}
-                        </SelectContent>
-                      </Select>
-                    </div>
+                            )}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </>
                   )}
+                  {/* Address field for courier options (no city field) */}
                   {(shippingMethod === 'nova_courier' || shippingMethod === 'own_courier') && (
                     <Input placeholder="Адреса доставки" value={address} onChange={e => setAddress(e.target.value)} className="mb-3" />
                   )}
