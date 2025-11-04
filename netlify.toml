@@ -8,7 +8,7 @@
 
 
 [functions]
-  external_node_modules = ["express"]
+  external_node_modules = ["express", "@supabase/supabase-js"]
   node_bundler = "esbuild"
   
 # Redirect specific API endpoints to dedicated serverless functions

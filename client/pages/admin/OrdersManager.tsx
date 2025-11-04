@@ -1,7 +1,6 @@
 import { useEffect, useState, useMemo } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -60,7 +59,6 @@ export function OrdersManager() {
   const [orders, setOrders] = useState<(Order & { items?: OrderItem[] })[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [statusFilter, setStatusFilter] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [sortBy, setSortBy] = useState<string>("newest");
   const [selectedTab, setSelectedTab] = useState<string>("orders");
@@ -103,19 +101,6 @@ export function OrdersManager() {
   };
 
   useEffect(() => { load(); }, []);
-
-  const updateStatus = async (orderId: number, newStatus: string) => {
-    try {
-      const { error } = await supabase
-        .from('orders')
-        .update({ status: newStatus, updated_at: new Date().toISOString() })
-        .eq('id', orderId);
-      if (error) throw error;
-      load();
-    } catch (e: any) {
-      alert('Помилка оновлення статусу: ' + e.message);
-    }
-  };
 
   const deleteOrder = async (orderId: number) => {
     setIsDeleting(true);
@@ -171,33 +156,8 @@ export function OrdersManager() {
     }
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'completed': return 'bg-green-500';
-      case 'processing': return 'bg-blue-500';
-      case 'pending': return 'bg-yellow-500';
-      case 'cancelled': return 'bg-red-500';
-      default: return 'bg-gray-500';
-    }
-  };
-
-  const getStatusLabel = (status: string) => {
-    switch (status) {
-      case 'completed': return 'Виконано';
-      case 'processing': return 'В обробці';
-      case 'pending': return 'Очікує';
-      case 'cancelled': return 'Скасовано';
-      default: return status;
-    }
-  };
-
   const filteredAndSorted = useMemo(() => {
     let filtered = [...orders];
-
-    // Status filter
-    if (statusFilter !== "all") {
-      filtered = filtered.filter(o => o.status === statusFilter);
-    }
 
     // Search filter
     if (searchQuery) {
@@ -222,7 +182,7 @@ export function OrdersManager() {
     });
 
     return filtered;
-  }, [orders, statusFilter, searchQuery, sortBy]);
+  }, [orders, searchQuery, sortBy]);
 
   // Group orders by email to create clients
   const clients = useMemo(() => {
@@ -359,7 +319,7 @@ export function OrdersManager() {
           {/* Filters and Search */}
           <Card>
             <CardContent className="p-4">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <Label>Пошук</Label>
                   <Input
@@ -367,21 +327,6 @@ export function OrdersManager() {
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                   />
-                </div>
-                <div>
-                  <Label>Статус</Label>
-                  <Select value={statusFilter} onValueChange={setStatusFilter}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Всі</SelectItem>
-                      <SelectItem value="pending">Очікує</SelectItem>
-                      <SelectItem value="processing">В обробці</SelectItem>
-                      <SelectItem value="completed">Виконано</SelectItem>
-                      <SelectItem value="cancelled">Скасовано</SelectItem>
-                    </SelectContent>
-                  </Select>
                 </div>
                 <div>
                   <Label>Сортування</Label>
@@ -410,17 +355,6 @@ export function OrdersManager() {
                       Замовлення #{order.id}
                     </CardTitle>
                     <div className="flex items-center gap-2">
-                      <Select value={order.status} onValueChange={(v) => updateStatus(order.id, v)} onClick={(e) => e.stopPropagation()}>
-                        <SelectTrigger className={`w-40 ${getStatusColor(order.status)} text-white border-0`}>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="pending">Очікує</SelectItem>
-                          <SelectItem value="processing">В обробці</SelectItem>
-                          <SelectItem value="completed">Виконано</SelectItem>
-                          <SelectItem value="cancelled">Скасовано</SelectItem>
-                        </SelectContent>
-                      </Select>
                       <Button
                         variant="outline"
                         size="sm"
@@ -435,9 +369,6 @@ export function OrdersManager() {
                     </div>
                   </div>
                   <div className="flex items-center gap-2 mt-2">
-                    <Badge className={getStatusColor(order.status)}>
-                      {getStatusLabel(order.status)}
-                    </Badge>
                     <span className="text-sm text-gray-500">
                       {format(new Date(order.created_at), 'dd.MM.yyyy HH:mm')}
                     </span>
@@ -489,7 +420,7 @@ export function OrdersManager() {
           {filteredAndSorted.length === 0 && (
             <Card>
               <CardContent className="p-8 text-center text-gray-500">
-                {searchQuery || statusFilter !== "all" ? "Не знайдено замовлень за заданими фільтрами" : "Немає замовлень"}
+                {searchQuery ? "Не знайдено замовлень за заданими фільтрами" : "Немає замовлень"}
               </CardContent>
             </Card>
           )}
@@ -578,17 +509,6 @@ export function OrdersManager() {
                         <div className="flex items-center justify-between">
                           <CardTitle className="text-lg">Замовлення #{order.id}</CardTitle>
                           <div className="flex items-center gap-2">
-                            <Select value={order.status} onValueChange={(v) => updateStatus(order.id, v)}>
-                              <SelectTrigger className={`w-40 ${getStatusColor(order.status)} text-white border-0`}>
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="pending">Очікує</SelectItem>
-                                <SelectItem value="processing">В обробці</SelectItem>
-                                <SelectItem value="completed">Виконано</SelectItem>
-                                <SelectItem value="cancelled">Скасовано</SelectItem>
-                              </SelectContent>
-                            </Select>
                             <Button
                               variant="outline"
                               size="sm"
@@ -603,9 +523,6 @@ export function OrdersManager() {
                           </div>
                         </div>
                         <div className="flex items-center gap-2 mt-2">
-                          <Badge className={getStatusColor(order.status)}>
-                            {getStatusLabel(order.status)}
-                          </Badge>
                           <span className="text-sm text-gray-500">
                             {format(new Date(order.created_at), 'dd.MM.yyyy HH:mm')}
                           </span>

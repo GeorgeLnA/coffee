@@ -670,7 +670,7 @@ export function CoffeeProductsManager() {
                     </Select>
                   </div>
                   <div>
-                    <Label>Обсмаження</Label>
+                    <Label>Обробка</Label>
                     <Select value={p.roast ?? ''} onValueChange={(v) => updateProductField(pIdx, 'roast', v)}>
                       <SelectTrigger>
                         <SelectValue placeholder="Оберіть рівень" />
