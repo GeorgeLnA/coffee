@@ -234,6 +234,8 @@ export default function Checkout() {
 
   // Fallback: send order emails via EmailJS browser SDK (same logic as test button)
   // Used when server-side email sending is unavailable or misconfigured
+  // NOTE: This only works in dev environment with VITE_* variables
+  // In production, server-side emails should work with EMAILJS_* variables on Netlify
   async function sendOrderEmailsClientSide(orderIdFromServer?: string) {
     try {
       const serviceId = import.meta.env.VITE_EMAILJS_SERVICE_ID as string;
@@ -244,6 +246,7 @@ export default function Checkout() {
 
       if (!serviceId || !templateIdCustomer || !templateIdAdmin || !publicKey) {
         console.warn("[Email Fallback] Missing VITE_* EmailJS envs; skipping client send");
+        console.warn("[Email Fallback] This is expected in production. Server-side emails should work with EMAILJS_* variables on Netlify.");
         return;
       }
 
@@ -533,15 +536,16 @@ export default function Checkout() {
         console.log("=== END EMAIL STATUS ===");
       }
 
-      // Fallback: send emails via browser for cash orders (same logic as test button)
-      try {
-        if (paymentMethod === 'cash') {
-          console.log('[Email Fallback] Triggering browser send for cash order...');
-          await sendOrderEmailsClientSide(data?.orderId);
-        }
-      } catch (e) {
-        console.error('[Email Fallback] Error:', e);
-      }
+      // NOTE: Client-side email fallback removed for production
+      // In production, emails should be sent server-side via Netlify functions
+      // Client-side fallback only works in dev with VITE_* variables
+      // If emails aren't sending, check Netlify environment variables:
+      // - EMAILJS_SERVICE_ID
+      // - EMAILJS_TEMPLATE_ID_CUSTOMER
+      // - EMAILJS_TEMPLATE_ID_ADMIN
+      // - EMAILJS_PUBLIC_KEY
+      // - EMAILJS_PRIVATE_KEY (optional, but recommended for server-side)
+      // - ADMIN_EMAILS
 
       // Handle different payment methods
       if (paymentMethod === "cash" || data.paymentMethod === "cash") {

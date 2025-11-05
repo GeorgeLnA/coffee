@@ -405,10 +405,23 @@ export const handler: Handler = async (event, context) => {
       // Include email status in response for debugging (check if we have the data needed)
       let emailStatus: any = { attempted: false, reason: "orderData or items not saved" };
       if (orderData && orderData.customer_email) {
-        // Check if items were saved (we can't access insertedItems here, so just check if orderData exists)
+        // Check if EmailJS is configured and if email sending was attempted
+        const emailjsServiceId = process.env.EMAILJS_SERVICE_ID;
+        const emailjsTemplateIdCustomer = process.env.EMAILJS_TEMPLATE_ID_CUSTOMER;
+        const emailjsTemplateIdAdmin = process.env.EMAILJS_TEMPLATE_ID_ADMIN;
+        const emailjsPublicKey = process.env.EMAILJS_PUBLIC_KEY;
+        const isConfigured = !!(emailjsServiceId && emailjsTemplateIdCustomer && emailjsTemplateIdAdmin && emailjsPublicKey);
+        
         emailStatus = {
           attempted: true,
-          configured: !!(process.env.EMAILJS_SERVICE_ID && process.env.EMAILJS_TEMPLATE_ID_CUSTOMER && process.env.EMAILJS_TEMPLATE_ID_ADMIN && process.env.EMAILJS_PUBLIC_KEY),
+          configured: isConfigured,
+          // Include which variables are missing for debugging
+          missingVars: {
+            serviceId: !emailjsServiceId,
+            customerTemplate: !emailjsTemplateIdCustomer,
+            adminTemplate: !emailjsTemplateIdAdmin,
+            publicKey: !emailjsPublicKey,
+          },
         };
       } else {
         emailStatus = {
