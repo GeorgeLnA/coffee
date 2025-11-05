@@ -558,7 +558,7 @@ export default function Product() {
                 
                 {/* metric rows */}
                 <div className="space-y-4">
-                  {[{label: t('coffee.strength'), value: product.strength_level ?? 3}, {label: t('coffee.acidity'), value: product.acidity_level ?? 3}, {label: 'Обсмаження', value: product.roast_level ?? 3}, {label: t('coffee.body'), value: product.body_level ?? 3}].map((metric, idx) => (
+                  {[{label: t('coffee.strength'), value: product.strength_level ?? 3}, {label: t('coffee.acidity'), value: product.acidity_level ?? 3}, {label: t('coffee.roastLevel'), value: product.roast_level ?? 3}, {label: t('coffee.body'), value: product.body_level ?? 3}].map((metric, idx) => (
                     <div key={idx} className={`flex items-center justify-between py-2 ${idx < 3 ? 'border-b border-gray-100' : ''}`}>
                       <span className="text-gray-700 font-medium">{metric.label}:</span>
                       <div className="flex space-x-2">

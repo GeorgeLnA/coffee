@@ -388,7 +388,7 @@ const translations = {
     'coffee.search': 'Поиск кофе...',
     'coffee.priceRange': 'Диапазон цен',
     'coffee.origins': 'Происхождение',
-    'coffee.roastLevel': 'Уровень обжарки',
+    'coffee.roastLevel': 'Обжарка',
     'coffee.availability': 'Доступность',
     'coffee.inStockOnly': 'Только в наличии',
     'coffee.showFilters': 'Показать',
