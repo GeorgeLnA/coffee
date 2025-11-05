@@ -171,7 +171,7 @@ export default function Footer() {
                   rel="noopener noreferrer"
                   className="text-white/70 hover:text-white underline-offset-4 hover:underline font-semibold text-sm md:text-base"
                 >
-                  {settings.made_by_text}
+                  {settings.made_by_text.replace(/^made by\s*/i, 'Site Credit: ')}
                 </a>
               )}
             </div>
