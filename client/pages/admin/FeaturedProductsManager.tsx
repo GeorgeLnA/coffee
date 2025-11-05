@@ -185,8 +185,10 @@ export function FeaturedProductsManager() {
       }
     }
     await load();
+    // Force refetch to ensure live updates
+    await queryClient.invalidateQueries({ queryKey: ['featured-slides'] });
+    await queryClient.refetchQueries({ queryKey: ['featured-slides'] });
     alert('Збережено!');
-    try { await queryClient.invalidateQueries({ queryKey: ['featured-slides'] }); } catch {}
   };
 
   const removeItem = async (id?: number) => {

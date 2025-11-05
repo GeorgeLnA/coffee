@@ -13,15 +13,54 @@ export interface HomepageSettings {
   season_title?: string | null;
   hero_video?: string | null;
 
-  // i18n and media fields
+  // Hero section i18n fields
+  hero_title_line1_ua?: string | null;
+  hero_title_line2_ua?: string | null;
+  hero_title_line3_ua?: string | null;
+  hero_title_line1_ru?: string | null;
+  hero_title_line2_ru?: string | null;
+  hero_title_line3_ru?: string | null;
   hero_cta_text_ua?: string | null;
   hero_cta_text_ru?: string | null;
   hero_cta_link?: string | null;
   hero_video_url?: string | null;
+  
+  // Season section i18n fields
   season_title_ua?: string | null;
   season_title_ru?: string | null;
+  season_cta_text_ua?: string | null;
+  season_cta_text_ru?: string | null;
+  season_cta_link?: string | null;
+  
+  // Video section i18n fields
+  video_title1_ua?: string | null;
+  video_title2_ua?: string | null;
+  video_desc_ua?: string | null;
+  video_feature1_ua?: string | null;
+  video_feature2_ua?: string | null;
+  video_feature3_ua?: string | null;
+  video_title1_ru?: string | null;
+  video_title2_ru?: string | null;
+  video_desc_ru?: string | null;
+  video_feature1_ru?: string | null;
+  video_feature2_ru?: string | null;
+  video_feature3_ru?: string | null;
   video_url?: string | null;
+  
+  // About section i18n fields
+  about_badge_ua?: string | null;
+  about_badge_ru?: string | null;
+  about_title_ua?: string | null;
+  about_title_ru?: string | null;
+  about_desc1_ua?: string | null;
+  about_desc2_ua?: string | null;
+  about_desc1_ru?: string | null;
+  about_desc2_ru?: string | null;
+  about_cta_text_ua?: string | null;
+  about_cta_text_ru?: string | null;
+  about_cta_link?: string | null;
   about_image_url?: string | null;
+  
   // visibility toggles
   hide_season?: boolean | null;
   hide_video?: boolean | null;
@@ -396,6 +435,31 @@ export function useDeliverySettings() {
 
 // Hook to fetch homepage settings from Supabase
 export function useHomepageSettings() {
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    // Set up realtime subscription for homepage settings
+    const channel = supabase
+      .channel('homepage-settings-realtime')
+      .on('postgres_changes', { 
+        event: '*', 
+        schema: 'public', 
+        table: 'homepage_settings' 
+      }, (payload) => {
+        console.log('Homepage settings changed:', payload);
+        // Force refetch immediately
+        queryClient.invalidateQueries({ queryKey: ['homepage-settings'] });
+        queryClient.refetchQueries({ queryKey: ['homepage-settings'] });
+      })
+      .subscribe((status) => {
+        console.log('Homepage settings subscription status:', status);
+      });
+    
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [queryClient]);
+
   return useQuery({
     queryKey: ['homepage-settings'],
     queryFn: async () => {
@@ -407,11 +471,37 @@ export function useHomepageSettings() {
       if (error && error.code !== 'PGRST116') throw error;
       return data as HomepageSettings | null;
     },
+    refetchOnWindowFocus: true, // Refetch when window regains focus
+    refetchOnReconnect: true, // Refetch when connection is restored
+    staleTime: 0, // Always consider data stale, fetch fresh data
+    gcTime: 0, // Don't cache, always fetch fresh
   });
 }
 
 // Hook to fetch featured slides from Supabase
 export function useFeaturedSlides() {
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    // Set up realtime subscription for featured slides
+    const channel = supabase
+      .channel('featured-slides-realtime')
+      .on('postgres_changes', { 
+        event: '*', 
+        schema: 'public', 
+        table: 'featured_products' 
+      }, (payload) => {
+        console.log('Featured slides changed:', payload);
+        queryClient.invalidateQueries({ queryKey: ['featured-slides'] });
+        queryClient.refetchQueries({ queryKey: ['featured-slides'] });
+      })
+      .subscribe();
+    
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [queryClient]);
+
   return useQuery({
     queryKey: ['featured-slides'],
     queryFn: async () => {
@@ -423,6 +513,10 @@ export function useFeaturedSlides() {
       if (error) throw error;
       return (data || []) as FeaturedSlide[];
     },
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
+    staleTime: 0,
+    gcTime: 0,
   });
 }
 

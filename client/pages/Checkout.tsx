@@ -400,18 +400,12 @@ export default function Checkout() {
               {hasWaterItems && (
                 <Input placeholder="Адреса доставки" value={address} onChange={e => setAddress(e.target.value)} className="mb-3" />
               )}
-              <div className="text-sm text-gray-700 mb-4">
-                Вартість доставки: {
-                  shippingMethod === 'own_courier' 
-                    ? (ownCourierPrice === 0 ? 'Безкоштовно' : `₴${ownCourierPrice}`)
-                    : 'Оплата за тарифами перевізника'
-                }
-                {shippingMethod === 'own_courier' && ownCourierPrice > 0 && totalPrice < freeDeliveryThreshold && (
-                  <div className="text-sm text-gray-700 mt-1">
-                    Додайте товарів на ₴{(freeDeliveryThreshold - totalPrice).toFixed(2)} для безкоштовної доставки
-                  </div>
-                )}
-              </div>
+              
+              {shippingMethod === 'own_courier' && ownCourierPrice > 0 && totalPrice < freeDeliveryThreshold && (
+                <div className="text-sm text-gray-700 mb-4">
+                  Додайте товарів на ₴{(freeDeliveryThreshold - totalPrice).toFixed(2)} для безкоштовної доставки
+                </div>
+              )}
               
               <div className="font-bold mb-2" style={{ color: '#361c0c' }}>Спосіб оплати</div>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-3">

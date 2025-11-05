@@ -1,6 +1,7 @@
 import type { Handler } from "@netlify/functions";
 import crypto from "crypto";
 import { createClient } from "@supabase/supabase-js";
+import { sendOrderConfirmationEmail, sendOrderNotificationEmail } from "./send-email";
 
 /**
  * Create Supabase client
@@ -443,6 +444,104 @@ export const handler: Handler = async (event, context) => {
             }
           } else {
             console.warn("⚠ No items to save for order");
+          }
+
+          // Send confirmation emails (only if we have required data)
+          if (orderDataResult && orderDataResult.customer_email) {
+            try {
+              // Fetch order items from database to get all details
+              const { data: savedOrderItems, error: itemsError } = await supabase
+                .from("order_items")
+                .select("*")
+                .eq("order_id", orderDataResult.id);
+
+              if (!itemsError && savedOrderItems && savedOrderItems.length > 0) {
+                const emailjsServiceId = process.env.EMAILJS_SERVICE_ID;
+                const emailjsTemplateIdCustomer = process.env.EMAILJS_TEMPLATE_ID_CUSTOMER;
+                const emailjsTemplateIdAdmin = process.env.EMAILJS_TEMPLATE_ID_ADMIN;
+                const emailjsPublicKey = process.env.EMAILJS_PUBLIC_KEY;
+                const adminEmails = process.env.ADMIN_EMAILS || "davidnuk877@gmil.com";
+
+                // Only send if EmailJS is configured
+                if (emailjsServiceId && emailjsTemplateIdCustomer && emailjsTemplateIdAdmin && emailjsPublicKey) {
+                  // Prepare order items for email
+                  const emailItems = savedOrderItems.map((item: any) => ({
+                    name: item.product_name || "Невідомий товар",
+                    quantity: item.quantity || 1,
+                    price: Number(item.price) || 0,
+                    image: item.product_image || null,
+                    variant: item.variant || null,
+                  }));
+
+                  // Build shipping address
+                  let shippingAddress = orderDataResult.shipping_address || "";
+                  if (orderDataResult.shipping_city) {
+                    shippingAddress = `${orderDataResult.shipping_city}${shippingAddress ? `, ${shippingAddress}` : ''}`;
+                  }
+                  if (orderDataResult.shipping_department) {
+                    const deptType = orderDataResult.shipping_method === 'nova_postomat' ? 'Поштомат' : 'Відділення';
+                    shippingAddress += ` (${deptType} №${orderDataResult.shipping_department})`;
+                  }
+
+                  // Send customer confirmation email
+                  const customerEmailResult = await sendOrderConfirmationEmail({
+                    customerEmail: orderDataResult.customer_email,
+                    customerName: orderDataResult.customer_name || "Клієнт",
+                    customerPhone: orderDataResult.customer_phone || "",
+                    orderId: orderDataResult.order_id || callbackData.order_id,
+                    orderDate: orderDataResult.created_at || new Date(),
+                    orderTotal: Number(orderDataResult.total_price) || 0,
+                    orderItems: emailItems,
+                    shippingAddress: shippingAddress || "Не вказано",
+                    shippingMethod: orderDataResult.shipping_method || null,
+                    paymentMethod: orderDataResult.payment_method || "liqpay",
+                    orderNotes: orderDataResult.notes || null,
+                    emailjsServiceId,
+                    emailjsTemplateIdCustomer,
+                    emailjsPublicKey,
+                  });
+
+                  if (customerEmailResult.success) {
+                    console.log("✓ Customer confirmation email sent");
+                  } else {
+                    console.error("✗ Failed to send customer email:", customerEmailResult.error);
+                  }
+
+                  // Send admin notification email
+                  const adminEmailResult = await sendOrderNotificationEmail({
+                    adminEmails: adminEmails.split(",").map((e: string) => e.trim()),
+                    customerName: orderDataResult.customer_name || "Клієнт",
+                    customerEmail: orderDataResult.customer_email,
+                    customerPhone: orderDataResult.customer_phone || "",
+                    orderId: orderDataResult.order_id || callbackData.order_id,
+                    orderTotal: Number(orderDataResult.total_price) || 0,
+                    orderItems: emailItems,
+                    shippingAddress: shippingAddress || "Не вказано",
+                    shippingCity: orderDataResult.shipping_city || null,
+                    shippingDepartment: orderDataResult.shipping_department || null,
+                    shippingMethod: orderDataResult.shipping_method || null,
+                    paymentMethod: orderDataResult.payment_method || "liqpay",
+                    notes: orderDataResult.notes || null,
+                    emailjsServiceId,
+                    emailjsTemplateIdAdmin,
+                    emailjsPublicKey,
+                  });
+
+                  if (adminEmailResult.success) {
+                    console.log("✓ Admin notification email sent");
+                  } else {
+                    console.error("✗ Failed to send admin email:", adminEmailResult.error);
+                  }
+                } else {
+                  console.warn("⚠ EmailJS not configured - skipping email sending");
+                }
+              } else {
+                console.warn("⚠ Could not fetch order items for email - skipping email sending");
+              }
+            } catch (emailError: any) {
+              console.error("✗ Error sending emails:", emailError);
+              // Don't fail the order if email fails
+            }
           }
           
           // Delete from pending_orders after successful save (if it existed)

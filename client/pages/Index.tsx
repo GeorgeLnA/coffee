@@ -20,10 +20,29 @@ export default function Index() {
   const { t, language } = useLanguage();
   
   // Fetch data from Supabase CMS
-  const { data: homepageSettings } = useHomepageSettings();
-  const { data: featuredSlides } = useFeaturedSlides();
+  const { data: homepageSettings, refetch: refetchHomepage } = useHomepageSettings();
+  const { data: featuredSlides, refetch: refetchFeatured } = useFeaturedSlides();
   const { data: customSections } = usePageSections('home');
   const { data: contactPoints } = useContactPoints();
+  
+  // Force refetch when window regains focus (for live updates when editing in admin)
+  useEffect(() => {
+    const handleFocus = () => {
+      refetchHomepage();
+      refetchFeatured();
+    };
+    window.addEventListener('focus', handleFocus);
+    // Also set up periodic refetch as backup (every 10 seconds)
+    const interval = setInterval(() => {
+      refetchHomepage();
+      refetchFeatured();
+    }, 10000); // Refetch every 10 seconds
+    
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+      clearInterval(interval);
+    };
+  }, [refetchHomepage, refetchFeatured]);
   
   // Trade points state
   const [selectedTradePoint, setSelectedTradePoint] = useState(0);
@@ -280,15 +299,15 @@ export default function Index() {
               <div className="text-center max-w-4xl mx-auto px-6">
                 {/* Main Title - Bold & Animated */}
                 <h1 className="text-7xl md:text-9xl lg:text-9xl font-black mb-8 leading-tight font-dosis tracking-wider text-white">
-                  <span className="block">{homepageSettings?.hero_title_line1 || "THE"}</span>
-                  <span className="block">{homepageSettings?.hero_title_line2 || "COFFEE"}</span>
-                  <span className="block">{homepageSettings?.hero_title_line3 || "MANIFEST"}</span>
+                  <span className="block">{language === 'ru' ? (homepageSettings?.hero_title_line1_ru || homepageSettings?.hero_title_line1 || "THE") : (homepageSettings?.hero_title_line1_ua || homepageSettings?.hero_title_line1 || "THE")}</span>
+                  <span className="block">{language === 'ru' ? (homepageSettings?.hero_title_line2_ru || homepageSettings?.hero_title_line2 || "COFFEE") : (homepageSettings?.hero_title_line2_ua || homepageSettings?.hero_title_line2 || "COFFEE")}</span>
+                  <span className="block">{language === 'ru' ? (homepageSettings?.hero_title_line3_ru || homepageSettings?.hero_title_line3 || "MANIFEST") : (homepageSettings?.hero_title_line3_ua || homepageSettings?.hero_title_line3 || "MANIFEST")}</span>
                 </h1>
                 
                 {/* CTA Button - Clean */}
                 <Link to={homepageSettings?.hero_cta_link || "/coffee"} className="group inline-block px-12 py-6 bg-transparent border-2 border-white text-white font-black text-xl hover:bg-[#fcf4e4] hover:text-[#361c0c] transition-all duration-300">
                   <span className="flex items-center space-x-4">
-                    <span>{homepageSettings?.hero_cta_text || t('hero.cta')}</span>
+                    <span>{language === 'ru' ? (homepageSettings?.hero_cta_text_ru || homepageSettings?.hero_cta_text || t('hero.cta')) : (homepageSettings?.hero_cta_text_ua || homepageSettings?.hero_cta_text || t('hero.cta'))}</span>
                     <ArrowRight className="w-6 h-6 group-hover:translate-x-2 transition-transform" />
                   </span>
                 </Link>
@@ -311,7 +330,7 @@ export default function Index() {
           {/* Section Header - Bold & Centered */}
           <div className="text-center mb-20">
             <h2 className="text-5xl md:text-7xl font-black mb-8 leading-tight font-coolvetica tracking-wider">
-              <span style={{ color: '#fcf4e4' }}>{homepageSettings?.season_title || t('season.title')}</span>
+              <span style={{ color: '#fcf4e4' }}>{language === 'ru' ? (homepageSettings?.season_title_ru || homepageSettings?.season_title || t('season.title')) : (homepageSettings?.season_title_ua || homepageSettings?.season_title || t('season.title'))}</span>
             </h2>
           </div>
 
@@ -415,29 +434,35 @@ export default function Index() {
             <div className="space-y-8">
               <div>
                  <h2 className="text-4xl md:text-5xl lg:text-7xl font-black mb-8 leading-tight font-coolvetica tracking-wider">
-                   <span style={{ color: '#fcf4e4' }}>{t('video.title1')}</span>
+                   <span style={{ color: '#fcf4e4' }}>{language === 'ru' ? (homepageSettings?.video_title1_ru || t('video.title1')) : (homepageSettings?.video_title1_ua || t('video.title1'))}</span>
                    <br />
-                   <span style={{ color: '#fcf4e4' }}>{t('video.title2')}</span>
+                   <span style={{ color: '#fcf4e4' }}>{language === 'ru' ? (homepageSettings?.video_title2_ru || t('video.title2')) : (homepageSettings?.video_title2_ua || t('video.title2'))}</span>
                  </h2>
               </div>
               
               <p className="text-xl text-white font-medium leading-relaxed">
-                {t('video.desc')}
+                {language === 'ru' ? (homepageSettings?.video_desc_ru || t('video.desc')) : (homepageSettings?.video_desc_ua || t('video.desc'))}
               </p>
               
               <div className="space-y-6">
-                <div className="flex items-center space-x-4">
-                  <div className="w-2 h-2" style={{ backgroundColor: '#fcf4e4' }}></div>
-                  <span className="text-white font-bold text-lg">{t('video.feature1')}</span>
-                </div>
-                <div className="flex items-center space-x-4">
-                  <div className="w-2 h-2" style={{ backgroundColor: '#fcf4e4' }}></div>
-                  <span className="text-white font-bold text-lg">{t('video.feature2')}</span>
-                </div>
-                <div className="flex items-center space-x-4">
-                  <div className="w-2 h-2" style={{ backgroundColor: '#fcf4e4' }}></div>
-                  <span className="text-white font-bold text-lg">{t('video.feature3')}</span>
-                </div>
+                {homepageSettings?.video_feature1_ua || homepageSettings?.video_feature1_ru || t('video.feature1') ? (
+                  <div className="flex items-center space-x-4">
+                    <div className="w-2 h-2" style={{ backgroundColor: '#fcf4e4' }}></div>
+                    <span className="text-white font-bold text-lg">{language === 'ru' ? (homepageSettings?.video_feature1_ru || t('video.feature1')) : (homepageSettings?.video_feature1_ua || t('video.feature1'))}</span>
+                  </div>
+                ) : null}
+                {homepageSettings?.video_feature2_ua || homepageSettings?.video_feature2_ru || t('video.feature2') ? (
+                  <div className="flex items-center space-x-4">
+                    <div className="w-2 h-2" style={{ backgroundColor: '#fcf4e4' }}></div>
+                    <span className="text-white font-bold text-lg">{language === 'ru' ? (homepageSettings?.video_feature2_ru || t('video.feature2')) : (homepageSettings?.video_feature2_ua || t('video.feature2'))}</span>
+                  </div>
+                ) : null}
+                {homepageSettings?.video_feature3_ua || homepageSettings?.video_feature3_ru || t('video.feature3') ? (
+                  <div className="flex items-center space-x-4">
+                    <div className="w-2 h-2" style={{ backgroundColor: '#fcf4e4' }}></div>
+                    <span className="text-white font-bold text-lg">{language === 'ru' ? (homepageSettings?.video_feature3_ru || t('video.feature3')) : (homepageSettings?.video_feature3_ua || t('video.feature3'))}</span>
+                  </div>
+                ) : null}
               </div>
               
             </div>
@@ -461,30 +486,34 @@ export default function Index() {
             <div className="order-2 lg:order-1">
               <div className="mb-12">
                 <div className="inline-block px-6 py-3 mb-8" style={{ backgroundColor: '#361c0c' }}>
-                  <span className="text-white font-black text-sm uppercase tracking-wider">{t('about.badge')}</span>
+                  <span className="text-white font-black text-sm uppercase tracking-wider">{language === 'ru' ? (homepageSettings?.about_badge_ru || t('about.badge')) : (homepageSettings?.about_badge_ua || t('about.badge'))}</span>
                 </div>
                 
                  <h2 className="text-4xl md:text-6xl font-black mb-8 leading-tight font-coolvetica tracking-wider">
-                   <span style={{ color: '#361c0c' }}>{t('about.title')}</span>
+                   <span style={{ color: '#361c0c' }}>{language === 'ru' ? (homepageSettings?.about_title_ru || t('about.title')) : (homepageSettings?.about_title_ua || t('about.title'))}</span>
                  </h2>
                 
-                    <p className="text-xl text-gray-700 font-medium leading-relaxed mb-8">
-                      {t('about.desc1')}
-                    </p>
+                    {homepageSettings?.about_desc1_ua || homepageSettings?.about_desc1_ru ? (
+                      <p className="text-xl text-gray-700 font-medium leading-relaxed mb-8">
+                        {language === 'ru' ? (homepageSettings?.about_desc1_ru || '') : (homepageSettings?.about_desc1_ua || '')}
+                      </p>
+                    ) : null}
 
-                    <p className="text-lg text-gray-700 font-medium leading-relaxed mb-12">
-                      {t('about.desc2')}
-                    </p>
+                    {homepageSettings?.about_desc2_ua || homepageSettings?.about_desc2_ru ? (
+                      <p className="text-lg text-gray-700 font-medium leading-relaxed mb-12">
+                        {language === 'ru' ? (homepageSettings?.about_desc2_ru || '') : (homepageSettings?.about_desc2_ua || '')}
+                      </p>
+                    ) : null}
               </div>
 
 
               {/* CTA Button - Clean */}
-              <button className="group px-12 py-4 bg-transparent border-2 font-black text-lg hover:bg-[#361c0c] transition-all duration-300" style={{ borderColor: '#361c0c', color: '#361c0c' }}>
+              <Link to={homepageSettings?.about_cta_link || "/about"} className="group inline-block px-12 py-4 bg-transparent border-2 font-black text-lg hover:bg-[#361c0c] transition-all duration-300" style={{ borderColor: '#361c0c', color: '#361c0c' }}>
                 <span className="flex items-center space-x-3">
-                  <span className="group-hover:text-[#fcf4e4]">{t('about.learnMore')}</span>
+                  <span className="group-hover:text-[#fcf4e4]">{language === 'ru' ? (homepageSettings?.about_cta_text_ru || t('about.learnMore')) : (homepageSettings?.about_cta_text_ua || t('about.learnMore'))}</span>
                   <ArrowRight className="w-5 h-5 group-hover:translate-x-2 transition-transform group-hover:text-[#fcf4e4]" />
                 </span>
-              </button>
+              </Link>
             </div>
 
             {/* Image Side - Clean */}
@@ -571,7 +600,19 @@ export default function Index() {
                   <h3 className="text-base md:text-lg font-black text-white mb-2 font-coolvetica tracking-wider">
                     {cafe.name}
                   </h3>
-                  <p className="text-white/80 font-medium text-sm md:text-base leading-relaxed">
+                  <p 
+                    className="text-white/80 font-medium text-sm md:text-base leading-relaxed"
+                    style={{ 
+                      textDecoration: 'none',
+                      pointerEvents: 'none',
+                      userSelect: 'text',
+                      WebkitUserSelect: 'text',
+                      MozUserSelect: 'text',
+                      msUserSelect: 'text'
+                    }}
+                    suppressContentEditableWarning={true}
+                    contentEditable={false}
+                  >
                     {cafe.address}
                   </p>
                 </div>

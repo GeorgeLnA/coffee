@@ -165,4 +165,23 @@
   .coolvetica {
     font-family: 'Coolvetica', sans-serif;
   }
+
+  /* Prevent browser auto-linking of addresses and coordinates */
+  p, span, div {
+    -webkit-touch-callout: none;
+    -webkit-user-select: text;
+    -moz-user-select: text;
+    -ms-user-select: text;
+    user-select: text;
+  }
+
+  /* Prevent auto-linking of coordinates and addresses */
+  p:not(a), span:not(a), div:not(a) {
+    text-decoration: none !important;
+  }
+
+  /* Remove any auto-generated links from browser */
+  a[href^="tel:"], a[href^="mailto:"], a[href^="geo:"] {
+    text-decoration: none;
+  }
 }

@@ -1,6 +1,7 @@
 import type { Handler } from "@netlify/functions";
 import crypto from "crypto";
 import { createClient } from "@supabase/supabase-js";
+import { sendOrderConfirmationEmail, sendOrderNotificationEmail } from "./send-email";
 
 /**
  * Helper function to base64 encode
@@ -208,6 +209,94 @@ export const handler: Handler = async (event, context) => {
         } else {
           console.log(`✓ Successfully saved ${orderItems.length} order items`);
           console.log("Inserted items:", insertedItems?.map((it: any) => ({ id: it.id, variant: it.variant })));
+
+          // Send confirmation emails for cash orders (only if we have required data)
+          if (orderData && orderData.customer_email && insertedItems && insertedItems.length > 0) {
+            try {
+              const emailjsServiceId = process.env.EMAILJS_SERVICE_ID;
+              const emailjsTemplateIdCustomer = process.env.EMAILJS_TEMPLATE_ID_CUSTOMER;
+              const emailjsTemplateIdAdmin = process.env.EMAILJS_TEMPLATE_ID_ADMIN;
+              const emailjsPublicKey = process.env.EMAILJS_PUBLIC_KEY;
+              const adminEmails = process.env.ADMIN_EMAILS || "davidnuk877@gmil.com";
+
+              // Only send if EmailJS is configured
+              if (emailjsServiceId && emailjsTemplateIdCustomer && emailjsTemplateIdAdmin && emailjsPublicKey) {
+                // Prepare order items for email (only use data we have)
+                const emailItems = insertedItems.map((item: any) => ({
+                  name: item.product_name || "Невідомий товар",
+                  quantity: item.quantity || 1,
+                  price: Number(item.price) || 0,
+                  image: item.product_image || null,
+                  variant: item.variant || null,
+                }));
+
+                // Build shipping address (only use available data)
+                let shippingAddress = orderData.shipping_address || "";
+                if (orderData.shipping_city) {
+                  shippingAddress = `${orderData.shipping_city}${shippingAddress ? `, ${shippingAddress}` : ''}`;
+                }
+                if (orderData.shipping_department) {
+                  const deptType = orderData.shipping_method === 'nova_postomat' ? 'Поштомат' : 'Відділення';
+                  shippingAddress += ` (${deptType} №${orderData.shipping_department})`;
+                }
+
+                // Send customer confirmation email
+                const customerEmailResult = await sendOrderConfirmationEmail({
+                  customerEmail: orderData.customer_email,
+                  customerName: orderData.customer_name || "Клієнт",
+                  customerPhone: orderData.customer_phone || "",
+                  orderId: orderData.order_id || orderId,
+                  orderDate: orderData.created_at || new Date(),
+                  orderTotal: Number(orderData.total_price) || amount,
+                  orderItems: emailItems,
+                  shippingAddress: shippingAddress || "Не вказано",
+                  shippingMethod: orderData.shipping_method || shipping?.method || null,
+                  paymentMethod: orderData.payment_method || "cash",
+                  orderNotes: orderData.notes || notes || null,
+                  emailjsServiceId,
+                  emailjsTemplateIdCustomer,
+                  emailjsPublicKey,
+                });
+
+                if (customerEmailResult.success) {
+                  console.log("✓ Customer confirmation email sent (cash order)");
+                } else {
+                  console.error("✗ Failed to send customer email:", customerEmailResult.error);
+                }
+
+                // Send admin notification email
+                const adminEmailResult = await sendOrderNotificationEmail({
+                  adminEmails: adminEmails.split(",").map((e: string) => e.trim()),
+                  customerName: orderData.customer_name || "Клієнт",
+                  customerEmail: orderData.customer_email,
+                  customerPhone: orderData.customer_phone || "",
+                  orderId: orderData.order_id || orderId,
+                  orderTotal: Number(orderData.total_price) || amount,
+                  orderItems: emailItems,
+                  shippingAddress: shippingAddress || "Не вказано",
+                  shippingCity: orderData.shipping_city || shipping?.city || null,
+                  shippingDepartment: orderData.shipping_department || shipping?.department || null,
+                  shippingMethod: orderData.shipping_method || shipping?.method || null,
+                  paymentMethod: orderData.payment_method || "cash",
+                  notes: orderData.notes || notes || null,
+                  emailjsServiceId,
+                  emailjsTemplateIdAdmin,
+                  emailjsPublicKey,
+                });
+
+                if (adminEmailResult.success) {
+                  console.log("✓ Admin notification email sent (cash order)");
+                } else {
+                  console.error("✗ Failed to send admin email:", adminEmailResult.error);
+                }
+              } else {
+                console.warn("⚠ EmailJS not configured - skipping email sending");
+              }
+            } catch (emailError: any) {
+              console.error("✗ Error sending emails:", emailError);
+              // Don't fail the order if email fails
+            }
+          }
         }
       }
 
@@ -219,7 +308,7 @@ export const handler: Handler = async (event, context) => {
           "Access-Control-Allow-Origin": "*",
           "Access-Control-Allow-Headers": "Content-Type",
           "Access-Control-Allow-Methods": "POST, OPTIONS",
-        },
+        } as Record<string, string>,
         body: JSON.stringify({
           success: true,
           orderId,

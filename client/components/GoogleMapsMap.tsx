@@ -139,7 +139,7 @@ const GoogleMapsMap: React.FC<GoogleMapsMapProps> = ({
           content: `
             <div style="padding: 8px; min-width: 200px;">
               <h3 style="margin: 0 0 8px 0; color: #361c0c; font-weight: bold;">${point.name}</h3>
-              <p style="margin: 0 0 4px 0; color: #666; font-size: 12px;">${point.address}</p>
+              <p style="margin: 0 0 4px 0; color: #666; font-size: 12px; text-decoration: none; pointer-events: none; user-select: text;">${point.address}</p>
               <p style="margin: 0; color: #666; font-size: 12px;">${point.hours}</p>
               <p style="margin: 4px 0 0 0; color: ${point.active ? '#10b981' : '#6b7280'}; font-size: 12px; font-weight: bold;">
                 ${point.active ? 'Відкрито' : 'Закрито'}

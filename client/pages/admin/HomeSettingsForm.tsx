@@ -148,9 +148,11 @@ export function HomeSettingsForm() {
         console.error('Save error:', error);
       } else {
         console.log('Save successful!');
+        // Invalidate and refetch to ensure live updates
+        await queryClient.invalidateQueries({ queryKey: ['homepage-settings'] });
+        await queryClient.refetchQueries({ queryKey: ['homepage-settings'] });
         // Optionally show success message
         alert('Settings saved successfully!');
-        try { await queryClient.invalidateQueries({ queryKey: ['homepage-settings'] }); } catch {}
       }
     } catch (err: any) {
       console.error('Save exception:', err);
