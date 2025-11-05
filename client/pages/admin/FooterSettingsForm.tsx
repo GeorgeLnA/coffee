@@ -276,6 +276,41 @@ export function FooterSettingsForm() {
           </div>
         </div>
 
+        <Separator />
+
+        {/* Copyright & Site Credit */}
+        <div className="space-y-4">
+          <div className="font-semibold">Авторські права та Site Credit</div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label>Текст авторських прав (UA)</Label>
+              <Input value={form.copyright_text_ua || ''} onChange={(e) => updateField('copyright_text_ua', e.target.value)} />
+            </div>
+            <div>
+              <Label>Текст авторських прав (RU)</Label>
+              <Input value={form.copyright_text_ru || ''} onChange={(e) => updateField('copyright_text_ru', e.target.value)} />
+            </div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label>Site Credit текст</Label>
+              <Input 
+                placeholder="Site Credit - Lead and Allure" 
+                value={form.made_by_text || ''} 
+                onChange={(e) => updateField('made_by_text', e.target.value)} 
+              />
+            </div>
+            <div>
+              <Label>Site Credit URL</Label>
+              <Input 
+                placeholder="https://leadandallure.com" 
+                value={form.made_by_url || ''} 
+                onChange={(e) => updateField('made_by_url', e.target.value)} 
+              />
+            </div>
+          </div>
+        </div>
+
         {error && <div className="text-destructive">{error}</div>}
 
         <div className="flex justify-end">
