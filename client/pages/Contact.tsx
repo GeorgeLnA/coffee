@@ -62,26 +62,26 @@ export default function Contact() {
           : pick(p.hours_ua, p.hours_ru, '');
         
         return {
-          name: pick(p.name_ua, p.name_ru, ''),
-          address: p.address || '',
+        name: pick(p.name_ua, p.name_ru, ''),
+        address: p.address || '',
           hours: dynamicHours,
         };
       });
     }
     
     return [
-      {
-        name: t('contact.street1'),
-        address: "50°24'24.1\"N 30°38'57.4\"E",
-        hours: t('contact.saturday'),
-        active: true
-      },
-      {
-        name: t('contact.street2'),
-        address: "50°22'56.6\"N 30°27'32.5\"E",
-        hours: t('contact.sunday'),
-        active: false
-      }
+        {
+          name: t('contact.street1'),
+          address: "50°24'24.1\"N 30°38'57.4\"E",
+          hours: t('contact.saturday'),
+          active: true
+        },
+        {
+          name: t('contact.street2'),
+          address: "50°22'56.6\"N 30°27'32.5\"E",
+          hours: t('contact.sunday'),
+          active: false
+        }
     ];
   }, [points, language, t]);
 

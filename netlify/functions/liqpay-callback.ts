@@ -456,14 +456,29 @@ export const handler: Handler = async (event, context) => {
                 .eq("order_id", orderDataResult.id);
 
               if (!itemsError && savedOrderItems && savedOrderItems.length > 0) {
+                console.log("=== EMAIL SENDING DEBUG (ONLINE PAYMENT) ===");
                 const emailjsServiceId = process.env.EMAILJS_SERVICE_ID;
                 const emailjsTemplateIdCustomer = process.env.EMAILJS_TEMPLATE_ID_CUSTOMER;
                 const emailjsTemplateIdAdmin = process.env.EMAILJS_TEMPLATE_ID_ADMIN;
                 const emailjsPublicKey = process.env.EMAILJS_PUBLIC_KEY;
+                const emailjsPrivateKey = process.env.EMAILJS_PRIVATE_KEY; // Private key for server-side REST API
                 const adminEmails = process.env.ADMIN_EMAILS || "davidnuk877@gmail.com";
+
+                console.log("Environment check:", {
+                  hasServiceId: !!emailjsServiceId,
+                  hasCustomerTemplate: !!emailjsTemplateIdCustomer,
+                  hasAdminTemplate: !!emailjsTemplateIdAdmin,
+                  hasPublicKey: !!emailjsPublicKey,
+                  serviceId: emailjsServiceId || "NOT SET",
+                  customerTemplate: emailjsTemplateIdCustomer || "NOT SET",
+                  adminTemplate: emailjsTemplateIdAdmin || "NOT SET",
+                  publicKey: emailjsPublicKey ? `${emailjsPublicKey.substring(0, 4)}...` : "NOT SET",
+                  adminEmails: adminEmails,
+                });
 
                 // Only send if EmailJS is configured
                 if (emailjsServiceId && emailjsTemplateIdCustomer && emailjsTemplateIdAdmin && emailjsPublicKey) {
+                  console.log("EmailJS configured, proceeding to send emails...");
                   // Prepare order items for email
                   const emailItems = savedOrderItems.map((item: any) => ({
                     name: item.product_name || "Невідомий товар",
@@ -473,15 +488,60 @@ export const handler: Handler = async (event, context) => {
                     variant: item.variant || null,
                   }));
 
-                  // Build shipping address
-                  let shippingAddress = orderDataResult.shipping_address || "";
-                  if (orderDataResult.shipping_city) {
-                    shippingAddress = `${orderDataResult.shipping_city}${shippingAddress ? `, ${shippingAddress}` : ''}`;
+                  // Build shipping address based on shipping method
+                  let shippingAddress = "";
+                  if (orderDataResult.shipping_method === 'nova_department' || orderDataResult.shipping_method === 'nova_postomat') {
+                    // Nova Poshta: city + department/postomat
+                    if (orderDataResult.shipping_city) {
+                      shippingAddress = orderDataResult.shipping_city;
+                    }
+                    if (orderDataResult.shipping_department) {
+                      const deptType = orderDataResult.shipping_method === 'nova_postomat' ? 'Поштомат' : 'Відділення';
+                      shippingAddress += shippingAddress ? `, ${deptType} №${orderDataResult.shipping_department}` : `${deptType} №${orderDataResult.shipping_department}`;
+                    } else if (orderDataResult.shipping_warehouse_ref) {
+                      // Fallback to warehouse ref if no department number
+                      const deptType = orderDataResult.shipping_method === 'nova_postomat' ? 'Поштомат' : 'Відділення';
+                      shippingAddress += shippingAddress ? `, ${deptType} (${orderDataResult.shipping_warehouse_ref.substring(0, 8)}...)` : `${deptType} (${orderDataResult.shipping_warehouse_ref.substring(0, 8)}...)`;
+                    }
+                    if (!shippingAddress) {
+                      shippingAddress = orderDataResult.shipping_address || orderDataResult.shipping_street_address || 'Не вказано';
+                    }
+                  } else if (orderDataResult.shipping_method === 'nova_courier' || orderDataResult.shipping_method === 'own_courier') {
+                    // Courier: just address (no city)
+                    shippingAddress = orderDataResult.shipping_street_address || orderDataResult.shipping_address || 'Не вказано';
+                  } else {
+                    // Fallback
+                    shippingAddress = orderDataResult.shipping_address || orderDataResult.shipping_street_address || 'Не вказано';
                   }
-                  if (orderDataResult.shipping_department) {
-                    const deptType = orderDataResult.shipping_method === 'nova_postomat' ? 'Поштомат' : 'Відділення';
-                    shippingAddress += ` (${deptType} №${orderDataResult.shipping_department})`;
-                  }
+
+                  console.log("Preparing customer email...");
+                  console.log("Customer email data:", {
+                    email: orderDataResult.customer_email,
+                    name: orderDataResult.customer_name,
+                    phone: orderDataResult.customer_phone,
+                    orderId: orderDataResult.order_id || callbackData.order_id,
+                    itemsCount: emailItems.length,
+                  });
+
+                  // Format shipping method display name
+                  const shippingMethodText = orderDataResult.shipping_method 
+                    ? (orderDataResult.shipping_method === 'nova_department' 
+                        ? 'Нова Пошта (на відділення)' 
+                        : orderDataResult.shipping_method === 'nova_postomat'
+                        ? 'Нова Пошта (на поштомат)'
+                        : orderDataResult.shipping_method === 'nova_courier'
+                        ? 'Нова Пошта (кур\'єром)'
+                        : orderDataResult.shipping_method === 'own_courier'
+                        ? 'Власна доставка (Київ)'
+                        : orderDataResult.shipping_method)
+                    : 'Не вказано';
+
+                  // Format payment method
+                  const paymentMethodText = orderDataResult.payment_method === 'cash'
+                    ? 'Оплата при отриманні'
+                    : orderDataResult.payment_method === 'liqpay'
+                    ? 'Онлайн оплата (LiqPay)'
+                    : orderDataResult.payment_method || 'Онлайн оплата';
 
                   // Send customer confirmation email
                   const customerEmailResult = await sendOrderConfirmationEmail({
@@ -493,21 +553,35 @@ export const handler: Handler = async (event, context) => {
                     orderTotal: Number(orderDataResult.total_price) || 0,
                     orderItems: emailItems,
                     shippingAddress: shippingAddress || "Не вказано",
-                    shippingMethod: orderDataResult.shipping_method || null,
-                    paymentMethod: orderDataResult.payment_method || "liqpay",
+                    shippingMethod: shippingMethodText,
+                    paymentMethod: paymentMethodText,
                     orderNotes: orderDataResult.notes || null,
                     emailjsServiceId,
                     emailjsTemplateIdCustomer,
                     emailjsPublicKey,
+                    emailjsPrivateKey, // Pass private key for server-side REST API
                   });
 
+                  console.log("Customer email result:", customerEmailResult);
                   if (customerEmailResult.success) {
                     console.log("✓ Customer confirmation email sent");
                   } else {
                     console.error("✗ Failed to send customer email:", customerEmailResult.error);
                   }
 
+                  console.log("Preparing admin email...");
+                  console.log("Admin email data:", {
+                    adminEmails: adminEmails.split(",").map((e: string) => e.trim()),
+                    customerName: orderDataResult.customer_name,
+                    orderId: orderDataResult.order_id || callbackData.order_id,
+                  });
+
                   // Send admin notification email
+                  const orderNotes = orderDataResult.notes || null;
+                  console.log("=== ADMIN EMAIL NOTES DEBUG (LIQPAY) ===");
+                  console.log("orderDataResult.notes:", orderDataResult.notes);
+                  console.log("Final orderNotes:", orderNotes);
+                  
                   const adminEmailResult = await sendOrderNotificationEmail({
                     adminEmails: adminEmails.split(",").map((e: string) => e.trim()),
                     customerName: orderDataResult.customer_name || "Клієнт",
@@ -519,19 +593,22 @@ export const handler: Handler = async (event, context) => {
                     shippingAddress: shippingAddress || "Не вказано",
                     shippingCity: orderDataResult.shipping_city || null,
                     shippingDepartment: orderDataResult.shipping_department || null,
-                    shippingMethod: orderDataResult.shipping_method || null,
-                    paymentMethod: orderDataResult.payment_method || "liqpay",
-                    notes: orderDataResult.notes || null,
+                    shippingMethod: shippingMethodText,
+                    paymentMethod: paymentMethodText,
+                    notes: orderNotes || '', // Pass notes as empty string if null
                     emailjsServiceId,
                     emailjsTemplateIdAdmin,
                     emailjsPublicKey,
+                    emailjsPrivateKey, // Pass private key for server-side REST API
                   });
 
+                  console.log("Admin email result:", adminEmailResult);
                   if (adminEmailResult.success) {
                     console.log("✓ Admin notification email sent");
                   } else {
                     console.error("✗ Failed to send admin email:", adminEmailResult.error);
                   }
+                  console.log("=== EMAIL SENDING DEBUG END ===");
                 } else {
                   console.warn("⚠ EmailJS not configured - skipping email sending");
                 }

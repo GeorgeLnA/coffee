@@ -1,6 +1,8 @@
 import { RequestHandler } from "express";
 import crypto from "crypto";
 import { createClient } from "@supabase/supabase-js";
+import { sendOrderConfirmationEmail, sendOrderNotificationEmail } from "../../netlify/functions/send-email";
+import { sendDevOrderEmails } from "../lib/dev-mailer";
 
 function getSupabaseClient() {
   const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || "https://umynzgzlqdphgrzixhsc.supabase.co";
@@ -52,6 +54,11 @@ export const prepareOrder: RequestHandler = async (req, res) => {
 
     // For cash payments, save order immediately (no payment gateway callback)
     if (paymentMethod === 'cash') {
+      console.log("=== CASH PAYMENT DETECTED ===");
+      console.log("Customer:", customer?.fullName, customer?.email);
+      console.log("Order ID:", orderId);
+      console.log("Amount:", amount);
+      
       const supabase = getSupabaseClient();
       const orderToInsert = {
         status: 'pending',
@@ -95,14 +102,20 @@ export const prepareOrder: RequestHandler = async (req, res) => {
         return res.status(500).json({ error: 'Failed to save order', details: orderError.message });
       }
 
-      console.log('✓ Cash order saved:', {
+      console.log('✓ Cash order saved to Supabase:', {
         orderId: orderData.id,
+        order_id: orderData.order_id,
         shipping_department: orderData.shipping_department,
         payment_method: orderData.payment_method,
+        customer_email: orderData.customer_email,
       });
 
       // Save order items with variant
+      // Declare insertedItems in outer scope so it's accessible for emailStatus
+      let insertedItems: any[] | null = null;
+      
       if (orderData) {
+        console.log("=== SAVING ORDER ITEMS ===");
         const orderItems = items.map((item: any) => ({
           order_id: orderData.id,
           product_id: item.id?.toString() || item.product_id || "unknown",
@@ -118,7 +131,7 @@ export const prepareOrder: RequestHandler = async (req, res) => {
           variant: it.variant,
         })));
 
-        const { data: insertedItems, error: itemsError } = await supabase
+        const { data: insertedItemsData, error: itemsError } = await supabase
           .from("order_items")
           .insert(orderItems)
           .select();
@@ -132,17 +145,228 @@ export const prepareOrder: RequestHandler = async (req, res) => {
             hint: itemsError.hint,
           });
         } else {
+          insertedItems = insertedItemsData;
           console.log(`✓ Saved ${orderItems.length} order items with variants`);
           console.log("Inserted items:", insertedItems?.map((it: any) => ({ variant: it.variant })));
+          console.log("=== CHECKING FOR EMAIL SENDING ===");
+          console.log("insertedItems exists:", !!insertedItems);
+          console.log("insertedItems length:", insertedItems?.length);
+          console.log("customer exists:", !!customer);
+          console.log("customer.email:", customer?.email);
+
+          // Send confirmation emails for cash orders (only if we have required data)
+          console.log("=== CHECKING EMAIL CONDITIONS (EXPRESS ROUTE) ===");
+          console.log("insertedItems exists:", !!insertedItems);
+          console.log("insertedItems length:", insertedItems?.length);
+          console.log("customer exists:", !!customer);
+          console.log("customer.email:", customer?.email);
+          
+          if (insertedItems && insertedItems.length > 0 && customer?.email) {
+            console.log("✓ Conditions met, attempting to send emails...");
+            try {
+              console.log("=== EMAIL SENDING DEBUG (CASH ORDER - EXPRESS ROUTE) ===");
+              const emailjsServiceId = process.env.EMAILJS_SERVICE_ID;
+              const emailjsTemplateIdCustomer = process.env.EMAILJS_TEMPLATE_ID_CUSTOMER;
+              const emailjsTemplateIdAdmin = process.env.EMAILJS_TEMPLATE_ID_ADMIN;
+              const emailjsPublicKey = process.env.EMAILJS_PUBLIC_KEY;
+              const emailjsPrivateKey = process.env.EMAILJS_PRIVATE_KEY; // Private key for server-side REST API
+              const adminEmails = process.env.ADMIN_EMAILS || "davidnuk877@gmail.com";
+
+              console.log("Environment check:", {
+                hasServiceId: !!emailjsServiceId,
+                hasCustomerTemplate: !!emailjsTemplateIdCustomer,
+                hasAdminTemplate: !!emailjsTemplateIdAdmin,
+                hasPublicKey: !!emailjsPublicKey,
+                serviceId: emailjsServiceId || "NOT SET",
+                customerTemplate: emailjsTemplateIdCustomer || "NOT SET",
+                adminTemplate: emailjsTemplateIdAdmin || "NOT SET",
+                publicKey: emailjsPublicKey ? `${emailjsPublicKey.substring(0, 4)}...` : "NOT SET",
+                adminEmails: adminEmails,
+              });
+
+              // Only send via EmailJS if configured; otherwise use dev mailer (Ethereal)
+              if (emailjsServiceId && emailjsTemplateIdCustomer && emailjsTemplateIdAdmin && emailjsPublicKey) {
+                console.log("EmailJS configured, proceeding to send emails...");
+                // Prepare order items for email (only use data we have)
+                const emailItems = insertedItems.map((item: any) => ({
+                  name: item.product_name || "Невідомий товар",
+                  quantity: item.quantity || 1,
+                  price: Number(item.price) || 0,
+                  image: item.product_image || null,
+                  variant: item.variant || null,
+                }));
+
+                // Build shipping address based on shipping method
+                let emailShippingAddress = "";
+                if (shipping?.method === 'nova_department' || shipping?.method === 'nova_postomat') {
+                  // Nova Poshta: city + department/postomat
+                  if (shipping.city) {
+                    emailShippingAddress = shipping.city;
+                  }
+                  if (shipping.department) {
+                    const deptType = shipping.method === 'nova_postomat' ? 'Поштомат' : 'Відділення';
+                    emailShippingAddress += emailShippingAddress ? `, ${deptType} №${shipping.department}` : `${deptType} №${shipping.department}`;
+                  } else if (shipping.warehouseRef) {
+                    // Fallback to warehouse ref if no department number
+                    const deptType = shipping.method === 'nova_postomat' ? 'Поштомат' : 'Відділення';
+                    emailShippingAddress += emailShippingAddress ? `, ${deptType} (${shipping.warehouseRef.substring(0, 8)}...)` : `${deptType} (${shipping.warehouseRef.substring(0, 8)}...)`;
+                  }
+                  if (!emailShippingAddress) {
+                    emailShippingAddress = shippingAddress || 'Не вказано';
+                  }
+                } else if (shipping?.method === 'nova_courier' || shipping?.method === 'own_courier') {
+                  // Courier: just address (no city)
+                  emailShippingAddress = shipping.address || shippingAddress || 'Не вказано';
+                } else {
+                  // Fallback
+                  emailShippingAddress = shippingAddress || shipping?.address || 'Не вказано';
+                }
+
+                // Format shipping method
+                const shippingMethodText = shipping?.method 
+                  ? (shipping.method === 'nova_department' 
+                      ? 'Нова Пошта (на відділення)' 
+                      : shipping.method === 'nova_postomat'
+                      ? 'Нова Пошта (на поштомат)'
+                      : shipping.method === 'nova_courier'
+                      ? 'Нова Пошта (кур\'єром)'
+                      : shipping.method === 'own_courier'
+                      ? 'Власна доставка (Київ)'
+                      : shipping.method)
+                  : 'Не вказано';
+
+                // Format payment method
+                const paymentMethodText = "Оплата при отриманні";
+
+                console.log("Preparing customer email...");
+                console.log("Customer email data:", {
+                  email: customer.email,
+                  name: customer.fullName,
+                  phone: customer.phone,
+                  orderId: orderId,
+                  itemsCount: emailItems.length,
+                });
+
+                // Send customer confirmation email
+                const customerEmailResult = await sendOrderConfirmationEmail({
+                  customerEmail: customer.email,
+                  customerName: customer.fullName,
+                  customerPhone: customer.phone,
+                  orderId: orderId,
+                  orderDate: new Date(),
+                  orderTotal: amount,
+                  orderItems: emailItems,
+                  shippingAddress: emailShippingAddress || "Не вказано",
+                  shippingMethod: shippingMethodText,
+                  paymentMethod: paymentMethodText,
+                  orderNotes: notes || null,
+                  emailjsServiceId,
+                  emailjsTemplateIdCustomer,
+                  emailjsPublicKey,
+                  emailjsPrivateKey, // Pass private key for server-side REST API
+                });
+
+                console.log("Customer email result:", customerEmailResult);
+                if (customerEmailResult.success) {
+                  console.log("✓ Customer confirmation email sent (cash order)");
+                } else {
+                  console.error("✗ Failed to send customer email:", customerEmailResult.error);
+                }
+
+                console.log("Preparing admin email...");
+                console.log("Admin email data:", {
+                  adminEmails: adminEmails.split(",").map((e: string) => e.trim()),
+                  customerName: customer.fullName,
+                  orderId: orderId,
+                });
+
+                // Send admin notification email
+                const orderNotes = notes || null;
+                console.log("=== ADMIN EMAIL NOTES DEBUG (EXPRESS) ===");
+                console.log("notes (from request):", notes);
+                console.log("Final orderNotes:", orderNotes);
+                
+                const adminEmailResult = await sendOrderNotificationEmail({
+                  adminEmails: adminEmails.split(",").map((e: string) => e.trim()),
+                  customerName: customer.fullName,
+                  customerEmail: customer.email,
+                  customerPhone: customer.phone,
+                  orderId: orderId,
+                  orderTotal: amount,
+                  orderItems: emailItems,
+                  shippingAddress: emailShippingAddress || "Не вказано",
+                  shippingCity: shipping?.city || null,
+                  shippingDepartment: shipping?.department || null,
+                  shippingMethod: shipping?.method || null,
+                  paymentMethod: paymentMethodText,
+                  notes: orderNotes || '', // Pass notes as empty string if null
+                  emailjsServiceId,
+                  emailjsTemplateIdAdmin,
+                  emailjsPublicKey,
+                  emailjsPrivateKey, // Pass private key for server-side REST API
+                });
+
+                console.log("Admin email result:", adminEmailResult);
+                if (adminEmailResult.success) {
+                  console.log("✓ Admin notification email sent (cash order)");
+                } else {
+                  console.error("✗ Failed to send admin email:", adminEmailResult.error);
+                }
+                console.log("=== EMAIL SENDING DEBUG END ===");
+              } else {
+                console.log("=== EMAILJS NOT CONFIGURED -> USING DEV MAILER (ETHEREAL) ===");
+                const devResult = await sendDevOrderEmails({
+                  adminEmails: (adminEmails || "").split(",").map((e: string) => e.trim()).filter(Boolean),
+                  customerEmail: customer.email,
+                  customerName: customer.fullName,
+                  customerPhone: customer.phone,
+                  orderId: orderId,
+                  orderTotal: amount,
+                  orderItems: emailItems,
+                  shippingAddress: emailShippingAddress || "Не вказано",
+                  shippingMethod: shippingMethodText,
+                  paymentMethod: paymentMethodText,
+                  notes: notes || null,
+                });
+                console.log("Dev mailer result:", devResult);
+                console.log("Customer preview URL:", devResult.customer.previewUrl);
+                console.log("Admin preview URLs:", devResult.admin.previewUrls);
+                console.log("=== EMAIL SENDING DEBUG END ===");
+              }
+            } catch (emailError: any) {
+              console.error("✗ Error sending emails:", emailError);
+              console.error("Email error message:", emailError?.message);
+              console.error("Email error stack:", emailError?.stack);
+              // Don't fail the order if email fails
+            }
+          } else {
+            console.log("⚠ Email sending skipped - conditions not met:", {
+              hasInsertedItems: !!insertedItems,
+              insertedItemsLength: insertedItems?.length,
+              hasCustomerEmail: !!customer?.email,
+            });
+          }
         }
       }
 
       // For cash payments, return success immediately
+      // Include email status in response for debugging
+      const emailStatus = insertedItems && insertedItems.length > 0 && customer?.email
+        ? {
+            attempted: true,
+            configured: !!(process.env.EMAILJS_SERVICE_ID && process.env.EMAILJS_TEMPLATE_ID_CUSTOMER && process.env.EMAILJS_TEMPLATE_ID_ADMIN && process.env.EMAILJS_PUBLIC_KEY),
+          }
+        : {
+            attempted: false,
+            reason: !insertedItems || insertedItems.length === 0 ? "insertedItems missing or empty" : !customer?.email ? "customer.email missing" : "unknown",
+          };
+
       return res.json({ 
         success: true, 
         orderId,
         paymentMethod: 'cash',
-        message: 'Order created successfully. Payment will be collected upon delivery.'
+        message: 'Order created successfully. Payment will be collected upon delivery.',
+        emailStatus, // Include email status for debugging
       });
     }
 

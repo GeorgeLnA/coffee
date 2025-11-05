@@ -2,6 +2,7 @@ import Header from "../components/Header";
 import Footer from "../components/Footer";
 import { useCart } from "../contexts/CartContext";
 import { useState, useMemo, useEffect } from "react";
+import emailjs from "@emailjs/browser";
 import { useDeliverySettings } from "../hooks/use-supabase";
 import { toast } from "@/components/ui/use-toast";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -34,6 +35,280 @@ export default function Checkout() {
   const [settlements, setSettlements] = useState<any[]>([]);
   const [showCityDropdown, setShowCityDropdown] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Format shipping address based on shipping method
+  const formatShippingAddress = (): string => {
+    if (shippingMethod === 'nova_department' || shippingMethod === 'nova_postomat') {
+      // Nova Poshta: city + department/postomat
+      let addr = city || '';
+      if (selectedWarehouse) {
+        const selectedWh = warehouses.find((wh: any) => wh.Ref === selectedWarehouse);
+        if (selectedWh) {
+          const whDesc = selectedWh.Description || selectedWh.ShortAddress || '';
+          if (shippingMethod === 'nova_department') {
+            // Extract department number from description
+            const deptMatch = whDesc.match(/№(\d+)/);
+            const deptNum = deptMatch ? deptMatch[1] : (department || '');
+            if (deptNum) {
+              addr += addr ? `, Відділення №${deptNum}` : `Відділення №${deptNum}`;
+            } else {
+              addr += addr ? `, ${whDesc}` : whDesc;
+            }
+          } else {
+            // Postomat - use reference or description
+            addr += addr ? `, Поштомат ${selectedWarehouse.substring(0, 8)}...` : `Поштомат ${selectedWarehouse.substring(0, 8)}...`;
+            if (whDesc) {
+              addr += ` (${whDesc})`;
+            }
+          }
+        } else if (department) {
+          addr += addr ? `, Відділення №${department}` : `Відділення №${department}`;
+        }
+      } else if (department) {
+        addr += addr ? `, Відділення №${department}` : `Відділення №${department}`;
+      }
+      return addr || 'Не вказано';
+    } else if (shippingMethod === 'nova_courier' || shippingMethod === 'own_courier') {
+      // Courier: just address (no city)
+      return address || 'Не вказано';
+    }
+    return 'Не вказано';
+  };
+
+  // Format shipping method display name
+  const formatShippingMethodName = (): string => {
+    switch (shippingMethod) {
+      case 'nova_department':
+        return 'Нова Пошта (на відділення)';
+      case 'nova_postomat':
+        return 'Нова Пошта (на поштомат)';
+      case 'nova_courier':
+        return 'Нова Пошта (кур\'єром)';
+      case 'own_courier':
+        return 'Власна доставка (Київ)';
+      default:
+        return 'Не вказано';
+    }
+  };
+
+  async function handleSendTestEmail() {
+    try {
+      const serviceId = import.meta.env.VITE_EMAILJS_SERVICE_ID as string;
+      const templateIdCustomer = import.meta.env.VITE_EMAILJS_TEMPLATE_ID_CUSTOMER as string;
+      const templateIdAdmin = import.meta.env.VITE_EMAILJS_TEMPLATE_ID_ADMIN as string;
+      const publicKey = import.meta.env.VITE_EMAILJS_PUBLIC_KEY as string;
+      const adminEmails = (import.meta.env.VITE_ADMIN_EMAILS as string) || "davidnuk877@gmail.com";
+
+      if (!serviceId || !templateIdCustomer || !templateIdAdmin || !publicKey) {
+        console.warn("EmailJS env missing", { serviceId: !!serviceId, templateIdCustomer: !!templateIdCustomer, templateIdAdmin: !!templateIdAdmin, publicKey: !!publicKey });
+        toast({ title: 'Налаштуйте EmailJS (VITE_* в .env.local)', description: 'VITE_EMAILJS_SERVICE_ID, VITE_EMAILJS_TEMPLATE_ID_CUSTOMER, VITE_EMAILJS_TEMPLATE_ID_ADMIN, VITE_EMAILJS_PUBLIC_KEY' as any, variant: 'destructive' as any });
+        return;
+      }
+
+      const customerEmail = email || 'godavid877@gmail.com';
+      if (!customerEmail || !customerEmail.includes('@')) {
+        toast({ title: 'Введіть email адресу', description: 'Заповніть поле Email або використайте Auto-fill' as any, variant: 'destructive' as any });
+        return;
+      }
+
+      // Format shipping address properly
+      const formattedShippingAddress = formatShippingAddress();
+      const formattedShippingMethod = formatShippingMethodName();
+
+      const orderId = `TEST-${Date.now()}`;
+      const templateParams: Record<string, any> = {
+        to_email: customerEmail,
+        to_name: fullName || 'Тестовий Користувач',
+        order_id: orderId,
+        order_date: new Date().toLocaleDateString('uk-UA'),
+        order_items_html: items.length > 0 ? items.map((item: any) => {
+          const itemName = item.name || 'Товар';
+          const variantText = item.variant ? ` (${item.variant})` : '';
+          const quantity = item.quantity || 1;
+          const price = item.price || 0;
+          const total = (price * quantity).toFixed(2);
+          return `${itemName}${variantText} - ${quantity} шт. × ${price.toFixed(2)} грн = ${total} грн`;
+        }).join('\n') : 'Товари не знайдено',
+        customer_name: fullName || 'Тестовий Користувач',
+        billing_address: formattedShippingAddress,
+        information: formattedShippingAddress, // Alias for "Information" label
+        customer_phone: phone || '—',
+        customer_email: customerEmail,
+        shipping_address: formattedShippingAddress,
+        order_notes: notes || '', // Leave empty if no notes
+        order_total: `₴${totalPrice.toFixed(2)}`,
+        shipping_method: formattedShippingMethod,
+        payment_method: paymentMethod === 'cash' ? 'Оплата при отриманні' : paymentMethod === 'liqpay' ? 'Онлайн оплата (LiqPay)' : paymentMethod || 'Не вказано',
+        reply_to: customerEmail,
+        // Additional shipping details
+        shipping_city: city || null,
+        shipping_department: department || null,
+        shipping_warehouse_ref: selectedWarehouse || null,
+      };
+
+      console.log('Sending EmailJS test email to:', customerEmail);
+      console.log('Template params:', { ...templateParams, order_items_html: '[HTML]' });
+
+      // EmailJS requires the recipient to be in template params
+      // Make sure to_email is the first parameter and is valid
+      const customerTemplateParams = {
+        to_email: customerEmail.trim(),
+        ...templateParams,
+      };
+      
+      // Remove any undefined or empty values
+      Object.keys(customerTemplateParams).forEach(key => {
+        if (customerTemplateParams[key] === undefined || customerTemplateParams[key] === '') {
+          delete customerTemplateParams[key];
+        }
+      });
+      
+      console.log('Final customer template params (to_email):', customerTemplateParams.to_email);
+      
+      // Send customer email
+      const customerRes = await emailjs.send(
+        serviceId, 
+        templateIdCustomer, 
+        customerTemplateParams,
+        publicKey
+      );
+      console.log('EmailJS customer send result:', customerRes?.status, customerRes?.text);
+
+      // Send admin emails (comma-separated)
+      const admins = adminEmails.split(',').map((e) => e.trim()).filter(Boolean);
+      const adminResults = [] as Array<{ email: string; status: any }>;
+      for (const admin of admins) {
+        if (!admin || !admin.includes('@')) continue;
+        
+        // Create admin-specific template params - use admin email for recipient
+        // IMPORTANT: Spread templateParams FIRST, then override to_email to ensure admin email is used
+        const adminTemplateParams: Record<string, any> = {
+          ...templateParams,
+          to_email: admin.trim(), // CRITICAL: Set AFTER spread to override customer email
+          to_name: 'Адміністратор', // Admin name
+        };
+        
+        // Remove any undefined or empty values
+        Object.keys(adminTemplateParams).forEach(key => {
+          if (adminTemplateParams[key] === undefined || adminTemplateParams[key] === '') {
+            delete adminTemplateParams[key];
+          }
+        });
+        
+        // FINAL CHECK: Ensure to_email is definitely the admin email (not customer)
+        if (adminTemplateParams.to_email !== admin.trim()) {
+          console.warn('WARNING: to_email was overwritten! Fixing...', {
+            expected: admin.trim(),
+            actual: adminTemplateParams.to_email
+          });
+          adminTemplateParams.to_email = admin.trim();
+        }
+        
+        console.log('Sending admin email to:', adminTemplateParams.to_email);
+        console.log('Admin template params to_email:', adminTemplateParams.to_email);
+        console.log('Customer email in params (should be different):', templateParams.customer_email);
+        
+        const r = await emailjs.send(serviceId, templateIdAdmin, adminTemplateParams, publicKey);
+        adminResults.push({ email: admin, status: { code: r?.status, text: r?.text } });
+      }
+      console.log('EmailJS admin send results:', adminResults);
+
+      toast({ title: 'Тестові листи надіслані', description: `Відправлено до: ${customerEmail} та адміністраторів` as any });
+    } catch (err: any) {
+      console.error('EmailJS browser send error:', err);
+      const errorText = err?.text || err?.message || String(err);
+      
+      // Provide helpful error message for common issues
+      let errorMessage = errorText;
+      if (errorText.includes('recipients address is empty') || errorText.includes('422')) {
+        errorMessage = 'Налаштуйте EmailJS шаблон: поле "To Email" має містити {{to_email}}. Див. EMAILJS_TEMPLATE_FIX.md';
+      }
+      
+      toast({ 
+        title: 'Помилка EmailJS', 
+        description: errorMessage as any, 
+        variant: 'destructive' as any 
+      });
+    }
+  }
+
+  // Fallback: send order emails via EmailJS browser SDK (same logic as test button)
+  // Used when server-side email sending is unavailable or misconfigured
+  async function sendOrderEmailsClientSide(orderIdFromServer?: string) {
+    try {
+      const serviceId = import.meta.env.VITE_EMAILJS_SERVICE_ID as string;
+      const templateIdCustomer = import.meta.env.VITE_EMAILJS_TEMPLATE_ID_CUSTOMER as string;
+      const templateIdAdmin = import.meta.env.VITE_EMAILJS_TEMPLATE_ID_ADMIN as string;
+      const publicKey = import.meta.env.VITE_EMAILJS_PUBLIC_KEY as string;
+      const adminEmails = (import.meta.env.VITE_ADMIN_EMAILS as string) || "davidnuk877@gmail.com";
+
+      if (!serviceId || !templateIdCustomer || !templateIdAdmin || !publicKey) {
+        console.warn("[Email Fallback] Missing VITE_* EmailJS envs; skipping client send");
+        return;
+      }
+
+      const customerEmail = email;
+      if (!customerEmail || !/\S+@\S+\.\S+/.test(customerEmail)) {
+        console.warn("[Email Fallback] Invalid customer email; skipping client send");
+        return;
+      }
+
+      const formattedShippingAddress = formatShippingAddress();
+      const formattedShippingMethod = formatShippingMethodName();
+      const orderId = orderIdFromServer || `ORDER-${Date.now()}`;
+
+      const templateParams: Record<string, any> = {
+        to_email: customerEmail,
+        to_name: fullName || 'Клієнт',
+        order_id: orderId,
+        order_date: new Date().toLocaleDateString('uk-UA'),
+        order_items_html: items.length > 0 ? items.map((item: any) => {
+          const itemName = item.name || 'Товар';
+          const variantText = item.variant ? ` (${item.variant})` : '';
+          const quantity = item.quantity || 1;
+          const price = item.price || 0;
+          const total = (price * quantity).toFixed(2);
+          return `${itemName}${variantText} - ${quantity} шт. × ${price.toFixed(2)} грн = ${total} грн`;
+        }).join('\n') : 'Товари не знайдено',
+        customer_name: fullName || 'Клієнт',
+        billing_address: formattedShippingAddress,
+        information: formattedShippingAddress, // Alias for "Information" label
+        customer_phone: phone || '—',
+        customer_email: customerEmail,
+        shipping_address: formattedShippingAddress,
+        order_notes: notes || '', // Leave empty if no notes
+        order_total: `₴${totalPrice.toFixed(2)}`,
+        shipping_method: formattedShippingMethod,
+        payment_method: paymentMethod === 'cash' ? 'Оплата при отриманні' : paymentMethod === 'liqpay' ? 'Онлайн оплата (LiqPay)' : paymentMethod || 'Не вказано',
+        reply_to: customerEmail,
+        shipping_city: city || null,
+        shipping_department: department || null,
+        shipping_warehouse_ref: selectedWarehouse || null,
+      };
+
+      // Customer email
+      const customerTemplateParams = { to_email: customerEmail.trim(), ...templateParams };
+      Object.keys(customerTemplateParams).forEach(key => {
+        if (customerTemplateParams[key] === undefined || customerTemplateParams[key] === '') delete (customerTemplateParams as any)[key];
+      });
+      const customerRes = await emailjs.send(serviceId, templateIdCustomer, customerTemplateParams, publicKey);
+      console.log('[Email Fallback] Customer email result:', customerRes?.status, customerRes?.text);
+
+      // Admin emails
+      const admins = adminEmails.split(',').map((e) => e.trim()).filter(Boolean);
+      for (const admin of admins) {
+        if (!admin || !admin.includes('@')) continue;
+        const adminTemplateParams: Record<string, any> = { ...templateParams, to_email: admin.trim(), to_name: 'Адміністратор' };
+        Object.keys(adminTemplateParams).forEach(key => {
+          if (adminTemplateParams[key] === undefined || adminTemplateParams[key] === '') delete adminTemplateParams[key];
+        });
+        const r = await emailjs.send(serviceId, templateIdAdmin, adminTemplateParams, publicKey);
+        console.log('[Email Fallback] Admin email to', admin, '=>', r?.status, r?.text);
+      }
+    } catch (e) {
+      console.error('[Email Fallback] Error sending emails via browser:', e);
+    }
+  }
 
   // Check if cart contains water items
   const hasWaterItems = useMemo(() => {
@@ -240,7 +515,33 @@ export default function Checkout() {
       });
 
       const data = await res.json();
+      console.log("Order prepare response:", data);
+      
       if (!res.ok) throw new Error(data?.error || "Не вдалося створити замовлення");
+      
+      // Log email sending status if available
+      if (data.emailStatus) {
+        console.log("=== EMAIL STATUS FROM SERVER ===");
+        console.log("Email attempted:", data.emailStatus.attempted);
+        console.log("Email configured:", data.emailStatus.configured);
+        if (!data.emailStatus.attempted) {
+          console.warn("Email not sent - reason:", data.emailStatus.reason);
+        }
+        if (data.emailStatus.attempted && !data.emailStatus.configured) {
+          console.warn("Email attempted but EmailJS not configured!");
+        }
+        console.log("=== END EMAIL STATUS ===");
+      }
+
+      // Fallback: send emails via browser for cash orders (same logic as test button)
+      try {
+        if (paymentMethod === 'cash') {
+          console.log('[Email Fallback] Triggering browser send for cash order...');
+          await sendOrderEmailsClientSide(data?.orderId);
+        }
+      } catch (e) {
+        console.error('[Email Fallback] Error:', e);
+      }
 
       // Handle different payment methods
       if (paymentMethod === "cash" || data.paymentMethod === "cash") {
@@ -296,6 +597,38 @@ export default function Checkout() {
               <Input placeholder="ПІБ" value={fullName} onChange={e => setFullName(e.target.value)} className="mb-3" />
               <Input placeholder="Телефон" value={phone} onChange={e => setPhone(e.target.value)} className="mb-3" />
               <Input placeholder="Email" type="email" value={email} onChange={e => setEmail(e.target.value)} className="mb-3" />
+              {/* TEMP: Auto-fill button for testing */}
+              <button
+                type="button"
+                onClick={() => {
+                  setFullName("Тестовий Користувач");
+                  setPhone("+380501234567");
+                  setEmail("godavid877@gmail.com");
+                  setCity("Київ");
+                  setCityRef("8d5a980d-391c-11dd-90d9-001a92567626");
+                  setCityQuery("Київ");
+                  setAddress("вул. Тестова, 1");
+                  setShippingMethod("nova_department");
+                  setPaymentMethod("liqpay");
+                  setNotes("Тестове замовлення");
+                  // Trigger warehouse load after a short delay
+                  setTimeout(() => {
+                    loadWarehouses();
+                  }, 100);
+                }}
+                className="mb-3 px-4 py-2 bg-orange-500 text-white rounded hover:bg-orange-600 text-sm font-medium"
+              >
+                🧪 Auto-fill (TEST)
+              </button>
+
+              {/* TEMP: Send EmailJS test */}
+              <button
+                type="button"
+                onClick={handleSendTestEmail}
+                className="mb-3 ml-2 text-sm underline text-blue-600 hover:text-blue-700"
+              >
+                Надіслати тестовий лист (EmailJS)
+              </button>
             </div>
 
             <div className="md:col-span-2">

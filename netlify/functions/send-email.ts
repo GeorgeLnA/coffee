@@ -3,45 +3,92 @@ import type { Handler } from "@netlify/functions";
 /**
  * Helper function to send emails via EmailJS REST API
  * This is called from other Netlify functions (server-side)
+ * Uses private key for server-side REST API calls
  */
 export async function sendEmailViaEmailJS(params: {
   serviceId: string;
   templateId: string;
-  publicKey: string;
+  publicKey: string; // Keep for backward compatibility, but use privateKey if available
+  privateKey?: string; // Optional private key for server-side REST API
   templateParams: Record<string, any>;
 }): Promise<{ success: boolean; error?: string }> {
   try {
-    const { serviceId, templateId, publicKey, templateParams } = params;
+    const { serviceId, templateId, publicKey, privateKey, templateParams } = params;
+
+    // Use private key for server-side REST API if available, otherwise fall back to public key
+    const apiKey = privateKey || publicKey;
+    const keyType = privateKey ? "PRIVATE" : "PUBLIC";
+
+    console.log("=== EMAILJS DEBUG START ===");
+    console.log("Service ID:", serviceId);
+    console.log("Template ID:", templateId);
+    console.log(`API Key type: ${keyType}`);
+    console.log("API Key (first 4):", apiKey?.substring(0, 4) + "...");
+    console.log("API Key length:", apiKey?.length);
+    console.log("Template Params keys:", Object.keys(templateParams));
+    console.log("To email:", templateParams.to_email);
+    console.log("Order ID:", templateParams.order_id);
 
     const emailjsUrl = `https://api.emailjs.com/api/v1.0/email/send`;
+
+    const requestBody = {
+      service_id: serviceId,
+      template_id: templateId,
+      user_id: apiKey, // Use private key for server-side if available
+      template_params: templateParams,
+    };
+
+    console.log("Request URL:", emailjsUrl);
+    console.log("Request body (sanitized):", {
+      service_id: serviceId,
+      template_id: templateId,
+      user_id: apiKey?.substring(0, 4) + "...",
+      template_params_keys: Object.keys(templateParams),
+    });
 
     const response = await fetch(emailjsUrl, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({
-        service_id: serviceId,
-        template_id: templateId,
-        user_id: publicKey,
-        template_params: templateParams,
-      }),
+      body: JSON.stringify(requestBody),
     });
 
+    console.log("Response status:", response.status);
+    console.log("Response ok:", response.ok);
+    console.log("Response headers:", Object.fromEntries(response.headers.entries()));
+
+    const responseText = await response.text();
+    console.log("Response text:", responseText);
+
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error("EmailJS API error:", errorText);
+      console.error("EmailJS API error:", {
+        status: response.status,
+        statusText: response.statusText,
+        body: responseText,
+      });
       return {
         success: false,
-        error: `EmailJS API error: ${response.status} ${errorText}`,
+        error: `EmailJS API error: ${response.status} ${responseText}`,
       };
     }
 
-    const result = await response.json();
+    let result;
+    try {
+      result = JSON.parse(responseText);
+    } catch {
+      result = { raw: responseText };
+    }
     console.log("Email sent successfully:", result);
+    console.log("=== EMAILJS DEBUG END ===");
     return { success: true };
   } catch (error: any) {
-    console.error("Error sending email:", error);
+    console.error("=== EMAILJS ERROR ===");
+    console.error("Error type:", error?.constructor?.name);
+    console.error("Error message:", error?.message);
+    console.error("Error stack:", error?.stack);
+    console.error("Full error:", error);
+    console.error("=== EMAILJS ERROR END ===");
     return {
       success: false,
       error: error.message || "Unknown error sending email",
@@ -73,6 +120,7 @@ export async function sendOrderConfirmationEmail(params: {
   emailjsServiceId: string;
   emailjsTemplateIdCustomer: string;
   emailjsPublicKey: string;
+  emailjsPrivateKey?: string; // Optional private key for server-side REST API
 }): Promise<{ success: boolean; error?: string }> {
   const {
     customerEmail,
@@ -89,6 +137,7 @@ export async function sendOrderConfirmationEmail(params: {
     emailjsServiceId,
     emailjsTemplateIdCustomer,
     emailjsPublicKey,
+    emailjsPrivateKey,
   } = params;
 
   // Format order date (Ukrainian format: DD.MM.YYYY)
@@ -100,69 +149,23 @@ export async function sendOrderConfirmationEmail(params: {
     return `${day}.${month}.${year}`;
   };
 
-  // Generate HTML for order items (only use data we have)
+  // Generate simple text for order items (no HTML, just plain text)
   const generateOrderItemsHTML = (items: typeof orderItems): string => {
     if (!items || items.length === 0) {
-      return '<p style="color: #000000; font-size: 15px;">Товари не знайдено</p>';
+      return 'Товари не знайдено';
     }
 
     return items.map((item) => {
-      // Only use data that exists
       const itemName = item.name || 'Невідомий товар';
-      const itemImage = item.image || 'https://coffeemanifest.com.ua/wp-content/uploads/2024/03/logo_manifest.png';
       const itemQuantity = item.quantity || 1;
       const itemPrice = item.price || 0;
       const itemTotal = (itemPrice * itemQuantity).toFixed(2);
-      const variantText = item.variant ? ` - ${item.variant}` : '';
-      
-      // Escape HTML to prevent XSS
-      const escapeHtml = (text: string): string => {
-        const map: Record<string, string> = {
-          '&': '&amp;',
-          '<': '&lt;',
-          '>': '&gt;',
-          '"': '&quot;',
-          "'": '&#039;',
-        };
-        return text.replace(/[&<>"']/g, (m) => map[m]);
-      };
-      
-      const safeName = escapeHtml(itemName);
-      const safeImage = escapeHtml(itemImage);
-      
-      return `
-        <table width="100%" border="0" cellpadding="0" cellspacing="0" align="center" valign="middle" style="border: 0 hidden; border-collapse: collapse; font-size: 0; margin-bottom: 10px;">
-          <tr>
-            <td valign="middle" style="display: inline-block; overflow: hidden; width: 100px;" width="100">
-              <table border="0" cellpadding="0" cellspacing="0" valign="middle" style="max-width: 100%; border-collapse: collapse; width: 100%;" width="100%">
-                <tr>
-                  <td valign="middle" style="max-width: 100%; overflow: hidden;">
-                    <img width="100%" alt="${safeName}" src="${safeImage}" style="border: 0; height: auto; line-height: 100%; outline: none; text-decoration: none; background-color: transparent; max-width: 100%; vertical-align: middle; width: 100%;" border="0">
-                  </td>
-                </tr>
-              </table>
-            </td>
-            <td valign="middle" style="display: inline-block; overflow: hidden; width: 268px;" width="268">
-              <table border="0" cellpadding="0" cellspacing="0" valign="middle" style="max-width: 100%; width: 100%; border-collapse: collapse; line-height: 150%; font-size: 15px;" width="100%">
-                <tr>
-                  <td valign="middle" style="max-width: 100%; overflow: hidden; font-size: 0; padding: 0; width: 15px;" width="15"></td>
-                  <td valign="middle" style="max-width: 100%; overflow: hidden;">
-                    <span style="max-width: 100%; box-sizing: border-box; font-size: 16px; font-weight: 400; font-family: Helvetica Neue, Helvetica, Roboto, Arial, sans-serif; color: #000000; line-height: 25px;">${safeName}${variantText ? ` - ${escapeHtml(item.variant)}` : ''}</span>
-                    <p style="max-width: 100%; box-sizing: border-box; display: block; margin: 0; font-size: 18px; font-weight: 600; font-family: Helvetica Neue, Helvetica, Roboto, Arial, sans-serif; color: #000000; line-height: 30px;">x ${itemQuantity}</p>
-                    <p style="max-width: 100%; box-sizing: border-box; display: block; margin: 0; font-size: 22px; font-weight: 600; font-family: Helvetica Neue, Helvetica, Roboto, Arial, sans-serif; color: #000000; line-height: 30px;">
-                      <span style="max-width: 100%; color: inherit; box-sizing: border-box;">${itemPrice.toFixed(2)}&nbsp;<span style="max-width: 100%; color: inherit; box-sizing: border-box;">грн</span></span>
-                    </p>
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-        </table>
-      `;
-    }).join('');
+      const variantText = item.variant ? ` (${item.variant})` : '';
+      return `${itemName}${variantText} - ${itemQuantity} шт. × ${itemPrice.toFixed(2)} грн = ${itemTotal} грн`;
+    }).join('\n');
   };
 
-  // Format shipping method
+  // Format shipping method (handle both raw method codes and pre-formatted strings)
   const shippingMethodText = shippingMethod 
     ? (shippingMethod === 'nova_department' 
         ? 'Нова Пошта (на відділення)' 
@@ -171,11 +174,11 @@ export async function sendOrderConfirmationEmail(params: {
         : shippingMethod === 'nova_courier'
         ? 'Нова Пошта (кур\'єром)'
         : shippingMethod === 'own_courier'
-        ? 'Власна доставка'
-        : shippingMethod)
+        ? 'Власна доставка (Київ)'
+        : shippingMethod) // Use as-is if already formatted
     : 'Не вказано';
 
-  // Format payment method
+  // Format payment method (handle both raw codes and pre-formatted strings)
   const paymentMethodText =
     paymentMethod === "cash"
       ? "Оплата при отриманні"
@@ -190,11 +193,12 @@ export async function sendOrderConfirmationEmail(params: {
     order_date: formatDate(orderDate),
     order_items_html: generateOrderItemsHTML(orderItems),
     customer_name: customerName,
-    billing_address: shippingAddress, // For billing, we use shipping address
+    billing_address: shippingAddress, // For billing, we use shipping address (displayed as "Information")
+    information: shippingAddress, // Alias for "Information" label
     customer_phone: customerPhone,
     customer_email: customerEmail,
     shipping_address: shippingAddress || 'Не вказано',
-    order_notes: orderNotes || '—',
+    order_notes: orderNotes || '', // Leave empty if no notes
     order_total: `₴${orderTotal.toFixed(2)}`,
     shipping_method: shippingMethodText,
     payment_method: paymentMethodText,
@@ -204,6 +208,7 @@ export async function sendOrderConfirmationEmail(params: {
     serviceId: emailjsServiceId,
     templateId: emailjsTemplateIdCustomer,
     publicKey: emailjsPublicKey,
+    privateKey: emailjsPrivateKey, // Pass private key for server-side REST API
     templateParams,
   });
 }
@@ -228,6 +233,7 @@ export async function sendOrderNotificationEmail(params: {
   emailjsServiceId: string;
   emailjsTemplateIdAdmin: string;
   emailjsPublicKey: string;
+  emailjsPrivateKey?: string; // Optional private key for server-side REST API
 }): Promise<{ success: boolean; error?: string }> {
   const {
     adminEmails,
@@ -246,75 +252,23 @@ export async function sendOrderNotificationEmail(params: {
     emailjsServiceId,
     emailjsTemplateIdAdmin,
     emailjsPublicKey,
+    emailjsPrivateKey,
   } = params;
 
-  // Generate HTML for order items (admin email uses table format)
+  // Generate simple text for order items (admin email - same as customer, just plain text)
   const generateAdminOrderItemsHTML = (items: typeof orderItems): string => {
     if (!items || items.length === 0) {
-      return '<tr><td colspan="3" style="color: #636363; padding: 8px 12px;">Товари не знайдено</td></tr>';
+      return 'Товари не знайдено';
     }
 
-    return items.map((item, index) => {
+    return items.map((item) => {
       const itemName = item.name || 'Невідомий товар';
-      const itemImage = item.image || 'https://coffeemanifest.com.ua/wp-content/uploads/2024/03/logo_manifest.png';
       const itemQuantity = item.quantity || 1;
       const itemPrice = Number(item.price) || 0;
       const itemTotal = (itemPrice * itemQuantity).toFixed(2);
-      const variantText = item.variant || '';
-      // Determine variant display: "В зернах" or "Мелена"
-      let variantDisplay = '';
-      if (variantText) {
-        const variantLower = variantText.toLowerCase();
-        if (variantLower.includes('зернах') || variantLower.includes('beans') || variantLower === 'в зернах') {
-          variantDisplay = 'В зернах';
-        } else if (variantLower.includes('мелен') || variantLower.includes('молот') || variantLower.includes('grounded') || variantLower === 'мелена') {
-          variantDisplay = 'Мелена';
-        } else {
-          variantDisplay = variantText; // Use as-is if unclear
-        }
-      }
-      
-      // Escape HTML
-      const escapeHtml = (text: string): string => {
-        const map: Record<string, string> = {
-          '&': '&amp;',
-          '<': '&lt;',
-          '>': '&gt;',
-          '"': '&quot;',
-          "'": '&#039;',
-        };
-        return text.replace(/[&<>"']/g, (m) => map[m]);
-      };
-      
-      const safeName = escapeHtml(itemName);
-      const safeImage = escapeHtml(itemImage);
-      const isLast = index === items.length - 1;
-      const borderBottom = isLast ? 'border-bottom: 1px solid rgba(0,0,0,.2); padding-bottom: 24px;' : 'border-bottom: 1px solid rgba(0,0,0,.2); padding-bottom: 24px;';
-      
-      return `
-        <tr>
-          <td style="color: #636363; border: 0; font-family: 'Helvetica Neue', Helvetica, Roboto, Arial, sans-serif; text-align: left; padding: 8px 12px; padding-left: 0; vertical-align: middle; word-wrap: break-word; ${borderBottom}" align="left">
-            <table style="color: #3c3c3c; font-family: 'Helvetica Neue', Helvetica, Roboto, Arial, sans-serif;">
-              <tr>
-                <td style="vertical-align: middle; padding-left: 0; border-bottom: 1px solid rgba(0,0,0,.2); padding-bottom: 24px; border: 0; padding: 0;">
-                  <img width="48" height="48" src="${safeImage}" alt="${safeName}" style="border: none; display: inline-block; font-size: 14px; font-weight: bold; height: auto; outline: none; text-decoration: none; text-transform: capitalize; vertical-align: middle; margin-right: 24px; max-width: 100%;" border="0">
-                </td>
-                <td style="vertical-align: middle; padding-right: 0; border-bottom: 1px solid rgba(0,0,0,.2); padding-bottom: 24px; border: 0; padding: 0;">
-                  ${safeName}
-                  ${variantText ? `<div style="color: #3c3c3c; font-size: 14px; line-height: 140%;"><span>Тип:</span> ${escapeHtml(variantDisplay)}</div>` : ''}
-                </td>
-              </tr>
-            </table>
-          </td>
-          <td style="color: #636363; border: 0; font-family: 'Helvetica Neue', Helvetica, Roboto, Arial, sans-serif; text-align: right; padding: 8px 12px; vertical-align: middle; ${borderBottom}" align="right">
-            ×${itemQuantity}
-          </td>
-          <td style="color: #636363; border: 0; font-family: 'Helvetica Neue', Helvetica, Roboto, Arial, sans-serif; text-align: right; padding: 8px 12px; padding-right: 0; vertical-align: middle; ${borderBottom}" align="right">
-            <span>${itemTotal}&nbsp;<span>₴</span></span>
-          </td>
-        </tr>
-      `;
-    }).join('');
+      const variantText = item.variant ? ` (${item.variant})` : '';
+      return `${itemName}${variantText} - ${itemQuantity} шт. × ${itemPrice.toFixed(2)} грн = ${itemTotal} грн`;
+    }).join('\n');
   };
 
   // Format order items for email (text version for simple templates)
@@ -325,21 +279,39 @@ export async function sendOrderNotificationEmail(params: {
     })
     .join("\n");
 
-  // Format shipping details
-  let shippingDetails = shippingAddress;
-  if (shippingCity) {
-    shippingDetails = `${shippingCity}, ${shippingDetails}`;
-  }
-  if (shippingDepartment) {
-    const departmentType =
-      shippingMethod === "nova_postomat" ? "Поштомат" : "Відділення";
-    shippingDetails += ` (${departmentType} №${shippingDepartment})`;
+  // Use shipping address directly (already formatted by caller)
+  // Only rebuild if shippingAddress is empty but we have city/department
+  let shippingDetails = shippingAddress || 'Не вказано';
+  if (!shippingAddress && (shippingCity || shippingDepartment)) {
+    // Fallback: rebuild only if shippingAddress wasn't provided
+    shippingDetails = shippingCity || '';
+    if (shippingDepartment) {
+      const departmentType =
+        shippingMethod === "nova_postomat" ? "Поштомат" : "Відділення";
+      shippingDetails += shippingDetails ? `, ${departmentType} №${shippingDepartment}` : `${departmentType} №${shippingDepartment}`;
+    }
+    if (!shippingDetails) {
+      shippingDetails = 'Не вказано';
+    }
   }
 
-  // Format payment method
+  // Format shipping method (handle both raw method codes and pre-formatted strings)
+  const shippingMethodText = shippingMethod 
+    ? (shippingMethod === 'nova_department' 
+        ? 'Нова Пошта (на відділення)' 
+        : shippingMethod === 'nova_postomat'
+        ? 'Нова Пошта (на поштомат)'
+        : shippingMethod === 'nova_courier'
+        ? 'Нова Пошта (кур\'єром)'
+        : shippingMethod === 'own_courier'
+        ? 'Власна доставка (Київ)'
+        : shippingMethod) // Use as-is if already formatted
+    : 'Не вказано';
+
+  // Format payment method (handle both raw codes and pre-formatted strings)
   const paymentMethodText =
     paymentMethod === "cash"
-      ? "Готівкою"
+      ? "Оплата при отриманні"
       : paymentMethod === "liqpay"
       ? "Онлайн оплата (LiqPay)"
       : paymentMethod || "Онлайн оплата";
@@ -372,32 +344,47 @@ export async function sendOrderNotificationEmail(params: {
     ? adminEmails
     : adminEmails.split(",").map((e) => e.trim()).filter(Boolean);
 
+  // Debug logging for notes
+  console.log("=== ADMIN EMAIL NOTES DEBUG (sendOrderNotificationEmail) ===");
+  console.log("notes parameter:", notes);
+  console.log("notes type:", typeof notes);
+  console.log("notes length:", notes?.length || 0);
+  console.log("notes truthy:", !!notes);
+
   // Send to all admin emails
   const results = await Promise.all(
-    emailArray.map((adminEmail) =>
-      sendEmailViaEmailJS({
+    emailArray.map((adminEmail) => {
+      const templateParams = {
+        to_email: adminEmail,
+        customer_name: customerName,
+        customer_email: customerEmail,
+        customer_phone: customerPhone,
+        order_id: orderId,
+        order_date: formatDate(orderId),
+        order_items_html: generateAdminOrderItemsHTML(orderItems),
+        order_items: itemsList, // Text version for simple templates
+        billing_address: shippingDetails,
+        information: shippingDetails, // Alias for "Information" label
+        shipping_address: shippingDetails,
+        shipping_method: shippingMethod || 'Не вказано',
+        shipping_cost: shippingMethod ? 'За тарифами перевізника' : '—',
+        order_total: `₴${orderTotal.toFixed(2)}`,
+        payment_method: paymentMethodText,
+        notes: notes || '', // Leave empty if no notes
+        order_notes: notes || '', // Also include as order_notes for compatibility
+      };
+      
+      console.log(`[Admin Email ${adminEmail}] Template params notes:`, templateParams.notes);
+      console.log(`[Admin Email ${adminEmail}] Template params order_notes:`, templateParams.order_notes);
+      
+      return sendEmailViaEmailJS({
         serviceId: emailjsServiceId,
         templateId: emailjsTemplateIdAdmin,
         publicKey: emailjsPublicKey,
-        templateParams: {
-          to_email: adminEmail,
-          customer_name: customerName,
-          customer_email: customerEmail,
-          customer_phone: customerPhone,
-          order_id: orderId,
-          order_date: formatDate(orderId),
-          order_items_html: generateAdminOrderItemsHTML(orderItems),
-          order_items: itemsList, // Text version for simple templates
-          billing_address: shippingDetails,
-          shipping_address: shippingDetails,
-          shipping_method: shippingMethod || 'Не вказано',
-          shipping_cost: shippingMethod ? 'За тарифами перевізника' : '—',
-          order_total: `₴${orderTotal.toFixed(2)}`,
-          payment_method: paymentMethodText,
-          notes: notes || "—",
-        },
-      })
-    )
+        privateKey: emailjsPrivateKey, // Pass private key for server-side REST API
+        templateParams,
+      });
+    })
   );
 
   // Return success if at least one email was sent
