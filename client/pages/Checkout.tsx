@@ -234,19 +234,17 @@ export default function Checkout() {
 
   // Fallback: send order emails via EmailJS browser SDK (same logic as test button)
   // Used when server-side email sending is unavailable or misconfigured
-  // NOTE: This only works in dev environment with VITE_* variables
-  // In production, server-side emails should work with EMAILJS_* variables on Netlify
+  // Works in dev with VITE_* vars; in production we also try using safe defaults (public key + template/service IDs)
   async function sendOrderEmailsClientSide(orderIdFromServer?: string) {
     try {
-      const serviceId = import.meta.env.VITE_EMAILJS_SERVICE_ID as string;
-      const templateIdCustomer = import.meta.env.VITE_EMAILJS_TEMPLATE_ID_CUSTOMER as string;
-      const templateIdAdmin = import.meta.env.VITE_EMAILJS_TEMPLATE_ID_ADMIN as string;
-      const publicKey = import.meta.env.VITE_EMAILJS_PUBLIC_KEY as string;
-      const adminEmails = (import.meta.env.VITE_ADMIN_EMAILS as string) || "davidnuk877@gmail.com";
+      const serviceId = (import.meta.env.VITE_EMAILJS_SERVICE_ID as string) || 'service_kifgtn2';
+      const templateIdCustomer = (import.meta.env.VITE_EMAILJS_TEMPLATE_ID_CUSTOMER as string) || 'template_gjxblw6';
+      const templateIdAdmin = (import.meta.env.VITE_EMAILJS_TEMPLATE_ID_ADMIN as string) || 'template_4ft87b9';
+      const publicKey = (import.meta.env.VITE_EMAILJS_PUBLIC_KEY as string) || 'dK2FblsCDGEM8ZpPq';
+      const adminEmails = (import.meta.env.VITE_ADMIN_EMAILS as string) || 'davidnuk877@gmail.com';
 
       if (!serviceId || !templateIdCustomer || !templateIdAdmin || !publicKey) {
-        console.warn("[Email Fallback] Missing VITE_* EmailJS envs; skipping client send");
-        console.warn("[Email Fallback] This is expected in production. Server-side emails should work with EMAILJS_* variables on Netlify.");
+        console.warn("[Email Fallback] EmailJS config missing; cannot send client-side");
         return;
       }
 
@@ -536,16 +534,27 @@ export default function Checkout() {
         console.log("=== END EMAIL STATUS ===");
       }
 
-      // NOTE: Client-side email fallback removed for production
-      // In production, emails should be sent server-side via Netlify functions
-      // Client-side fallback only works in dev with VITE_* variables
-      // If emails aren't sending, check Netlify environment variables:
-      // - EMAILJS_SERVICE_ID
-      // - EMAILJS_TEMPLATE_ID_CUSTOMER
-      // - EMAILJS_TEMPLATE_ID_ADMIN
-      // - EMAILJS_PUBLIC_KEY
-      // - EMAILJS_PRIVATE_KEY (optional, but recommended for server-side)
-      // - ADMIN_EMAILS
+      // Client-side fallback: if server-side emails failed/misconfigured, try sending via browser (public key)
+      try {
+        if (paymentMethod === 'cash' || data.paymentMethod === 'cash') {
+          let shouldFallback = false;
+          if (data.emailStatus) {
+            const attempted = !!data.emailStatus.attempted;
+            const configured = !!data.emailStatus.configured;
+            const details = (data.emailStatus as any).details;
+            const failedDetail = details && ((details.customer && details.customer.success === false) || (details.admin && details.admin.success === false));
+            shouldFallback = !attempted || !configured || !!failedDetail;
+          } else {
+            shouldFallback = true; // no status info, attempt fallback
+          }
+          if (shouldFallback) {
+            console.log('[Email Fallback] Trying client-side EmailJS send...');
+            await sendOrderEmailsClientSide(data?.orderId);
+          }
+        }
+      } catch (fallbackErr) {
+        console.warn('[Email Fallback] Client-side send failed:', fallbackErr);
+      }
 
       // Handle different payment methods
       if (paymentMethod === "cash" || data.paymentMethod === "cash") {
