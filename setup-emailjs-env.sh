@@ -59,7 +59,7 @@ declare -A envVars=(
     ["EMAILJS_TEMPLATE_ID_CUSTOMER"]="template_gjxblw6"
     ["EMAILJS_TEMPLATE_ID_ADMIN"]="template_4ft87b9"
     ["EMAILJS_PUBLIC_KEY"]="dK2FblsCDGEM8ZpPq"
-    ["ADMIN_EMAILS"]="davidnuk877@gmil.com"
+    ["ADMIN_EMAILS"]="davidnuk877@gmail.com"
 )
 
 echo ""

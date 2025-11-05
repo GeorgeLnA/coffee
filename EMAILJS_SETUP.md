@@ -8,7 +8,7 @@ Add these to your Netlify environment variables:
 2. **EMAILJS_TEMPLATE_ID_CUSTOMER** - `template_gjxblw6` (customer confirmation)
 3. **EMAILJS_TEMPLATE_ID_ADMIN** - `template_4ft87b9` (admin notification)
 4. **EMAILJS_PUBLIC_KEY** - `dK2FblsCDGEM8ZpPq` (User ID)
-5. **ADMIN_EMAILS** - Comma-separated list of admin emails (e.g., "davidnuk877@gmil.com,other@example.com")
+5. **ADMIN_EMAILS** - Comma-separated list of admin emails (e.g., "davidnuk877@gmail.com,other@example.com")
 
 ## EmailJS Template Variables
 

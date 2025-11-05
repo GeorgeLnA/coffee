@@ -32,7 +32,7 @@ Add these to your Netlify site settings:
   - **Scopes**: All scopes
 
 - **Variable**: `ADMIN_EMAILS`
-  - **Value**: `davidnuk877@gmil.com` (or comma-separated: `email1@example.com,email2@example.com`)
+  - **Value**: `davidnuk877@gmail.com` (or comma-separated: `email1@example.com,email2@example.com`)
   - **Scopes**: All scopes
 
 ## How to Add in Netlify

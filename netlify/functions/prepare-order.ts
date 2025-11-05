@@ -217,7 +217,7 @@ export const handler: Handler = async (event, context) => {
               const emailjsTemplateIdCustomer = process.env.EMAILJS_TEMPLATE_ID_CUSTOMER;
               const emailjsTemplateIdAdmin = process.env.EMAILJS_TEMPLATE_ID_ADMIN;
               const emailjsPublicKey = process.env.EMAILJS_PUBLIC_KEY;
-              const adminEmails = process.env.ADMIN_EMAILS || "davidnuk877@gmil.com";
+              const adminEmails = process.env.ADMIN_EMAILS || "davidnuk877@gmail.com";
 
               // Only send if EmailJS is configured
               if (emailjsServiceId && emailjsTemplateIdCustomer && emailjsTemplateIdAdmin && emailjsPublicKey) {

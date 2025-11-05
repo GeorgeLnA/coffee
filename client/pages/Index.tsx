@@ -122,23 +122,23 @@ export default function Index() {
     
     // Fallback to hardcoded if no data
     return [
-      {
-        name: t('cafes.cafe1.name'),
-        address: t('cafes.cafe1.address'),
+    {
+      name: t('cafes.cafe1.name'),
+      address: t('cafes.cafe1.address'),
         active: isCurrentlyOpen(6, 6, 14),
-        hours: t('cafes.cafe1.hours'),
-        lat: 50.4067,
-        lng: 30.6493
-      },
-      {
-        name: t('cafes.cafe2.name'),
-        address: t('cafes.cafe2.address'),
+      hours: t('cafes.cafe1.hours'),
+      lat: 50.4067,
+      lng: 30.6493
+    },
+    {
+      name: t('cafes.cafe2.name'),
+      address: t('cafes.cafe2.address'),
         active: isCurrentlyOpen(0, 6, 14),
-        hours: t('cafes.cafe2.hours'),
-        lat: 50.3824,
-        lng: 30.4590
-      }
-    ];
+      hours: t('cafes.cafe2.hours'),
+      lat: 50.3824,
+      lng: 30.4590
+    }
+  ];
   }, [contactPoints, currentTime, language, t]);
 
   // Reset selected trade point when trade points change
@@ -446,22 +446,22 @@ export default function Index() {
               
               <div className="space-y-6">
                 {homepageSettings?.video_feature1_ua || homepageSettings?.video_feature1_ru || t('video.feature1') ? (
-                  <div className="flex items-center space-x-4">
-                    <div className="w-2 h-2" style={{ backgroundColor: '#fcf4e4' }}></div>
+                <div className="flex items-center space-x-4">
+                  <div className="w-2 h-2" style={{ backgroundColor: '#fcf4e4' }}></div>
                     <span className="text-white font-bold text-lg">{language === 'ru' ? (homepageSettings?.video_feature1_ru || t('video.feature1')) : (homepageSettings?.video_feature1_ua || t('video.feature1'))}</span>
-                  </div>
+                </div>
                 ) : null}
                 {homepageSettings?.video_feature2_ua || homepageSettings?.video_feature2_ru || t('video.feature2') ? (
-                  <div className="flex items-center space-x-4">
-                    <div className="w-2 h-2" style={{ backgroundColor: '#fcf4e4' }}></div>
+                <div className="flex items-center space-x-4">
+                  <div className="w-2 h-2" style={{ backgroundColor: '#fcf4e4' }}></div>
                     <span className="text-white font-bold text-lg">{language === 'ru' ? (homepageSettings?.video_feature2_ru || t('video.feature2')) : (homepageSettings?.video_feature2_ua || t('video.feature2'))}</span>
-                  </div>
+                </div>
                 ) : null}
                 {homepageSettings?.video_feature3_ua || homepageSettings?.video_feature3_ru || t('video.feature3') ? (
-                  <div className="flex items-center space-x-4">
-                    <div className="w-2 h-2" style={{ backgroundColor: '#fcf4e4' }}></div>
+                <div className="flex items-center space-x-4">
+                  <div className="w-2 h-2" style={{ backgroundColor: '#fcf4e4' }}></div>
                     <span className="text-white font-bold text-lg">{language === 'ru' ? (homepageSettings?.video_feature3_ru || t('video.feature3')) : (homepageSettings?.video_feature3_ua || t('video.feature3'))}</span>
-                  </div>
+                </div>
                 ) : null}
               </div>
               
@@ -494,15 +494,15 @@ export default function Index() {
                  </h2>
                 
                     {homepageSettings?.about_desc1_ua || homepageSettings?.about_desc1_ru ? (
-                      <p className="text-xl text-gray-700 font-medium leading-relaxed mb-8">
+                    <p className="text-xl text-gray-700 font-medium leading-relaxed mb-8">
                         {language === 'ru' ? (homepageSettings?.about_desc1_ru || '') : (homepageSettings?.about_desc1_ua || '')}
-                      </p>
+                    </p>
                     ) : null}
 
                     {homepageSettings?.about_desc2_ua || homepageSettings?.about_desc2_ru ? (
-                      <p className="text-lg text-gray-700 font-medium leading-relaxed mb-12">
+                    <p className="text-lg text-gray-700 font-medium leading-relaxed mb-12">
                         {language === 'ru' ? (homepageSettings?.about_desc2_ru || '') : (homepageSettings?.about_desc2_ua || '')}
-                      </p>
+                    </p>
                     ) : null}
               </div>
 
@@ -553,21 +553,21 @@ export default function Index() {
 
           {/* Map - Google Maps with markers */}
           {tradePoints.filter(p => p.lat != null && p.lng != null && !isNaN(p.lat) && !isNaN(p.lng)).length > 0 && (
-            <div className="mb-20">
-              <div className="h-[600px] relative overflow-hidden rounded-lg bg-gray-200">
-                <GoogleMapsMap
+          <div className="mb-20">
+            <div className="h-[600px] relative overflow-hidden rounded-lg bg-gray-200">
+              <GoogleMapsMap
                   tradePoints={tradePoints.filter(p => p.lat != null && p.lng != null && !isNaN(p.lat) && !isNaN(p.lng))}
-                  selectedIndex={selectedTradePoint}
-                  onSelect={setSelectedTradePoint}
-                />
-              </div>
+                selectedIndex={selectedTradePoint}
+                onSelect={setSelectedTradePoint}
+              />
             </div>
+          </div>
           )}
 
           {/* Cafe List - Clean Grid */}
           {tradePoints.length > 0 && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12 mb-16 max-w-8xl mx-auto">
-              {tradePoints.map((cafe, index) => (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12 mb-16 max-w-8xl mx-auto">
+            {tradePoints.map((cafe, index) => (
               <div 
                 key={index} 
                 onClick={() => {
@@ -637,7 +637,7 @@ export default function Index() {
                 )}
               </div>
             ))}
-            </div>
+          </div>
           )}
 
         </div>
