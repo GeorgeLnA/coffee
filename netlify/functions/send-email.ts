@@ -15,16 +15,15 @@ export async function sendEmailViaEmailJS(params: {
   try {
     const { serviceId, templateId, publicKey, privateKey, templateParams } = params;
 
-    // Use private key for server-side REST API if available, otherwise fall back to public key
-    const apiKey = privateKey || publicKey;
-    const keyType = privateKey ? "PRIVATE" : "PUBLIC";
+    // For server-side REST API, EmailJS expects public key in user_id and private key in accessToken
+    const keyType = privateKey ? "PRIVATE+PUBLIC" : "PUBLIC_ONLY";
 
     console.log("=== EMAILJS DEBUG START ===");
     console.log("Service ID:", serviceId);
     console.log("Template ID:", templateId);
     console.log(`API Key type: ${keyType}`);
-    console.log("API Key (first 4):", apiKey?.substring(0, 4) + "...");
-    console.log("API Key length:", apiKey?.length);
+    console.log("Public Key (first 4):", publicKey?.substring(0, 4) + "...");
+    console.log("Private Key present:", !!privateKey);
     console.log("Template Params keys:", Object.keys(templateParams));
     console.log("To email:", templateParams.to_email);
     console.log("Order ID:", templateParams.order_id);
@@ -36,18 +35,22 @@ export async function sendEmailViaEmailJS(params: {
 
     const emailjsUrl = `https://api.emailjs.com/api/v1.0/email/send`;
 
-    const requestBody = {
+    const requestBody: Record<string, any> = {
       service_id: serviceId,
       template_id: templateId,
-      user_id: apiKey, // Use private key for server-side if available
+      user_id: publicKey, // Always send public key here
       template_params: templateParams,
     };
+    if (privateKey) {
+      requestBody.accessToken = privateKey; // Server-side requires private key here
+    }
 
     console.log("Request URL:", emailjsUrl);
     console.log("Request body (sanitized):", {
       service_id: serviceId,
       template_id: templateId,
-      user_id: apiKey?.substring(0, 4) + "...",
+      user_id: publicKey?.substring(0, 4) + "...",
+      accessToken_present: !!privateKey,
       template_params_keys: Object.keys(templateParams),
     });
 
