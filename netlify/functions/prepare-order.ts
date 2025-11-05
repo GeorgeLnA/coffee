@@ -121,6 +121,8 @@ export const handler: Handler = async (event, context) => {
     // For cash payments, save order immediately (no payment gateway callback)
     if (paymentMethod === "cash") {
       const supabase = getSupabaseClient();
+      // Track email send results for returning to client
+      let emailResults: { customer?: { success: boolean; error?: string }; admin?: { success: boolean; error?: string } } = {};
       const orderToInsert = {
         status: "pending",
         customer_name: customer.fullName,
@@ -324,6 +326,7 @@ export const handler: Handler = async (event, context) => {
                 });
 
                 console.log("Customer email result:", JSON.stringify(customerEmailResult, null, 2));
+                emailResults.customer = { success: !!customerEmailResult.success, error: customerEmailResult.error };
                 if (customerEmailResult.success) {
                   console.log("✓ Customer confirmation email sent (cash order)");
                 } else {
@@ -366,6 +369,7 @@ export const handler: Handler = async (event, context) => {
                 });
 
                 console.log("Admin email result:", JSON.stringify(adminEmailResult, null, 2));
+                emailResults.admin = { success: !!adminEmailResult.success, error: adminEmailResult.error };
                 if (adminEmailResult.success) {
                   console.log("✓ Admin notification email sent (cash order)");
                 } else {
@@ -424,6 +428,7 @@ export const handler: Handler = async (event, context) => {
             adminTemplate: !emailjsTemplateIdAdmin,
             publicKey: !emailjsPublicKey,
           },
+          details: emailResults,
         };
       } else {
         emailStatus = {

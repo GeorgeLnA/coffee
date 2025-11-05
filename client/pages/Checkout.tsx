@@ -672,25 +672,25 @@ export default function Checkout() {
                 <>
                   {/* City field only for Nova Poshta (postomat/department) */}
                   {(shippingMethod === 'nova_department' || shippingMethod === 'nova_postomat') && (
-                    <>
-                      <div className="relative mb-2">
-                        <Input placeholder="Місто" value={cityQuery} onChange={e => { setCityQuery(e.target.value); setCityRef(""); setCity(""); }} />
-                        {showCityDropdown && settlements.length > 0 && (
-                          <div className="absolute left-0 right-0 top-full mt-1 border border-gray-300 rounded bg-white shadow-lg max-h-56 overflow-auto z-50">
-                            {settlements.slice(0, 12).map((s: any, i: number) => (
-                              <button type="button" key={i} onClick={() => handleSelectSettlement(s)} className="w-full text-left px-3 py-2 hover:bg-gray-50 text-sm">
-                                {(s?.Present || s?.Description || s?.MainDescription || s?.City) as string}
-                              </button>
-                            ))}
-                          </div>
-                        )}
+                <>
+                  <div className="relative mb-2">
+                    <Input placeholder="Місто" value={cityQuery} onChange={e => { setCityQuery(e.target.value); setCityRef(""); setCity(""); }} />
+                    {showCityDropdown && settlements.length > 0 && (
+                      <div className="absolute left-0 right-0 top-full mt-1 border border-gray-300 rounded bg-white shadow-lg max-h-56 overflow-auto z-50">
+                        {settlements.slice(0, 12).map((s: any, i: number) => (
+                          <button type="button" key={i} onClick={() => handleSelectSettlement(s)} className="w-full text-left px-3 py-2 hover:bg-gray-50 text-sm">
+                            {(s?.Present || s?.Description || s?.MainDescription || s?.City) as string}
+                          </button>
+                        ))}
                       </div>
+                    )}
+                  </div>
                       {city && !cityRef && (
-                        <div className="text-sm text-orange-600 mb-2">
-                          Оберіть місто зі списку, щоб побачити {shippingMethod === 'nova_postomat' ? 'поштомати' : 'відділення'}
-                        </div>
-                      )}
-                      <div className="mb-3">
+                    <div className="text-sm text-orange-600 mb-2">
+                      Оберіть місто зі списку, щоб побачити {shippingMethod === 'nova_postomat' ? 'поштомати' : 'відділення'}
+                    </div>
+                  )}
+                    <div className="mb-3">
                         <Select value={selectedWarehouse} onValueChange={(value) => {
                           setSelectedWarehouse(value);
                           // Extract department number from selected warehouse
@@ -708,24 +708,24 @@ export default function Checkout() {
                             setDepartment('');
                           }
                         }}>
-                          <SelectTrigger>
-                            <SelectValue placeholder={loadingWarehouses ? "Завантаження..." : shippingMethod === 'nova_postomat' ? "Оберіть поштомат" : "Оберіть відділення"} />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {warehouses.length > 0 ? (
-                              warehouses.map((wh: any) => (
-                                <SelectItem key={wh.Ref} value={wh.Ref}>
-                                  {wh.Description} - {wh.ShortAddress}
-                                </SelectItem>
-                              ))
-                            ) : (
-                              <SelectItem value="no-data" disabled>
-                                {cityRef ? (loadingWarehouses ? "Завантаження..." : shippingMethod === 'nova_postomat' ? "Немає доступних поштоматів" : "Немає доступних відділень") : "Спочатку оберіть місто"}
+                        <SelectTrigger>
+                          <SelectValue placeholder={loadingWarehouses ? "Завантаження..." : shippingMethod === 'nova_postomat' ? "Оберіть поштомат" : "Оберіть відділення"} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {warehouses.length > 0 ? (
+                            warehouses.map((wh: any) => (
+                              <SelectItem key={wh.Ref} value={wh.Ref}>
+                                {wh.Description} - {wh.ShortAddress}
                               </SelectItem>
-                            )}
-                          </SelectContent>
-                        </Select>
-                      </div>
+                            ))
+                          ) : (
+                            <SelectItem value="no-data" disabled>
+                              {cityRef ? (loadingWarehouses ? "Завантаження..." : shippingMethod === 'nova_postomat' ? "Немає доступних поштоматів" : "Немає доступних відділень") : "Спочатку оберіть місто"}
+                            </SelectItem>
+                          )}
+                        </SelectContent>
+                      </Select>
+                    </div>
                     </>
                   )}
                   {/* Address field for courier options (no city field) */}
@@ -739,10 +739,10 @@ export default function Checkout() {
               )}
               
               {shippingMethod === 'own_courier' && ownCourierPrice > 0 && totalPrice < freeDeliveryThreshold && (
-                <div className="text-sm text-gray-700 mb-4">
-                  Додайте товарів на ₴{(freeDeliveryThreshold - totalPrice).toFixed(2)} для безкоштовної доставки
-                </div>
-              )}
+              <div className="text-sm text-gray-700 mb-4">
+                    Додайте товарів на ₴{(freeDeliveryThreshold - totalPrice).toFixed(2)} для безкоштовної доставки
+                  </div>
+                )}
               
               <div className="font-bold mb-2" style={{ color: '#361c0c' }}>Спосіб оплати</div>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-3">
