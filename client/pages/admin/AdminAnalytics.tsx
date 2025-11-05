@@ -104,12 +104,10 @@ export function AdminAnalytics() {
     }
     const mostOrdered = Object.entries(itemsByProduct)
       .map(([id, v]) => ({ id, ...v }))
-      .sort((a, b) => b.qty - a.qty)
-      .slice(0, 10);
+      .sort((a, b) => b.qty - a.qty);
     const topRevenue = Object.entries(itemsByProduct)
       .map(([id, v]) => ({ id, ...v }))
-      .sort((a, b) => b.revenue - a.revenue)
-      .slice(0, 10);
+      .sort((a, b) => b.revenue - a.revenue);
 
     return { totalOrders, totalRevenue, avgOrderValue, mostOrdered, topRevenue };
   }, [orders, items]);
@@ -229,8 +227,7 @@ export function AdminAnalytics() {
         quantity: data.quantity,
         revenue: Number(data.revenue.toFixed(2)),
       }))
-      .sort((a, b) => b.revenue - a.revenue)
-      .slice(0, 10); // Top 10 products
+      .sort((a, b) => b.revenue - a.revenue); // All products
   }, [filteredItems]);
 
   // Chart configuration
@@ -515,18 +512,20 @@ export function AdminAnalytics() {
       {/* Product Sales Charts */}
       {productSalesData.length > 0 && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <Card className="border-2 border-gray-100 shadow-lg">
+          <Card className="border-2 border-gray-100 shadow-lg flex flex-col h-full">
             <CardHeader className="pb-4">
               <CardTitle className="text-xl font-bold mb-2">ТОП продуктів за виторгом</CardTitle>
               <p className="text-sm text-gray-500">
                 Найбільший дохід від продажу • Висота стовпця = сума виторгу
               </p>
             </CardHeader>
-            <CardContent className="pt-2 pb-8 px-6">
-              <ChartContainer config={productChartConfig} className="h-[500px] w-full">
+            <CardContent className="pt-2 pb-8 px-6 flex-1 flex flex-col">
+              <ChartContainer config={productChartConfig} className="flex-1 w-full min-h-[500px]">
                 <BarChart 
                   data={productSalesData} 
-                  margin={{ top: 30, right: 30, left: 80, bottom: 130 }}
+                  margin={{ top: 20, right: 20, left: 60, bottom: 100 }}
+                  width={undefined}
+                  height={undefined}
                 >
                   <defs>
                     <linearGradient id="revenueBarGradient" x1="0" y1="0" x2="0" y2="1">
@@ -574,18 +573,20 @@ export function AdminAnalytics() {
             </CardContent>
           </Card>
 
-          <Card className="border-2 border-gray-100 shadow-lg">
+          <Card className="border-2 border-gray-100 shadow-lg flex flex-col h-full">
             <CardHeader className="pb-4">
               <CardTitle className="text-xl font-bold mb-2">ТОП продуктів за кількістю</CardTitle>
               <p className="text-sm text-gray-500">
                 Найпопулярніші товари • Висота стовпця = кількість проданих одиниць
               </p>
             </CardHeader>
-            <CardContent className="pt-2 pb-8 px-6">
-              <ChartContainer config={productChartConfig} className="h-[500px] w-full">
+            <CardContent className="pt-2 pb-8 px-6 flex-1 flex flex-col">
+              <ChartContainer config={productChartConfig} className="flex-1 w-full min-h-[500px]">
                 <BarChart 
                   data={productSalesData} 
-                  margin={{ top: 30, right: 30, left: 80, bottom: 130 }}
+                  margin={{ top: 20, right: 20, left: 60, bottom: 100 }}
+                  width={undefined}
+                  height={undefined}
                 >
                   <defs>
                     <linearGradient id="quantityBarGradient" x1="0" y1="0" x2="0" y2="1">
@@ -642,7 +643,7 @@ export function AdminAnalytics() {
 
         <TabsContent value="most-ordered">
           <Card>
-            <CardHeader><CardTitle>ТОП-10 за кількістю</CardTitle></CardHeader>
+            <CardHeader><CardTitle>ТОП за кількістю</CardTitle></CardHeader>
             <CardContent>
               <ul className="space-y-2 text-sm">
                 {summary.mostOrdered.map((p) => (
@@ -658,7 +659,7 @@ export function AdminAnalytics() {
 
         <TabsContent value="top-revenue">
           <Card>
-            <CardHeader><CardTitle>ТОП-10 за виторгом</CardTitle></CardHeader>
+            <CardHeader><CardTitle>ТОП за виторгом</CardTitle></CardHeader>
             <CardContent>
               <ul className="space-y-2 text-sm">
                 {summary.topRevenue.map((p) => (

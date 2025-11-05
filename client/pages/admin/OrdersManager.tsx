@@ -16,8 +16,9 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Trash2 } from "lucide-react";
+import { Trash2, Edit2, Check, X, Plus, XCircle } from "lucide-react";
 import { format, differenceInDays } from "date-fns";
+import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, useDraggable, useDroppable, MouseSensor, TouchSensor, useSensor, useSensors } from "@dnd-kit/core";
 
 type Order = {
   id: number;
@@ -64,6 +65,277 @@ type Client = {
   firstOrderDate: string | null;
 };
 
+type PipelineColumn = {
+  id: string;
+  status: string;
+  title: string;
+  bgColor: string;
+  badgeColor: string;
+};
+
+// Draggable Order Card Component
+function DraggableOrderCard({
+  order,
+  onDelete,
+  badgeText,
+  badgeColor,
+}: {
+  order: Order & { items?: OrderItem[] };
+  onDelete: (orderId: number) => void;
+  badgeText: string;
+  badgeColor: string;
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    isDragging,
+  } = useDraggable({ 
+    id: order.id.toString(),
+  });
+
+  const style = transform ? {
+    transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
+  } : undefined;
+
+  const formatVariantDisplay = (variant: string | null): string => {
+    if (!variant) return 'В зернах';
+    const gramsMatch = variant.match(/(\d+g)/);
+    const grams = gramsMatch ? gramsMatch[1] : '';
+    const isBeans = variant.includes('В зернах') || variant.includes('beans') || variant.toLowerCase().includes('зерн');
+    const isGround = variant.includes('Мелена') || variant.includes('ground') || variant.toLowerCase().includes('мелен');
+    const grindType = isBeans ? 'В зернах' : isGround ? 'Мелена' : '';
+    if (grams && grindType) {
+      return `${grams} ${grindType}`;
+    } else if (grams) {
+      return grams;
+    } else if (grindType) {
+      return grindType;
+    } else {
+      return variant;
+    }
+  };
+
+  return (
+    <div ref={setNodeRef} style={style} {...listeners} {...attributes}>
+      <Card className={`mb-4 cursor-grab active:cursor-grabbing hover:shadow-md transition-shadow ${isDragging ? 'opacity-50' : ''}`}>
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between">
+            <div className="flex-1">
+              <CardTitle className="text-base">
+                Замовлення #{order.id}
+              </CardTitle>
+              {order.order_id && (
+                <p className="text-xs text-gray-600 mt-1 font-mono">
+                  {order.order_id}
+                </p>
+              )}
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onDelete(order.id);
+              }}
+              onMouseDown={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+              }}
+              onPointerDown={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+              }}
+              className="text-red-600 hover:text-red-700 h-6 w-6 p-0 pointer-events-auto"
+              style={{ touchAction: 'none' }}
+            >
+              <Trash2 className="w-3 h-3" />
+            </Button>
+          </div>
+          <div className="flex items-center gap-2 mt-2">
+            <span className="text-xs text-gray-500">
+              {format(new Date(order.created_at), 'dd.MM.yyyy HH:mm')}
+            </span>
+            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${badgeColor}`}>
+              {badgeText}
+            </span>
+          </div>
+        </CardHeader>
+        <CardContent className="pt-0 space-y-2">
+          {/* Customer Name */}
+          <div className="text-sm">
+            <div className="flex items-center gap-2">
+              <strong>Ім'я:</strong>
+              <span className="flex-1">{order.customer_name || '—'}</span>
+            </div>
+          </div>
+
+          {/* Customer Email */}
+          <div className="text-sm">
+            <div className="flex items-center gap-2">
+              <strong>Email:</strong>
+              <span className="flex-1 text-xs">{order.customer_email || '—'}</span>
+            </div>
+          </div>
+
+          {/* Customer Phone */}
+          <div className="text-sm">
+            <div className="flex items-center gap-2">
+              <strong>Телефон:</strong>
+              <span className="flex-1 text-xs">{order.customer_phone || '—'}</span>
+            </div>
+          </div>
+
+          {/* Notes */}
+          <div className="text-sm">
+            <div className="flex items-start gap-2">
+              <strong>Примітки:</strong>
+              <span className="flex-1 text-xs">{order.notes || '—'}</span>
+            </div>
+          </div>
+
+          {/* Items Summary */}
+          {order.items && order.items.length > 0 && (
+            <div className="text-xs pt-2 border-t">
+              <strong>Товари:</strong>
+              <div className="mt-1 space-y-1">
+                {order.items.slice(0, 3).map((item) => (
+                  <div key={item.id}>
+                    {item.product_name} ({formatVariantDisplay(item.variant)}) ×{item.quantity}
+                  </div>
+                ))}
+                {order.items.length > 3 && <div>+{order.items.length - 3} більше</div>}
+              </div>
+            </div>
+          )}
+
+          {/* Total */}
+          <div className="text-sm font-bold pt-2 border-t">
+            Всього: ₴{order.total_price.toFixed(2)}
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+// Pipeline Column Component
+function PipelineColumn({
+  title,
+  status,
+  orders,
+  onDelete,
+  bgColor,
+  badgeColor,
+  badgeText,
+  isEditingTitle,
+  editingTitleValue,
+  onStartEditTitle,
+  onSaveTitle,
+  onCancelEditTitle,
+  onTitleChange,
+}: {
+  title: string;
+  status: string;
+  orders: (Order & { items?: OrderItem[] })[];
+  onDelete: (orderId: number) => void;
+  bgColor: string;
+  badgeColor: string;
+  badgeText: string;
+  isEditingTitle: boolean;
+  editingTitleValue: string;
+  onStartEditTitle: () => void;
+  onSaveTitle: (newTitle: string) => void;
+  onCancelEditTitle: () => void;
+  onTitleChange: (value: string) => void;
+}) {
+  const { setNodeRef, isOver } = useDroppable({ 
+    id: status,
+  });
+
+  return (
+    <div className={`${bgColor} rounded-lg p-4 flex flex-col h-full`}>
+      <div className="flex items-center justify-between mb-4">
+        {isEditingTitle ? (
+          <div className="flex-1 flex items-center gap-1">
+            <Input
+              value={editingTitleValue}
+              onChange={(e) => onTitleChange(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  onSaveTitle(editingTitleValue);
+                } else if (e.key === 'Escape') {
+                  onCancelEditTitle();
+                }
+              }}
+              className="h-8 text-lg font-semibold"
+              autoFocus
+            />
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => onSaveTitle(editingTitleValue)}
+              className="h-8 w-8 p-0 text-green-600"
+            >
+              <Check className="w-4 h-4" />
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={onCancelEditTitle}
+              className="h-8 w-8 p-0 text-red-600"
+            >
+              <X className="w-4 h-4" />
+            </Button>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2 flex-1">
+            <h3 className="font-semibold text-lg">{title}</h3>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={onStartEditTitle}
+              className="h-6 w-6 p-0"
+            >
+              <Edit2 className="w-3 h-3" />
+            </Button>
+          </div>
+        )}
+        <span className="text-sm text-gray-600 bg-white px-2 py-1 rounded-full">
+          {orders.length}
+        </span>
+      </div>
+      <div className="mb-2">
+        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${badgeColor}`}>
+          {badgeText}
+        </span>
+      </div>
+      <div 
+        ref={setNodeRef} 
+        className={`flex-1 overflow-y-auto min-h-[200px] ${isOver ? 'ring-2 ring-blue-500 ring-offset-2 bg-blue-50' : ''}`}
+      >
+        {orders.length > 0 ? (
+          orders.map((order) => (
+            <DraggableOrderCard
+              key={order.id}
+              order={order}
+              onDelete={onDelete}
+              badgeText={badgeText}
+              badgeColor={badgeColor}
+            />
+          ))
+        ) : (
+          <div className="text-center text-gray-400 py-8 text-sm h-full flex items-center justify-center min-h-[200px]">
+            Перетягніть замовлення сюди
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export function OrdersManager() {
   const [orders, setOrders] = useState<(Order & { items?: OrderItem[] })[]>([]);
   const [loading, setLoading] = useState(true);
@@ -76,6 +348,61 @@ export function OrdersManager() {
   const [deleteOrderId, setDeleteOrderId] = useState<number | null>(null);
   const [deleteClientEmail, setDeleteClientEmail] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [activeId, setActiveId] = useState<string | null>(null);
+
+  // Default columns
+  const defaultColumns: PipelineColumn[] = [
+    { id: 'ordered', status: 'ordered', title: 'Замовлено', bgColor: 'bg-gray-50', badgeColor: 'bg-blue-100 text-blue-800' },
+    { id: 'processing', status: 'processing', title: 'Обробляється', bgColor: 'bg-yellow-50', badgeColor: 'bg-yellow-100 text-yellow-800' },
+    { id: 'done', status: 'done', title: 'Виконано', bgColor: 'bg-green-50', badgeColor: 'bg-green-100 text-green-800' },
+  ];
+
+  // Column configuration state
+  const [columns, setColumns] = useState<PipelineColumn[]>(defaultColumns);
+
+  // Editing state for column titles
+  const [editingColumnTitle, setEditingColumnTitle] = useState<string | null>(null);
+  const [editingTitleValue, setEditingTitleValue] = useState<string>("");
+
+  // State for adding new column
+  const [isAddingColumn, setIsAddingColumn] = useState(false);
+  const [newColumnTitle, setNewColumnTitle] = useState("");
+  const [newColumnStatus, setNewColumnStatus] = useState("");
+  const [newColumnBgColor, setNewColumnBgColor] = useState("bg-gray-50");
+  const [newColumnBadgeColor, setNewColumnBadgeColor] = useState("bg-gray-100 text-gray-800");
+
+  // Edit mode state for showing/hiding delete buttons
+  const [isEditMode, setIsEditMode] = useState(false);
+
+  // dnd-kit sensors for better drag behavior
+  const sensors = useSensors(
+    useSensor(MouseSensor, {
+      activationConstraint: { distance: 5 },
+    }),
+    useSensor(TouchSensor, {
+      activationConstraint: { delay: 120, tolerance: 5 },
+    })
+  );
+
+  // Load column configuration from localStorage on mount
+  useEffect(() => {
+    const savedColumns = localStorage.getItem('pipeline_columns');
+    if (savedColumns) {
+      try {
+        const parsed = JSON.parse(savedColumns);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setColumns(parsed);
+        }
+      } catch (e) {
+        console.error('Failed to parse saved columns:', e);
+      }
+    }
+  }, []);
+
+  // Save columns to localStorage whenever they change
+  useEffect(() => {
+    localStorage.setItem('pipeline_columns', JSON.stringify(columns));
+  }, [columns]);
 
   // Helper function to format variant display (grams + grind type)
   const formatVariantDisplay = (variant: string | null): string => {
@@ -209,6 +536,141 @@ export function OrdersManager() {
       alert('Помилка видалення замовлень клієнта: ' + e.message);
     } finally {
       setIsDeleting(false);
+    }
+  };
+
+  const updateOrderStatus = async (orderId: number, newStatus: string) => {
+    try {
+      const { error } = await supabase
+        .from('orders')
+        .update({ status: newStatus, updated_at: new Date().toISOString() })
+        .eq('id', orderId);
+      
+      if (error) throw error;
+      
+      // Update local state immediately
+      setOrders(prev => prev.map(o => 
+        o.id === orderId ? { ...o, status: newStatus, updated_at: new Date().toISOString() } : o
+      ));
+    } catch (e: any) {
+      console.error('Error updating order status:', e);
+      alert('Помилка оновлення статусу: ' + e.message);
+      // Reload orders on error to ensure consistency
+      load();
+    }
+  };
+
+  // Helper function to get status label based on order status
+  const getStatusLabel = (status: string | null): string => {
+    const column = columns.find(col => {
+      if (col.status === 'ordered' && (!status || status === 'ordered' || status === 'pending')) {
+        return true;
+      }
+      return col.status === status;
+    });
+    return column?.title || status || '—';
+  };
+
+  // Handlers for editing column titles
+  const handleStartEditTitle = (columnId: string) => {
+    const column = columns.find(col => col.id === columnId);
+    if (column) {
+      setEditingColumnTitle(columnId);
+      setEditingTitleValue(column.title);
+    }
+  };
+
+  const handleSaveTitle = (columnId: string, newTitle: string) => {
+    setColumns(prev => prev.map(col => 
+      col.id === columnId ? { ...col, title: newTitle } : col
+    ));
+    setEditingColumnTitle(null);
+    setEditingTitleValue("");
+  };
+
+  const handleCancelEditTitle = () => {
+    setEditingColumnTitle(null);
+    setEditingTitleValue("");
+  };
+
+  // Handler for adding new column
+  const handleAddColumn = () => {
+    if (!newColumnTitle.trim() || !newColumnStatus.trim()) {
+      alert('Будь ласка, введіть назву та статус колонки');
+      return;
+    }
+    
+    // Check if status already exists
+    if (columns.some(col => col.status === newColumnStatus)) {
+      alert('Колонка з таким статусом вже існує');
+      return;
+    }
+
+    const newColumn: PipelineColumn = {
+      id: `column-${Date.now()}`,
+      status: newColumnStatus,
+      title: newColumnTitle,
+      bgColor: newColumnBgColor,
+      badgeColor: newColumnBadgeColor,
+    };
+
+    setColumns(prev => [...prev, newColumn]);
+    setIsAddingColumn(false);
+    setNewColumnTitle("");
+    setNewColumnStatus("");
+    setNewColumnBgColor("bg-gray-50");
+    setNewColumnBadgeColor("bg-gray-100 text-gray-800");
+  };
+
+  // Handler for removing column
+  const handleRemoveColumn = (columnId: string) => {
+    if (columns.length <= 1) {
+      alert('Не можна видалити останню колонку');
+      return;
+    }
+
+    if (confirm('Ви впевнені, що хочете видалити цю колонку?')) {
+      setColumns(prev => prev.filter(col => col.id !== columnId));
+    }
+  };
+
+  const handleDragStart = (event: DragStartEvent) => {
+    setActiveId(event.active.id as string);
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    setActiveId(null);
+    
+    if (!over) return;
+    
+    const orderId = parseInt(active.id as string);
+    const targetStatus = over.id as string;
+    
+    // Check if target is a valid column
+    const targetColumn = columns.find(col => col.status === targetStatus);
+    if (!targetColumn) return;
+    
+    const currentOrder = orders.find(o => o.id === orderId);
+    if (!currentOrder) return;
+    
+    // Check if status changed
+    const currentStatus = currentOrder.status;
+    const isOrderedColumn = targetStatus === 'ordered';
+    const currentIsOrdered = !currentStatus || currentStatus === 'ordered' || currentStatus === 'pending';
+    
+    if (isOrderedColumn && !currentIsOrdered) {
+      // Moving to ordered
+      setOrders(prev => prev.map(o => 
+        o.id === orderId ? { ...o, status: 'ordered', updated_at: new Date().toISOString() } : o
+      ));
+      updateOrderStatus(orderId, 'ordered');
+    } else if (!isOrderedColumn && currentStatus !== targetStatus) {
+      // Moving to other status
+      setOrders(prev => prev.map(o => 
+        o.id === orderId ? { ...o, status: targetStatus, updated_at: new Date().toISOString() } : o
+      ));
+      updateOrderStatus(orderId, targetStatus);
     }
   };
 
@@ -368,6 +830,7 @@ export function OrdersManager() {
       <Tabs value={selectedTab} onValueChange={setSelectedTab}>
         <TabsList>
           <TabsTrigger value="orders">Замовлення</TabsTrigger>
+          <TabsTrigger value="pipeline">Пайплайн</TabsTrigger>
           <TabsTrigger value="clients">Клієнти</TabsTrigger>
         </TabsList>
 
@@ -435,6 +898,16 @@ export function OrdersManager() {
                     <span className="text-sm text-gray-500">
                       {format(new Date(order.created_at), 'dd.MM.yyyy HH:mm')}
                     </span>
+                    {order.status && (
+                      <span className={`text-xs px-2 py-1 rounded-full font-medium ${
+                        order.status === 'ordered' || order.status === 'pending' ? 'bg-blue-100 text-blue-800' :
+                        order.status === 'processing' ? 'bg-yellow-100 text-yellow-800' :
+                        order.status === 'done' ? 'bg-green-100 text-green-800' :
+                        'bg-gray-100 text-gray-800'
+                      }`}>
+                        {getStatusLabel(order.status)}
+                      </span>
+                    )}
                   </div>
                 </CardHeader>
                 <CardContent>
@@ -532,6 +1005,180 @@ export function OrdersManager() {
               </CardContent>
             </Card>
           )}
+        </TabsContent>
+
+        <TabsContent value="pipeline" className="space-y-6">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h3 className="text-lg font-semibold">Пайплайн</h3>
+              <p className="text-sm text-gray-600">Всього замовлень: {orders.length}</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant={isEditMode ? "default" : "outline"}
+                onClick={() => setIsEditMode(!isEditMode)}
+                className="flex items-center gap-2"
+              >
+                <Edit2 className="w-4 h-4" />
+                {isEditMode ? "Завершити редагування" : "Редагувати"}
+              </Button>
+              <Button
+                onClick={() => setIsAddingColumn(true)}
+                className="flex items-center gap-2"
+              >
+                <Plus className="w-4 h-4" />
+                Додати колонку
+              </Button>
+            </div>
+          </div>
+
+          {isAddingColumn && (
+            <Card className="mb-4">
+              <CardHeader>
+                <CardTitle>Додати нову колонку</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <Label>Назва колонки</Label>
+                  <Input
+                    value={newColumnTitle}
+                    onChange={(e) => setNewColumnTitle(e.target.value)}
+                    placeholder="Наприклад: На перевірці"
+                  />
+                </div>
+                <div>
+                  <Label>Статус (унікальний ідентифікатор)</Label>
+                  <Input
+                    value={newColumnStatus}
+                    onChange={(e) => setNewColumnStatus(e.target.value.toLowerCase().replace(/\s+/g, '_'))}
+                    placeholder="Наприклад: review"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Буде використано для зберігання статусу замовлень</p>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>Колір фону</Label>
+                    <Select value={newColumnBgColor} onValueChange={setNewColumnBgColor}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="bg-gray-50">Сірий</SelectItem>
+                        <SelectItem value="bg-blue-50">Синій</SelectItem>
+                        <SelectItem value="bg-yellow-50">Жовтий</SelectItem>
+                        <SelectItem value="bg-green-50">Зелений</SelectItem>
+                        <SelectItem value="bg-purple-50">Фіолетовий</SelectItem>
+                        <SelectItem value="bg-pink-50">Рожевий</SelectItem>
+                        <SelectItem value="bg-red-50">Червоний</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label>Колір бейджа</Label>
+                    <Select value={newColumnBadgeColor} onValueChange={setNewColumnBadgeColor}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="bg-gray-100 text-gray-800">Сірий</SelectItem>
+                        <SelectItem value="bg-blue-100 text-blue-800">Синій</SelectItem>
+                        <SelectItem value="bg-yellow-100 text-yellow-800">Жовтий</SelectItem>
+                        <SelectItem value="bg-green-100 text-green-800">Зелений</SelectItem>
+                        <SelectItem value="bg-purple-100 text-purple-800">Фіолетовий</SelectItem>
+                        <SelectItem value="bg-pink-100 text-pink-800">Рожевий</SelectItem>
+                        <SelectItem value="bg-red-100 text-red-800">Червоний</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <Button onClick={handleAddColumn}>
+                    <Check className="w-4 h-4 mr-2" />
+                    Додати
+                  </Button>
+                  <Button variant="outline" onClick={() => {
+                    setIsAddingColumn(false);
+                    setNewColumnTitle("");
+                    setNewColumnStatus("");
+                    setNewColumnBgColor("bg-gray-50");
+                    setNewColumnBadgeColor("bg-gray-100 text-gray-800");
+                  }}>
+                    <X className="w-4 h-4 mr-2" />
+                    Скасувати
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          <DndContext
+            sensors={sensors}
+            onDragStart={handleDragStart}
+            onDragEnd={handleDragEnd}
+          >
+            <div className={`grid gap-4 h-[calc(100vh-300px)]`} style={{ gridTemplateColumns: `repeat(${columns.length}, minmax(250px, 1fr))` }}>
+              {columns.map((column) => {
+                const columnOrders = orders.filter(o => {
+                  if (column.status === 'ordered') {
+                    return !o.status || o.status === 'ordered' || o.status === 'pending';
+                  }
+                  return o.status === column.status;
+                });
+
+                return (
+                  <div key={column.id} className="relative">
+                    {isEditMode && columns.length > 1 && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleRemoveColumn(column.id)}
+                        className="absolute -top-2 -right-2 z-10 h-6 w-6 p-0 bg-red-500 hover:bg-red-600 text-white rounded-full"
+                      >
+                        <XCircle className="w-4 h-4" />
+                      </Button>
+                    )}
+                    <PipelineColumn
+                      title={column.title}
+                      status={column.status}
+                      orders={columnOrders}
+                      onDelete={(orderId) => setDeleteOrderId(orderId)}
+                      bgColor={column.bgColor}
+                      badgeColor={column.badgeColor}
+                      badgeText={column.title}
+                      isEditingTitle={editingColumnTitle === column.id}
+                      editingTitleValue={editingTitleValue}
+                      onStartEditTitle={() => handleStartEditTitle(column.id)}
+                      onSaveTitle={(newTitle) => handleSaveTitle(column.id, newTitle)}
+                      onCancelEditTitle={handleCancelEditTitle}
+                      onTitleChange={setEditingTitleValue}
+                    />
+                  </div>
+                );
+              })}
+            </div>
+            <DragOverlay>
+              {activeId ? (() => {
+                const draggedOrder = orders.find(o => o.id.toString() === activeId);
+                return draggedOrder ? (
+                  <Card className="w-64 shadow-2xl border-2 border-blue-500">
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-base">Замовлення #{draggedOrder.id}</CardTitle>
+                      {draggedOrder.customer_name && (
+                        <p className="text-sm text-gray-600">{draggedOrder.customer_name}</p>
+                      )}
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-sm font-bold">₴{draggedOrder.total_price.toFixed(2)}</p>
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <div className="bg-white rounded-lg shadow-lg p-4 border-2 border-blue-500">
+                    <p className="font-semibold">Замовлення #{activeId}</p>
+                  </div>
+                );
+              })() : null}
+            </DragOverlay>
+          </DndContext>
         </TabsContent>
 
         <TabsContent value="clients" className="space-y-6">

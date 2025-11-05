@@ -170,7 +170,7 @@ export const prepareOrder: RequestHandler = async (req, res) => {
               const emailjsTemplateIdAdmin = process.env.EMAILJS_TEMPLATE_ID_ADMIN;
               const emailjsPublicKey = process.env.EMAILJS_PUBLIC_KEY;
               const emailjsPrivateKey = process.env.EMAILJS_PRIVATE_KEY; // Private key for server-side REST API
-              const adminEmails = process.env.ADMIN_EMAILS || "davidnuk877@gmail.com";
+              const adminEmails = process.env.ADMIN_EMAILS || "dovedem2014@gmail.com,manifestcava@gmail.com";
 
               console.log("Environment check:", {
                 hasServiceId: !!emailjsServiceId,

@@ -8,7 +8,7 @@ export const testEmail: RequestHandler = async (req, res) => {
     const emailjsTemplateIdCustomer = process.env.EMAILJS_TEMPLATE_ID_CUSTOMER;
     const emailjsTemplateIdAdmin = process.env.EMAILJS_TEMPLATE_ID_ADMIN;
     const emailjsPublicKey = process.env.EMAILJS_PUBLIC_KEY;
-    const adminEmails = process.env.ADMIN_EMAILS || "davidnuk877@gmail.com";
+    const adminEmails = process.env.ADMIN_EMAILS || "dovedem2014@gmail.com,manifestcava@gmail.com";
 
     if (!emailjsServiceId || !emailjsTemplateIdCustomer || !emailjsTemplateIdAdmin || !emailjsPublicKey) {
       return res.status(400).json({

@@ -91,146 +91,6 @@ export default function Checkout() {
     }
   };
 
-  async function handleSendTestEmail() {
-    try {
-      const serviceId = import.meta.env.VITE_EMAILJS_SERVICE_ID as string;
-      const templateIdCustomer = import.meta.env.VITE_EMAILJS_TEMPLATE_ID_CUSTOMER as string;
-      const templateIdAdmin = import.meta.env.VITE_EMAILJS_TEMPLATE_ID_ADMIN as string;
-      const publicKey = import.meta.env.VITE_EMAILJS_PUBLIC_KEY as string;
-      const adminEmails = (import.meta.env.VITE_ADMIN_EMAILS as string) || "davidnuk877@gmail.com";
-
-      if (!serviceId || !templateIdCustomer || !templateIdAdmin || !publicKey) {
-        console.warn("EmailJS env missing", { serviceId: !!serviceId, templateIdCustomer: !!templateIdCustomer, templateIdAdmin: !!templateIdAdmin, publicKey: !!publicKey });
-        toast({ title: 'Налаштуйте EmailJS (VITE_* в .env.local)', description: 'VITE_EMAILJS_SERVICE_ID, VITE_EMAILJS_TEMPLATE_ID_CUSTOMER, VITE_EMAILJS_TEMPLATE_ID_ADMIN, VITE_EMAILJS_PUBLIC_KEY' as any, variant: 'destructive' as any });
-        return;
-      }
-
-      const customerEmail = email || 'godavid877@gmail.com';
-      if (!customerEmail || !customerEmail.includes('@')) {
-        toast({ title: 'Введіть email адресу', description: 'Заповніть поле Email або використайте Auto-fill' as any, variant: 'destructive' as any });
-        return;
-      }
-
-      // Format shipping address properly
-      const formattedShippingAddress = formatShippingAddress();
-      const formattedShippingMethod = formatShippingMethodName();
-
-      const orderId = `TEST-${Date.now()}`;
-      const templateParams: Record<string, any> = {
-        to_email: customerEmail,
-        to_name: fullName || 'Тестовий Користувач',
-        order_id: orderId,
-        order_date: new Date().toLocaleDateString('uk-UA'),
-        order_items_html: items.length > 0 ? items.map((item: any) => {
-          const itemName = item.name || 'Товар';
-          const variantText = item.variant ? ` (${item.variant})` : '';
-          const quantity = item.quantity || 1;
-          const price = item.price || 0;
-          const total = (price * quantity).toFixed(2);
-          return `${itemName}${variantText} - ${quantity} шт. × ${price.toFixed(2)} грн = ${total} грн`;
-        }).join('\n') : 'Товари не знайдено',
-        customer_name: fullName || 'Тестовий Користувач',
-        billing_address: formattedShippingAddress,
-        information: formattedShippingAddress, // Alias for "Information" label
-        customer_phone: phone || '—',
-        customer_email: customerEmail,
-        shipping_address: formattedShippingAddress,
-        order_notes: notes || '', // Leave empty if no notes
-        order_total: `₴${totalPrice.toFixed(2)}`,
-        shipping_method: formattedShippingMethod,
-        payment_method: paymentMethod === 'cash' ? 'Оплата при отриманні' : paymentMethod === 'liqpay' ? 'Онлайн оплата (LiqPay)' : paymentMethod || 'Не вказано',
-        reply_to: customerEmail,
-        // Additional shipping details
-        shipping_city: city || null,
-        shipping_department: department || null,
-        shipping_warehouse_ref: selectedWarehouse || null,
-      };
-
-      console.log('Sending EmailJS test email to:', customerEmail);
-      console.log('Template params:', { ...templateParams, order_items_html: '[HTML]' });
-
-      // EmailJS requires the recipient to be in template params
-      // Make sure to_email is the first parameter and is valid
-      const customerTemplateParams = {
-        to_email: customerEmail.trim(),
-        ...templateParams,
-      };
-      
-      // Remove any undefined or empty values
-      Object.keys(customerTemplateParams).forEach(key => {
-        if (customerTemplateParams[key] === undefined || customerTemplateParams[key] === '') {
-          delete customerTemplateParams[key];
-        }
-      });
-      
-      console.log('Final customer template params (to_email):', customerTemplateParams.to_email);
-      
-      // Send customer email
-      const customerRes = await emailjs.send(
-        serviceId, 
-        templateIdCustomer, 
-        customerTemplateParams,
-        publicKey
-      );
-      console.log('EmailJS customer send result:', customerRes?.status, customerRes?.text);
-
-      // Send admin emails (comma-separated)
-      const admins = adminEmails.split(',').map((e) => e.trim()).filter(Boolean);
-      const adminResults = [] as Array<{ email: string; status: any }>;
-      for (const admin of admins) {
-        if (!admin || !admin.includes('@')) continue;
-        
-        // Create admin-specific template params - use admin email for recipient
-        // IMPORTANT: Spread templateParams FIRST, then override to_email to ensure admin email is used
-        const adminTemplateParams: Record<string, any> = {
-          ...templateParams,
-          to_email: admin.trim(), // CRITICAL: Set AFTER spread to override customer email
-          to_name: 'Адміністратор', // Admin name
-        };
-        
-        // Remove any undefined or empty values
-        Object.keys(adminTemplateParams).forEach(key => {
-          if (adminTemplateParams[key] === undefined || adminTemplateParams[key] === '') {
-            delete adminTemplateParams[key];
-          }
-        });
-        
-        // FINAL CHECK: Ensure to_email is definitely the admin email (not customer)
-        if (adminTemplateParams.to_email !== admin.trim()) {
-          console.warn('WARNING: to_email was overwritten! Fixing...', {
-            expected: admin.trim(),
-            actual: adminTemplateParams.to_email
-          });
-          adminTemplateParams.to_email = admin.trim();
-        }
-        
-        console.log('Sending admin email to:', adminTemplateParams.to_email);
-        console.log('Admin template params to_email:', adminTemplateParams.to_email);
-        console.log('Customer email in params (should be different):', templateParams.customer_email);
-        
-        const r = await emailjs.send(serviceId, templateIdAdmin, adminTemplateParams, publicKey);
-        adminResults.push({ email: admin, status: { code: r?.status, text: r?.text } });
-      }
-      console.log('EmailJS admin send results:', adminResults);
-
-      toast({ title: 'Тестові листи надіслані', description: `Відправлено до: ${customerEmail} та адміністраторів` as any });
-    } catch (err: any) {
-      console.error('EmailJS browser send error:', err);
-      const errorText = err?.text || err?.message || String(err);
-      
-      // Provide helpful error message for common issues
-      let errorMessage = errorText;
-      if (errorText.includes('recipients address is empty') || errorText.includes('422')) {
-        errorMessage = 'Налаштуйте EmailJS шаблон: поле "To Email" має містити {{to_email}}. Див. EMAILJS_TEMPLATE_FIX.md';
-      }
-      
-      toast({ 
-        title: 'Помилка EmailJS', 
-        description: errorMessage as any, 
-        variant: 'destructive' as any 
-      });
-    }
-  }
 
   // Fallback: send order emails via EmailJS browser SDK (same logic as test button)
   // Used when server-side email sending is unavailable or misconfigured
@@ -241,7 +101,7 @@ export default function Checkout() {
       const templateIdCustomer = (import.meta.env.VITE_EMAILJS_TEMPLATE_ID_CUSTOMER as string) || 'template_gjxblw6';
       const templateIdAdmin = (import.meta.env.VITE_EMAILJS_TEMPLATE_ID_ADMIN as string) || 'template_4ft87b9';
       const publicKey = (import.meta.env.VITE_EMAILJS_PUBLIC_KEY as string) || 'dK2FblsCDGEM8ZpPq';
-      const adminEmails = (import.meta.env.VITE_ADMIN_EMAILS as string) || 'davidnuk877@gmail.com';
+      const adminEmails = (import.meta.env.VITE_ADMIN_EMAILS as string) || 'dovedem2014@gmail.com,manifestcava@gmail.com';
 
       if (!serviceId || !templateIdCustomer || !templateIdAdmin || !publicKey) {
         console.warn("[Email Fallback] EmailJS config missing; cannot send client-side");
@@ -331,18 +191,23 @@ export default function Checkout() {
   const courierPrice = deliverySettings?.courier_price || 200;
   const freeDeliveryThreshold = deliverySettings?.free_delivery_threshold || 1500;
 
+  // Check if order qualifies for free delivery (for Nova Poshta methods)
+  const isFreeDelivery = totalPrice >= freeDeliveryThreshold;
+  const isNovaPoshtaMethod = shippingMethod === 'nova_department' || shippingMethod === 'nova_postomat' || shippingMethod === 'nova_courier';
+
   const shippingPrice = useMemo(() => {
-    if (totalPrice >= freeDeliveryThreshold) return 0;
+    // Free delivery applies to all methods when over threshold
+    if (isFreeDelivery) return 0;
     if (shippingMethod === "own_courier") return courierPrice;
-    // Nova Poshta pricing handled on delivery, but show 0 here; final sum may vary
+    // Nova Poshta pricing handled on delivery, but show 0 here when free delivery applies
     return 0;
-  }, [shippingMethod, totalPrice, freeDeliveryThreshold, courierPrice]);
+  }, [shippingMethod, totalPrice, freeDeliveryThreshold, courierPrice, isFreeDelivery]);
 
   // Calculate price specifically for own_courier button display
   const ownCourierPrice = useMemo(() => {
-    if (totalPrice >= freeDeliveryThreshold) return 0;
+    if (isFreeDelivery) return 0;
     return courierPrice;
-  }, [totalPrice, freeDeliveryThreshold, courierPrice]);
+  }, [totalPrice, freeDeliveryThreshold, courierPrice, isFreeDelivery]);
 
   // Load warehouses when city is selected
   const loadWarehouses = async () => {
@@ -610,38 +475,6 @@ export default function Checkout() {
               <Input placeholder="ПІБ" value={fullName} onChange={e => setFullName(e.target.value)} className="mb-3" />
               <Input placeholder="Телефон" value={phone} onChange={e => setPhone(e.target.value)} className="mb-3" />
               <Input placeholder="Email" type="email" value={email} onChange={e => setEmail(e.target.value)} className="mb-3" />
-              {/* TEMP: Auto-fill button for testing */}
-              <button
-                type="button"
-                onClick={() => {
-                  setFullName("Тестовий Користувач");
-                  setPhone("+380501234567");
-                  setEmail("godavid877@gmail.com");
-                  setCity("Київ");
-                  setCityRef("8d5a980d-391c-11dd-90d9-001a92567626");
-                  setCityQuery("Київ");
-                  setAddress("вул. Тестова, 1");
-                  setShippingMethod("nova_department");
-                  setPaymentMethod("liqpay");
-                  setNotes("Тестове замовлення");
-                  // Trigger warehouse load after a short delay
-                  setTimeout(() => {
-                    loadWarehouses();
-                  }, 100);
-                }}
-                className="mb-3 px-4 py-2 bg-orange-500 text-white rounded hover:bg-orange-600 text-sm font-medium"
-              >
-                🧪 Auto-fill (TEST)
-              </button>
-
-              {/* TEMP: Send EmailJS test */}
-              <button
-                type="button"
-                onClick={handleSendTestEmail}
-                className="mb-3 ml-2 text-sm underline text-blue-600 hover:text-blue-700"
-              >
-                Надіслати тестовий лист (EmailJS)
-              </button>
             </div>
 
             <div className="md:col-span-2">
@@ -747,11 +580,16 @@ export default function Checkout() {
                 <Input placeholder="Адреса доставки" value={address} onChange={e => setAddress(e.target.value)} className="mb-3" />
               )}
               
-              {shippingMethod === 'own_courier' && ownCourierPrice > 0 && totalPrice < freeDeliveryThreshold && (
-              <div className="text-sm text-gray-700 mb-4">
-                    Додайте товарів на ₴{(freeDeliveryThreshold - totalPrice).toFixed(2)} для безкоштовної доставки
-                  </div>
-                )}
+              {!isFreeDelivery && (
+                <div className="text-sm text-gray-700 mb-4">
+                  {isNovaPoshtaMethod 
+                    ? `Додайте товарів на ₴${(freeDeliveryThreshold - totalPrice).toFixed(2)} для безкоштовної доставки Новою Поштою`
+                    : shippingMethod === 'own_courier' && ownCourierPrice > 0
+                    ? `Додайте товарів на ₴${(freeDeliveryThreshold - totalPrice).toFixed(2)} для безкоштовної доставки`
+                    : null
+                  }
+                </div>
+              )}
               
               <div className="font-bold mb-2" style={{ color: '#361c0c' }}>Спосіб оплати</div>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-3">
@@ -831,7 +669,9 @@ export default function Checkout() {
                   <div className="flex justify-between items-start">
                     <span className="pr-2">Доставка</span>
                     <span className="text-right">
-                      {shippingMethod === 'own_courier' 
+                      {isFreeDelivery && isNovaPoshtaMethod
+                        ? 'Безкоштовно'
+                        : shippingMethod === 'own_courier' 
                         ? (shippingPrice === 0 ? 'Безкоштовно' : `₴${shippingPrice.toFixed(2)}`)
                         : <span className="text-xs leading-tight">Оплата за тарифами<br />перевізника</span>
                       }

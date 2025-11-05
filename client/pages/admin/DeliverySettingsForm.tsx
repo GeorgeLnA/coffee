@@ -85,7 +85,7 @@ export function DeliverySettingsForm() {
               value={form.free_delivery_threshold || ''} 
               onChange={(e) => updateField('free_delivery_threshold', parseFloat(e.target.value) || 0)} 
             />
-            <p className="text-sm text-gray-500 mt-1">При замовленні на суму від цього значення доставка буде безкоштовною</p>
+            <p className="text-sm text-gray-500 mt-1">При замовленні на суму від цього значення доставка буде безкоштовною для всіх методів доставки (Нова Пошта та власна доставка)</p>
           </div>
         </div>
 
