@@ -28,6 +28,11 @@ export async function sendEmailViaEmailJS(params: {
     console.log("Template Params keys:", Object.keys(templateParams));
     console.log("To email:", templateParams.to_email);
     console.log("Order ID:", templateParams.order_id);
+    console.log("Full template params (sanitized):", {
+      ...templateParams,
+      order_items_html: templateParams.order_items_html ? '[HTML content]' : undefined,
+      order_items: templateParams.order_items ? '[Text content]' : undefined,
+    });
 
     const emailjsUrl = `https://api.emailjs.com/api/v1.0/email/send`;
 
@@ -59,27 +64,31 @@ export async function sendEmailViaEmailJS(params: {
     console.log("Response headers:", Object.fromEntries(response.headers.entries()));
 
     const responseText = await response.text();
-    console.log("Response text:", responseText);
+    console.log("Response text (first 500 chars):", responseText.substring(0, 500));
+    console.log("Response text length:", responseText.length);
 
     if (!response.ok) {
-      console.error("EmailJS API error:", {
-        status: response.status,
-        statusText: response.statusText,
-        body: responseText,
-      });
+      console.error("=== EMAILJS API ERROR ===");
+      console.error("Status:", response.status);
+      console.error("Status Text:", response.statusText);
+      console.error("Response Body:", responseText);
+      console.error("Full response headers:", Object.fromEntries(response.headers.entries()));
+      console.error("=== END EMAILJS API ERROR ===");
       return {
         success: false,
-        error: `EmailJS API error: ${response.status} ${responseText}`,
+        error: `EmailJS API error: ${response.status} ${responseText.substring(0, 200)}`,
       };
     }
 
     let result;
     try {
       result = JSON.parse(responseText);
-    } catch {
-      result = { raw: responseText };
+      console.log("Parsed response:", JSON.stringify(result, null, 2));
+    } catch (parseError) {
+      console.warn("Failed to parse response as JSON:", parseError);
+      result = { raw: responseText.substring(0, 200) };
     }
-    console.log("Email sent successfully:", result);
+    console.log("Email sent successfully:", JSON.stringify(result, null, 2));
     console.log("=== EMAILJS DEBUG END ===");
     return { success: true };
   } catch (error: any) {

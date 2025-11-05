@@ -323,11 +323,12 @@ export const handler: Handler = async (event, context) => {
                   emailjsPrivateKey, // Pass private key for server-side REST API
                 });
 
-                console.log("Customer email result:", customerEmailResult);
+                console.log("Customer email result:", JSON.stringify(customerEmailResult, null, 2));
                 if (customerEmailResult.success) {
                   console.log("✓ Customer confirmation email sent (cash order)");
                 } else {
                   console.error("✗ Failed to send customer email:", customerEmailResult.error);
+                  console.error("Full customer email error:", JSON.stringify(customerEmailResult, null, 2));
                 }
 
                 console.log("Preparing admin email...");
@@ -364,11 +365,12 @@ export const handler: Handler = async (event, context) => {
                   emailjsPrivateKey, // Pass private key for server-side REST API
                 });
 
-                console.log("Admin email result:", adminEmailResult);
+                console.log("Admin email result:", JSON.stringify(adminEmailResult, null, 2));
                 if (adminEmailResult.success) {
                   console.log("✓ Admin notification email sent (cash order)");
                 } else {
                   console.error("✗ Failed to send admin email:", adminEmailResult.error);
+                  console.error("Full admin email error:", JSON.stringify(adminEmailResult, null, 2));
                 }
                 console.log("=== EMAIL SENDING DEBUG END ===");
               } else {
