@@ -58,6 +58,45 @@ const getCoffeeDescription = (coffeeId: string, language: string) => {
   return descriptions[language as keyof typeof descriptions]?.[coffeeId as keyof typeof descriptions.ua] || descriptions.ua[coffeeId as keyof typeof descriptions.ua];
 };
 
+// Helper function to translate processing methods using filter options
+// Replaces UA version with RU version from admin when language is Russian
+const translateProcess = (process: string, language: string, filterOptions: any) => {
+  if (!process || !filterOptions) return process;
+  
+  // Get process pairs from filter options
+  const processPairs = filterOptions?.processPairs || [];
+  
+  // Map English keys to Ukrainian filter values (for matching)
+  const processKeyMap: Record<string, string> = {
+    'washed': 'Вмита',
+    'natural': 'Натуральна',
+    'honey': 'Медова',
+    'semi-washed': 'Напіввмита'
+  };
+  
+  const processLower = process.toLowerCase();
+  let searchKey = process;
+  
+  // If it's an English key, map to Ukrainian for matching
+  if (processKeyMap[processLower]) {
+    searchKey = processKeyMap[processLower];
+  }
+  
+  // Find match in processPairs (match by UA value)
+  const match = processPairs.find((p: { ua: string; ru: string }) => 
+    p.ua.toLowerCase() === searchKey.toLowerCase() || 
+    p.ua === searchKey
+  );
+  
+  // Return Russian version when language is Russian, otherwise return original
+  if (match && language === 'ru') {
+    return match.ru;
+  }
+  
+  // Return original for Ukrainian or if no match
+  return process;
+};
+
 // Helper function to translate flavor notes
 const translateFlavorNote = (note: string, language: string) => {
   const translations = {
@@ -499,7 +538,7 @@ export default function Product() {
                         const label = roasts.find(r => r.toLowerCase().includes(roastCode)) || roasts.find(r => roastCode.includes(r.toLowerCase()));
                         return label || product!.roast || '-';
                       })()
-                    }
+                    } • {product!.process ? translateProcess(product!.process, language, filterOptions) : ''}
                   </p>
                 )}
               </div>

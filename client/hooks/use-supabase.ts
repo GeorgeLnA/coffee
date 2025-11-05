@@ -988,11 +988,13 @@ export function useFilterOptions(language: string = 'ua') {
 
       if (error) {
         console.error('Error fetching filter options:', error);
-        return { origins: [], roasts: [], originPairs: [], roastPairs: [] } as {
+        return { origins: [], roasts: [], originPairs: [], roastPairs: [], processes: [], processPairs: [] } as {
           origins: string[];
           roasts: string[];
           originPairs: { ua: string; ru: string }[];
           roastPairs: { ua: string; ru: string }[];
+          processes: string[];
+          processPairs: { ua: string; ru: string }[];
         };
       }
 
@@ -1014,7 +1016,15 @@ export function useFilterOptions(language: string = 'ua') {
         .filter(f => f.filter_type === 'roast')
         .map(f => ({ ua: f.value, ru: f.value_ru || f.value }));
 
-      return { origins, roasts, originPairs, roastPairs };
+      const processes = all
+        .filter(f => f.filter_type === 'process')
+        .map(f => language === 'ru' ? (f.value_ru || f.value) : f.value);
+
+      const processPairs = all
+        .filter(f => f.filter_type === 'process')
+        .map(f => ({ ua: f.value, ru: f.value_ru || f.value }));
+
+      return { origins, roasts, originPairs, roastPairs, processes, processPairs };
     },
     refetchOnWindowFocus: true,
     refetchOnReconnect: true,
