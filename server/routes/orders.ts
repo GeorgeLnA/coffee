@@ -185,8 +185,13 @@ export const prepareOrder: RequestHandler = async (req, res) => {
               });
 
               // Only send via EmailJS if configured; otherwise use dev mailer (Ethereal)
-              if (emailjsServiceId && emailjsTemplateIdCustomer && emailjsTemplateIdAdmin && emailjsPublicKey) {
+              // Check if we have private key too (required for server-side)
+              const hasEmailJSConfig = emailjsServiceId && emailjsTemplateIdCustomer && emailjsTemplateIdAdmin && emailjsPublicKey;
+              if (hasEmailJSConfig) {
                 console.log("EmailJS configured, proceeding to send emails...");
+                if (!emailjsPrivateKey) {
+                  console.warn("⚠ WARNING: EMAILJS_PRIVATE_KEY not set! Server-side emails may fail. Add it to .env.local");
+                }
                 // Prepare order items for email (only use data we have)
                 const emailItems = insertedItems.map((item: any) => ({
                   name: item.product_name || "Невідомий товар",
@@ -266,11 +271,12 @@ export const prepareOrder: RequestHandler = async (req, res) => {
                   emailjsPrivateKey, // Pass private key for server-side REST API
                 });
 
-                console.log("Customer email result:", customerEmailResult);
+                console.log("Customer email result:", JSON.stringify(customerEmailResult, null, 2));
                 if (customerEmailResult.success) {
                   console.log("✓ Customer confirmation email sent (cash order)");
                 } else {
                   console.error("✗ Failed to send customer email:", customerEmailResult.error);
+                  console.error("Full error:", JSON.stringify(customerEmailResult, null, 2));
                 }
 
                 console.log("Preparing admin email...");
@@ -306,11 +312,12 @@ export const prepareOrder: RequestHandler = async (req, res) => {
                   emailjsPrivateKey, // Pass private key for server-side REST API
                 });
 
-                console.log("Admin email result:", adminEmailResult);
+                console.log("Admin email result:", JSON.stringify(adminEmailResult, null, 2));
                 if (adminEmailResult.success) {
                   console.log("✓ Admin notification email sent (cash order)");
                 } else {
                   console.error("✗ Failed to send admin email:", adminEmailResult.error);
+                  console.error("Full error:", JSON.stringify(adminEmailResult, null, 2));
                 }
                 console.log("=== EMAIL SENDING DEBUG END ===");
               } else {
