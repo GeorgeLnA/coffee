@@ -188,7 +188,7 @@ export const handler: Handler = async (event, context) => {
     return {
       statusCode: 200,
       headers: {
-        'Content-Type': 'application/xml; charset=utf-8',
+        'Content-Type': 'text/xml; charset=utf-8',
         'Cache-Control': 'public, max-age=3600', // Cache for 1 hour
       },
       body: sitemapContent,
@@ -210,7 +210,7 @@ export const handler: Handler = async (event, context) => {
     return {
       statusCode: 200,
       headers: {
-        'Content-Type': 'application/xml; charset=utf-8',
+        'Content-Type': 'text/xml; charset=utf-8',
         'Cache-Control': 'public, max-age=3600',
       },
       body: fallbackSitemap,
