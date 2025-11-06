@@ -485,6 +485,51 @@ export function OrdersManager() {
 
   useEffect(() => { load(); }, []);
 
+  const renumberOrders = async () => {
+    if (!confirm('Ви впевнені, що хочете перенумерувати всі замовлення? Це оновить ID замовлень (Замовлення #1, #2, #3...). Ця операція незворотна!')) {
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+    try {
+      // Call serverless function via API route (redirects to function)
+      const response = await fetch('/api/orders/renumber', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      // Check if response has content before parsing
+      const text = await response.text();
+      let data;
+      
+      try {
+        data = text ? JSON.parse(text) : {};
+      } catch (parseError) {
+        console.error('Failed to parse response:', text);
+        throw new Error('Сервер повернув невалідну відповідь. Перевірте консоль для деталей.');
+      }
+
+      if (!response.ok) {
+        // If 404, the function might not be deployed yet
+        if (response.status === 404) {
+          throw new Error('Функція перенумерації не знайдена. Будь ласка, переконайтеся, що функція розгорнута на Netlify.');
+        }
+        throw new Error(data.error || data.message || 'Помилка перенумерації');
+      }
+
+      alert(`Успішно перенумеровано ${data.count || 0} замовлень!`);
+      await load(); // Reload orders
+    } catch (e: any) {
+      setError(`Помилка перенумерації: ${e.message}`);
+      console.error('Renumber error:', e);
+      alert(`Помилка: ${e.message}. Будь ласка, перезавантажте сторінку.`);
+    }
+    setLoading(false);
+  };
+
   const deleteOrder = async (orderId: number) => {
     setIsDeleting(true);
     try {
@@ -813,12 +858,22 @@ export function OrdersManager() {
         <h2 className="text-xl font-semibold">
           {selectedTab === "orders" ? `Замовлення (${filteredAndSorted.length})` : `Клієнти (${filteredClients.length})`}
         </h2>
-        <button 
-          onClick={load} 
-          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-        >
-          Оновити
-        </button>
+        <div className="flex items-center gap-2">
+          <button 
+            onClick={renumberOrders} 
+            className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+            disabled={loading}
+          >
+            Перенумерувати
+          </button>
+          <button 
+            onClick={load} 
+            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+            disabled={loading}
+          >
+            Оновити
+          </button>
+        </div>
       </div>
 
       {error && (

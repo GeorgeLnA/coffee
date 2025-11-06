@@ -39,6 +39,18 @@
   status = 200
   to = "/.netlify/functions/warehouses"
 
+[[redirects]]
+  force = true
+  from = "/api/orders/renumber"
+  status = 200
+  to = "/.netlify/functions/renumber-orders"
+
+[[redirects]]
+  force = true
+  from = "/api/orders/regenerate-ids"
+  status = 200
+  to = "/.netlify/functions/regenerate-order-ids"
+
 # Redirect all other API endpoints to Express wrapper function
 [[redirects]]
   force = true
