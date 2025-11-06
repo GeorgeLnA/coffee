@@ -1,5 +1,3 @@
-# SPA fallback - redirect all non-API routes to index.html
-# Note: sitemap.xml is handled by Netlify function (see netlify.toml)
-# robots.txt should be served automatically as a static file
-/* /index.html 200
+# All redirects are handled in netlify.toml
+# This file is kept for compatibility but redirects are defined in netlify.toml
 

@@ -71,3 +71,10 @@
   from = "/.netlify/functions/compare-deployments"
   status = 200
   to = "/.netlify/functions/compare-deployments"
+
+# SPA fallback - MUST be last, after all API routes
+# This catches all other routes and serves index.html for client-side routing
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
