@@ -11,6 +11,7 @@
   external_node_modules = ["express", "@supabase/supabase-js"]
   node_bundler = "esbuild"
   
+# API Routes - Must come BEFORE SPA catch-all in _redirects
 # Redirect specific API endpoints to dedicated serverless functions
 [[redirects]]
   force = true
@@ -24,15 +25,20 @@
   status = 200
   to = "/.netlify/functions/prepare-order"
 
-# Note: liqpay-callback function is accessed directly via /.netlify/functions/liqpay-callback
-# No redirect needed for function endpoints
-
-# Redirect other API endpoints to Express wrapper (for backward compatibility)
+# Redirect all other API endpoints to Express wrapper function
+# The Express server (api.ts) handles routing internally for /api/settlements, /api/warehouses, etc.
 [[redirects]]
   force = true
   from = "/api/*"
   status = 200
   to = "/.netlify/functions/api/:splat"
+
+# Test endpoint to verify functions are working
+[[redirects]]
+  force = true
+  from = "/api/test"
+  status = 200
+  to = "/.netlify/functions/test-api"
 
 # Serve sitemap.xml via function to ensure correct content-type (application/xml)
 [[redirects]]
