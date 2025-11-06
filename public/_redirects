@@ -1,0 +1,7 @@
+# Static files - these will be served directly from the build output
+# No redirect needed, they're handled automatically by Netlify
+
+# SPA fallback - redirect all non-API, non-static routes to index.html
+# Note: API routes are handled in netlify.toml
+/* /index.html 200
+
