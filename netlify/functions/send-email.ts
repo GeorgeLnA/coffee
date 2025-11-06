@@ -161,10 +161,10 @@ export async function sendOrderConfirmationEmail(params: {
     return `${day}.${month}.${year}`;
   };
 
-  // Generate simple text for order items (no HTML, just plain text)
+  // Generate HTML for order items with images (table-based for email client compatibility)
   const generateOrderItemsHTML = (items: typeof orderItems): string => {
     if (!items || items.length === 0) {
-      return 'Товари не знайдено';
+      return '<p style="color: #666; font-size: 15px;">Товари не знайдено</p>';
     }
 
     return items.map((item) => {
@@ -173,8 +173,34 @@ export async function sendOrderConfirmationEmail(params: {
       const itemPrice = item.price || 0;
       const itemTotal = (itemPrice * itemQuantity).toFixed(2);
       const variantText = item.variant ? ` (${item.variant})` : '';
-      return `${itemName}${variantText} - ${itemQuantity} шт. × ${itemPrice.toFixed(2)} грн = ${itemTotal} грн`;
-    }).join('\n');
+      const itemImage = item.image || '';
+      
+      // Generate HTML for each item with image using table layout (email client compatible)
+      return `
+        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom: 0; border-bottom: 1px solid #e8e8e8;">
+          <tr>
+            <td style="padding: 15px 0; vertical-align: top;">
+              <table cellpadding="0" cellspacing="0" border="0" width="100%">
+                <tr>
+                  <td width="80" style="padding-right: 15px; vertical-align: top;">
+                    ${itemImage ? `
+                      <img src="${itemImage}" alt="${itemName}" width="80" height="80" style="width: 80px; height: 80px; object-fit: cover; border-radius: 8px; display: block; border: 0;" />
+                    ` : `
+                      <div style="width: 80px; height: 80px; background-color: #f5f5f5; border-radius: 8px; display: block; text-align: center; line-height: 80px; color: #999; font-size: 11px;">No Image</div>
+                    `}
+                  </td>
+                  <td style="vertical-align: top;">
+                    <div style="font-size: 16px; font-weight: 600; color: #1f0a03; margin-bottom: 5px; line-height: 1.4;">${itemName}${variantText}</div>
+                    <div style="font-size: 14px; color: #666666; margin-bottom: 5px; line-height: 1.4;">${itemQuantity} шт. × ${itemPrice.toFixed(2)} грн</div>
+                    <div style="font-size: 16px; font-weight: 600; color: #361c0c; line-height: 1.4;">${itemTotal} грн</div>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+      `;
+    }).join('');
   };
 
   // Format shipping method (handle both raw method codes and pre-formatted strings)
@@ -235,7 +261,7 @@ export async function sendOrderNotificationEmail(params: {
   customerPhone: string;
   orderId: string;
   orderTotal: number;
-  orderItems: Array<{ name: string; quantity: number; price: number; variant?: string }>;
+  orderItems: Array<{ name: string; quantity: number; price: number; variant?: string; image?: string | null }>;
   shippingAddress: string;
   shippingCity?: string;
   shippingDepartment?: string;
@@ -267,10 +293,10 @@ export async function sendOrderNotificationEmail(params: {
     emailjsPrivateKey,
   } = params;
 
-  // Generate simple text for order items (admin email - same as customer, just plain text)
+  // Generate HTML for order items with images (admin email - same as customer)
   const generateAdminOrderItemsHTML = (items: typeof orderItems): string => {
     if (!items || items.length === 0) {
-      return 'Товари не знайдено';
+      return '<p style="color: #666; font-size: 15px;">Товари не знайдено</p>';
     }
 
     return items.map((item) => {
@@ -279,8 +305,34 @@ export async function sendOrderNotificationEmail(params: {
       const itemPrice = Number(item.price) || 0;
       const itemTotal = (itemPrice * itemQuantity).toFixed(2);
       const variantText = item.variant ? ` (${item.variant})` : '';
-      return `${itemName}${variantText} - ${itemQuantity} шт. × ${itemPrice.toFixed(2)} грн = ${itemTotal} грн`;
-    }).join('\n');
+      const itemImage = item.image || '';
+      
+      // Generate HTML for each item with image using table layout (email client compatible)
+      return `
+        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom: 0; border-bottom: 1px solid #e8e8e8;">
+          <tr>
+            <td style="padding: 15px 0; vertical-align: top;">
+              <table cellpadding="0" cellspacing="0" border="0" width="100%">
+                <tr>
+                  <td width="80" style="padding-right: 15px; vertical-align: top;">
+                    ${itemImage ? `
+                      <img src="${itemImage}" alt="${itemName}" width="80" height="80" style="width: 80px; height: 80px; object-fit: cover; border-radius: 8px; display: block; border: 0;" />
+                    ` : `
+                      <div style="width: 80px; height: 80px; background-color: #f5f5f5; border-radius: 8px; display: block; text-align: center; line-height: 80px; color: #999; font-size: 11px;">No Image</div>
+                    `}
+                  </td>
+                  <td style="vertical-align: top;">
+                    <div style="font-size: 16px; font-weight: 600; color: #1f0a03; margin-bottom: 5px; line-height: 1.4;">${itemName}${variantText}</div>
+                    <div style="font-size: 14px; color: #666666; margin-bottom: 5px; line-height: 1.4;">${itemQuantity} шт. × ${itemPrice.toFixed(2)} грн</div>
+                    <div style="font-size: 16px; font-weight: 600; color: #361c0c; line-height: 1.4;">${itemTotal} грн</div>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+      `;
+    }).join('');
   };
 
   // Format order items for email (text version for simple templates)
