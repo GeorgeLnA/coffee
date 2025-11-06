@@ -25,8 +25,20 @@
   status = 200
   to = "/.netlify/functions/prepare-order"
 
+# Redirect Nova Poshta API endpoints to dedicated functions
+[[redirects]]
+  force = true
+  from = "/api/settlements"
+  status = 200
+  to = "/.netlify/functions/settlements"
+
+[[redirects]]
+  force = true
+  from = "/api/warehouses"
+  status = 200
+  to = "/.netlify/functions/warehouses"
+
 # Redirect all other API endpoints to Express wrapper function
-# The Express server (api.ts) handles routing internally for /api/settlements, /api/warehouses, etc.
 [[redirects]]
   force = true
   from = "/api/*"
