@@ -59,9 +59,15 @@
   status = 200
   to = "/.netlify/functions/sitemap"
 
-# Diagnostic endpoint for environment variable checking
+# Diagnostic endpoints
 [[redirects]]
   force = true
   from = "/.netlify/functions/env-check"
   status = 200
   to = "/.netlify/functions/env-check"
+
+[[redirects]]
+  force = true
+  from = "/.netlify/functions/compare-deployments"
+  status = 200
+  to = "/.netlify/functions/compare-deployments"
