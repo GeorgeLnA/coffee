@@ -4,201 +4,347 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Підтвердження замовлення</title>
+    <style>
+        /* Reset styles for email clients */
+        body, table, td, p, a, li, blockquote {
+            -webkit-text-size-adjust: 100%;
+            -ms-text-size-adjust: 100%;
+        }
+        table, td {
+            mso-table-lspace: 0pt;
+            mso-table-rspace: 0pt;
+        }
+        img {
+            -ms-interpolation-mode: bicubic;
+            border: 0;
+            outline: none;
+            text-decoration: none;
+        }
+        
+        /* Main styles */
+        body {
+            margin: 0;
+            padding: 0;
+            width: 100% !important;
+            height: 100% !important;
+            background-color: #f5f5f5;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+        }
+        
+        .email-wrapper {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #ffffff;
+        }
+        
+        .email-header {
+            background: linear-gradient(135deg, #361c0c 0%, #4a2817 100%);
+            padding: 40px 30px;
+            text-align: center;
+        }
+        
+        .logo {
+            max-width: 200px;
+            height: auto;
+            margin: 0 auto 20px;
+            display: block;
+        }
+        
+        .email-content {
+            padding: 40px 30px;
+            background-color: #ffffff;
+        }
+        
+        .greeting {
+            font-size: 24px;
+            font-weight: 700;
+            color: #361c0c;
+            margin: 0 0 20px 0;
+            line-height: 1.4;
+        }
+        
+        .order-info-box {
+            background-color: #fcf4e4;
+            border-left: 4px solid #361c0c;
+            padding: 20px;
+            margin: 30px 0;
+            border-radius: 8px;
+        }
+        
+        .order-info-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #361c0c;
+            margin: 0 0 15px 0;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .order-info-item {
+            margin: 10px 0;
+            font-size: 15px;
+            color: #1f0a03;
+            line-height: 1.6;
+        }
+        
+        .order-info-label {
+            font-weight: 600;
+            color: #361c0c;
+            display: inline-block;
+            min-width: 140px;
+        }
+        
+        .order-items {
+            margin: 30px 0;
+        }
+        
+        .order-items-title {
+            font-size: 20px;
+            font-weight: 700;
+            color: #361c0c;
+            margin: 0 0 20px 0;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #fcf4e4;
+        }
+        
+        .order-item {
+            padding: 15px 0;
+            border-bottom: 1px solid #e8e8e8;
+        }
+        
+        .order-item:last-child {
+            border-bottom: none;
+        }
+        
+        .item-name {
+            font-size: 16px;
+            font-weight: 600;
+            color: #1f0a03;
+            margin: 0 0 5px 0;
+        }
+        
+        .item-details {
+            font-size: 14px;
+            color: #666666;
+            margin: 5px 0;
+        }
+        
+        .item-total {
+            font-size: 16px;
+            font-weight: 600;
+            color: #361c0c;
+            text-align: right;
+            margin-top: 5px;
+        }
+        
+        .order-total {
+            background-color: #361c0c;
+            color: #fcf4e4;
+            padding: 25px;
+            margin: 30px 0;
+            border-radius: 8px;
+            text-align: center;
+        }
+        
+        .order-total-label {
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin: 0 0 10px 0;
+            opacity: 0.9;
+        }
+        
+        .order-total-amount {
+            font-size: 32px;
+            font-weight: 700;
+            margin: 0;
+        }
+        
+        .shipping-info {
+            background-color: #f9f9f9;
+            padding: 20px;
+            margin: 30px 0;
+            border-radius: 8px;
+            border: 1px solid #e8e8e8;
+        }
+        
+        .shipping-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #361c0c;
+            margin: 0 0 15px 0;
+        }
+        
+        .shipping-detail {
+            margin: 8px 0;
+            font-size: 15px;
+            color: #1f0a03;
+            line-height: 1.6;
+        }
+        
+        .notes-section {
+            background-color: #fff9e6;
+            border-left: 4px solid #d59e53;
+            padding: 20px;
+            margin: 30px 0;
+            border-radius: 8px;
+        }
+        
+        .notes-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #361c0c;
+            margin: 0 0 10px 0;
+        }
+        
+        .notes-text {
+            font-size: 15px;
+            color: #1f0a03;
+            line-height: 1.6;
+            margin: 0;
+        }
+        
+        .footer {
+            background-color: #1f0a03;
+            color: #fcf4e4;
+            padding: 30px;
+            text-align: center;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+        
+        .footer-text {
+            margin: 10px 0;
+            color: #d59e53;
+        }
+        
+        .divider {
+            height: 1px;
+            background: linear-gradient(to right, transparent, #e8e8e8, transparent);
+            margin: 30px 0;
+        }
+        
+        @media only screen and (max-width: 600px) {
+            .email-content {
+                padding: 30px 20px;
+            }
+            
+            .email-header {
+                padding: 30px 20px;
+            }
+            
+            .greeting {
+                font-size: 20px;
+            }
+            
+            .order-info-label {
+                display: block;
+                margin-bottom: 5px;
+            }
+        }
+    </style>
 </head>
-<body style="margin: 0; padding: 0; font-family: 'Helvetica Neue', Helvetica, Roboto, Arial, sans-serif; background-color: #f2f2f2;">
-    <table border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #f2f2f2; padding: 20px 0;">
-        <tr>
-            <td align="center">
-                <table border="0" cellpadding="0" cellspacing="0" width="600" style="background-color: #ffffff; border-radius: 0;">
-                    <!-- Header with Logo and Order Info -->
-                    <tr>
-                        <td style="padding: 20px; background-color: #ffffff;">
-                            <table border="0" cellpadding="0" cellspacing="0" width="100%">
-                                <tr>
-                                    <td width="50%" valign="top">
-                                        <img src="https://coffeemanifest.com.ua/wp-content/uploads/2024/03/logo_manifest.png" alt="THE COFFEE MANIFEST" width="185" style="max-width: 185px; height: auto; display: block;">
-                                    </td>
-                                    <td width="50%" valign="top" style="text-align: right; padding-top: 10px;">
-                                        <p style="margin: 0; line-height: 22px; text-align: center;">
-                                            <span style="font-size: 16px; color: #000000;">Замовлення #{{order_id}}</span>
-                                        </p>
-                                        <p style="margin: 0; line-height: 22px; text-align: center;">
-                                            <span style="font-size: 16px; color: #000000;">від {{order_date}}</span>
-                                        </p>
-                                    </td>
-                                </tr>
-                            </table>
-                        </td>
-                    </tr>
-
-                    <!-- Order Items -->
-                    <tr>
-                        <td style="padding: 10px 20px 5px; background-color: #ffffff;">
-                            <table border="0" cellpadding="0" cellspacing="0" width="100%">
-                                <tr>
-                                    <td>
-                                        {{order_items_html}}
-                                    </td>
-                                </tr>
-                            </table>
-                        </td>
-                    </tr>
-
-                    <!-- Billing Address -->
-                    <tr>
-                        <td style="padding: 0 20px; background-color: #ffffff;">
-                            <table border="0" cellpadding="0" cellspacing="0" width="100%">
-                                <tr>
-                                    <td width="50%" valign="top" style="padding-bottom: 10px;">
-                                        <p style="margin: 0; line-height: 22px;">
-                                            <span style="color: #000000; font-size: 16px;"><strong>Платіжна адреса</strong></span>
-                                        </p>
-                                        <div style="margin-top: 5px; font-size: 15px; font-weight: 400; color: #000000; line-height: 22px;">
-                                            {{customer_name}}<br>
-                                            {{billing_address}}<br>
-                                            {{customer_phone}}<br>
-                                            {{customer_email}}
-                                        </div>
-                                    </td>
-                                    <td width="50%" valign="top" style="padding-bottom: 10px;">
-                                        <p style="margin: 0; line-height: 22px;">
-                                            <span style="color: #000000; font-size: 16px;"><strong>Адреса доставки</strong></span>
-                                        </p>
-                                        <div style="margin-top: 5px; font-size: 15px; font-weight: 400; color: #000000; line-height: 22px;">
-                                            {{shipping_address}}
-                                        </div>
-                                    </td>
-                                </tr>
-                            </table>
-                        </td>
-                    </tr>
-
-                    <!-- Order Notes -->
-                    <tr>
-                        <td style="padding: 5px 20px; background-color: #ffffff;">
-                            <table border="0" cellpadding="0" cellspacing="0" width="100%">
-                                <tr>
-                                    <td>
-                                        <table border="0" cellpadding="0" cellspacing="0" width="100%" style="margin: 10px 0;">
-                                            <tr>
-                                                <td style="border-top: 3px solid #eaeaea;"></td>
-                                            </tr>
-                                        </table>
-                                        <p style="margin: 0; line-height: 22px;">
-                                            <span style="color: #000000; font-size: 16px;"><strong>Коментар до замовлення</strong></span>
-                                        </p>
-                                        <div style="margin-top: 10px; font-size: 15px; font-weight: 400; color: #000000; line-height: 22px;">
-                                            {{order_notes}}
-                                        </div>
-                                        <table border="0" cellpadding="0" cellspacing="0" width="100%" style="margin: 10px 0;">
-                                            <tr>
-                                                <td style="border-top: 3px solid #eaeaea;"></td>
-                                            </tr>
-                                        </table>
-                                    </td>
-                                </tr>
-                            </table>
-                        </td>
-                    </tr>
-
-                    <!-- Subtotal -->
-                    <tr>
-                        <td style="padding: 5px 20px; background-color: #ffffff;">
-                            <table border="0" cellpadding="0" cellspacing="0" width="100%">
-                                <tr>
-                                    <td>
-                                        <table border="0" cellpadding="0" cellspacing="0" width="100%" style="margin: 10px 0;">
-                                            <tr>
-                                                <td style="border-top: 3px solid #eaeaea;"></td>
-                                            </tr>
-                                        </table>
-                                        <table border="0" cellpadding="0" cellspacing="0" width="100%">
-                                            <tr>
-                                                <td valign="top" style="padding: 0; text-align: left; font-weight: 400; font-size: 15px; line-height: 22px; color: #000000;">
-                                                    <p style="margin: 0; font-weight: 400; font-size: 15px; line-height: 22px; color: #000000;">Разом:</p>
-                                                </td>
-                                                <td valign="top" style="padding: 0; width: 50%; text-align: right;">
-                                                    <p style="margin: 0; font-weight: 400; font-size: 15px; line-height: 22px; color: #000000;">
-                                                        <span>{{order_total}}</span>
-                                                    </p>
-                                                </td>
-                                            </tr>
-                                        </table>
-                                        <table border="0" cellpadding="0" cellspacing="0" width="100%" style="margin: 10px 0;">
-                                            <tr>
-                                                <td style="border-top: 3px solid #eaeaea;"></td>
-                                            </tr>
-                                        </table>
-                                    </td>
-                                </tr>
-                            </table>
-                        </td>
-                    </tr>
-
-                    <!-- Delivery and Payment Methods -->
-                    <tr>
-                        <td style="padding: 5px 20px; background-color: #ffffff;">
-                            <table border="0" cellpadding="0" cellspacing="0" width="100%">
-                                <tr>
-                                    <td width="50%" valign="top" style="padding-bottom: 5px;">
-                                        <p style="margin: 0; line-height: 22px;">
-                                            <span style="font-size: 15px; color: #000000;">Спосіб доставки:</span>
-                                        </p>
-                                    </td>
-                                    <td width="50%" valign="top" style="padding-bottom: 5px; text-align: right;">
-                                        <p style="margin: 0; line-height: 22px; text-align: right;">
-                                            <span style="font-size: 15px; color: #000000;">{{shipping_method}}</span>
-                                        </p>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td width="50%" valign="top" style="padding-bottom: 5px;">
-                                        <p style="margin: 0; line-height: 22px;">
-                                            <span style="font-size: 15px; color: #000000;">Спосіб оплати:</span>
-                                        </p>
-                                    </td>
-                                    <td width="50%" valign="top" style="padding-bottom: 5px; text-align: right;">
-                                        <p style="margin: 0; line-height: 22px; text-align: right;">
-                                            <span style="font-size: 15px; color: #000000;">{{payment_method}}</span>
-                                        </p>
-                                    </td>
-                                </tr>
-                            </table>
-                        </td>
-                    </tr>
-
-                    <!-- Total -->
-                    <tr>
-                        <td style="padding: 5px 20px 50px; background-color: #ffffff;">
-                            <table border="0" cellpadding="0" cellspacing="0" width="100%">
-                                <tr>
-                                    <td>
-                                        <table border="0" cellpadding="0" cellspacing="0" width="100%" style="margin: 10px 0;">
-                                            <tr>
-                                                <td style="border-top: 3px solid #eaeaea;"></td>
-                                            </tr>
-                                        </table>
-                                        <table border="0" cellpadding="0" cellspacing="0" width="100%">
-                                            <tr>
-                                                <td valign="top" style="padding: 0; text-align: left; font-weight: 600; font-size: 20px; line-height: 22px; color: #000000;">
-                                                    <p style="margin: 0; font-weight: 600; font-size: 20px; line-height: 22px; color: #000000;">Всього:</p>
-                                                </td>
-                                                <td valign="top" style="padding: 0; width: 50%; text-align: right;">
-                                                    <p style="margin: 0; font-weight: 600; font-size: 20px; line-height: 22px; color: #000000;">
-                                                        <span>{{order_total}}</span>
-                                                    </p>
-                                                </td>
-                                            </tr>
-                                        </table>
-                                    </td>
-                                </tr>
-                            </table>
-                        </td>
-                    </tr>
-                </table>
-            </td>
-        </tr>
-    </table>
+<body>
+    <div class="email-wrapper">
+        <!-- Header with Logo -->
+        <div class="email-header">
+            <img src="https://manifestcoffee.com.ua/manifest-site-logo.png" alt="THE COFFEE MANIFEST" class="logo" />
+        </div>
+        
+        <!-- Main Content -->
+        <div class="email-content">
+            <h1 class="greeting">Вітаємо, {{customer_name}}!</h1>
+            
+            <p style="font-size: 16px; color: #1f0a03; line-height: 1.6; margin: 0 0 20px 0;">
+                Дякуємо за ваше замовлення! Ми отримали ваш запит і вже готуємо його до відправки.
+            </p>
+            
+            <!-- Order Information Box -->
+            <div class="order-info-box">
+                <h2 class="order-info-title">Деталі замовлення</h2>
+                <div class="order-info-item">
+                    <span class="order-info-label">Номер замовлення:</span>
+                    <span>{{order_id}}</span>
+                </div>
+                <div class="order-info-item">
+                    <span class="order-info-label">Дата замовлення:</span>
+                    <span>{{order_date}}</span>
+                </div>
+            </div>
+            
+            <!-- Order Items -->
+            <div class="order-items">
+                <h2 class="order-items-title">Ваше замовлення</h2>
+                <div style="white-space: pre-line; font-size: 15px; color: #1f0a03; line-height: 1.8;">
+{{order_items_html}}
+                </div>
+            </div>
+            
+            <!-- Order Total -->
+            <div class="order-total">
+                <p class="order-total-label">До сплати</p>
+                <p class="order-total-amount">{{order_total}}</p>
+            </div>
+            
+            <!-- Shipping Information -->
+            <div class="shipping-info">
+                <h2 class="shipping-title">Доставка</h2>
+                <div class="shipping-detail">
+                    <strong style="color: #361c0c;">Адреса доставки:</strong><br>
+                    {{shipping_address}}
+                </div>
+                <div class="shipping-detail">
+                    <strong style="color: #361c0c;">Спосіб доставки:</strong><br>
+                    {{shipping_method}}
+                </div>
+                <div class="shipping-detail">
+                    <strong style="color: #361c0c;">Спосіб оплати:</strong><br>
+                    {{payment_method}}
+                </div>
+            </div>
+            
+            <!-- Contact Information -->
+            <div class="shipping-info">
+                <h2 class="shipping-title">Контактна інформація</h2>
+                <div class="shipping-detail">
+                    <strong style="color: #361c0c;">Телефон:</strong><br>
+                    {{customer_phone}}
+                </div>
+                <div class="shipping-detail">
+                    <strong style="color: #361c0c;">Email:</strong><br>
+                    {{customer_email}}
+                </div>
+            </div>
+            
+            <!-- Notes Section (will show empty if order_notes is empty) -->
+            <div class="notes-section">
+                <h3 class="notes-title">Примітки до замовлення</h3>
+                <p class="notes-text">{{order_notes}}&nbsp;</p>
+            </div>
+            
+            <div class="divider"></div>
+            
+            <p style="font-size: 15px; color: #1f0a03; line-height: 1.6; margin: 20px 0 0 0;">
+                Якщо у вас виникли питання щодо замовлення, будь ласка, зв'яжіться з нами за телефоном або електронною поштою.
+            </p>
+            
+            <p style="font-size: 15px; color: #1f0a03; line-height: 1.6; margin: 20px 0 0 0;">
+                З повагою,<br>
+                <strong style="color: #361c0c;">Команда THE COFFEE MANIFEST</strong>
+            </p>
+        </div>
+        
+        <!-- Footer -->
+        <div class="footer">
+            <p class="footer-text">THE COFFEE MANIFEST</p>
+            <p style="margin: 10px 0; color: #fcf4e4;">
+                Свіжообсмажена кава з Києва<br>
+                Доставка по всій Україні
+            </p>
+            <p style="margin: 10px 0; font-size: 12px; color: #878787;">
+                Це автоматичне повідомлення. Будь ласка, не відповідайте на цей лист.
+            </p>
+        </div>
+    </div>
 </body>
 </html>
-
