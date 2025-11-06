@@ -35,6 +35,14 @@ function getSupabaseClient() {
  * Returns: { data, signature, orderId, paymentMethod }
  */
 export const handler: Handler = async (event, context) => {
+  // Debug: Log the incoming request method
+  console.log("=== PREPARE ORDER FUNCTION DEBUG ===");
+  console.log("HTTP Method:", event.httpMethod);
+  console.log("Path:", event.path);
+  console.log("Raw URL:", event.rawUrl);
+  console.log("Headers:", JSON.stringify(event.headers, null, 2));
+  console.log("================================");
+
   // Handle CORS preflight
   if (event.httpMethod === "OPTIONS") {
     return {
@@ -50,9 +58,18 @@ export const handler: Handler = async (event, context) => {
 
   // Only allow POST requests
   if (event.httpMethod !== "POST") {
+    console.error("Method not allowed - received:", event.httpMethod, "expected: POST");
     return {
       statusCode: 405,
-      body: JSON.stringify({ error: "Method not allowed" }),
+      headers: {
+        "Content-Type": "application/json",
+        "Access-Control-Allow-Origin": "*",
+      },
+      body: JSON.stringify({ 
+        error: "Method not allowed",
+        received: event.httpMethod,
+        expected: "POST"
+      }),
     };
   }
 
