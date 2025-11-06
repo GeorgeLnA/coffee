@@ -109,6 +109,69 @@ export async function sendEmailViaEmailJS(params: {
 }
 
 /**
+ * Helper function to get product image based on variant/weight
+ * Uses Supabase-hosted images for each weight
+ * Shared between customer and admin email functions
+ */
+function getPlaceholderImageByWeight(variant: string | null | undefined): string {
+  console.log('getPlaceholderImageByWeight called with variant:', variant);
+  
+  // Image URLs from Supabase storage
+  const imageUrls = {
+    250: 'https://umynzgzlqdphgrzixhsc.supabase.co/storage/v1/object/public/media/coffee/1761665796405-250gr.png',
+    500: 'https://umynzgzlqdphgrzixhsc.supabase.co/storage/v1/object/public/media/coffee/sizes/1761665813027-500gr.png',
+    1000: 'https://umynzgzlqdphgrzixhsc.supabase.co/storage/v1/object/public/media/coffee/sizes/1761665827913-1000gr.png',
+  };
+  
+  if (!variant) {
+    console.log('No variant, using default 250g image');
+    return imageUrls[250]; // Default to 250g
+  }
+  
+  // Extract weight from variant (e.g., "250g Зерна", "1kg", "1000g" -> weight in grams)
+  // Try multiple patterns to catch different formats
+  const kgMatch = variant.match(/(\d+)\s*kg/i);
+  const gMatch = variant.match(/(\d+)\s*g/i);
+  const numberMatch = variant.match(/(\d+)/); // Fallback: just get any number
+  
+  let weightInGrams = 0;
+  if (kgMatch) {
+    weightInGrams = parseInt(kgMatch[1], 10) * 1000; // Convert kg to grams
+    console.log('Found kg match:', kgMatch[1], '->', weightInGrams, 'grams');
+  } else if (gMatch) {
+    weightInGrams = parseInt(gMatch[1], 10);
+    console.log('Found g match:', gMatch[1], '->', weightInGrams, 'grams');
+  } else if (numberMatch) {
+    // Fallback: if we find a number, assume it's grams
+    const num = parseInt(numberMatch[1], 10);
+    if (num >= 1000) {
+      weightInGrams = num;
+    } else if (num === 1 && variant.toLowerCase().includes('kg')) {
+      weightInGrams = 1000;
+    } else {
+      weightInGrams = num;
+    }
+    console.log('Found number match:', numberMatch[1], '->', weightInGrams, 'grams (fallback)');
+  }
+  
+  let imageUrl = '';
+  if (weightInGrams === 250) {
+    imageUrl = imageUrls[250];
+  } else if (weightInGrams === 500) {
+    imageUrl = imageUrls[500];
+  } else if (weightInGrams === 1000) {
+    imageUrl = imageUrls[1000];
+  } else {
+    // Default to 250g if weight not found or doesn't match
+    imageUrl = imageUrls[250];
+    console.log('Weight not matched, using default 250g. Weight was:', weightInGrams);
+  }
+  
+  console.log('Final image URL:', imageUrl);
+  return imageUrl;
+}
+
+/**
  * Send order confirmation email to customer
  */
 export async function sendOrderConfirmationEmail(params: {
@@ -161,34 +224,6 @@ export async function sendOrderConfirmationEmail(params: {
     return `${day}.${month}.${year}`;
   };
 
-  // Helper function to get placeholder image based on variant/weight
-  const getPlaceholderImage = (variant: string | null | undefined, baseUrl: string = 'https://manifestcoffee.com.ua'): string => {
-    if (!variant) {
-      return `${baseUrl}/250-g_Original.PNG`; // Default to 250g
-    }
-    
-    // Extract weight from variant (e.g., "250g Зерна", "1kg", "1000g" -> weight in grams)
-    const kgMatch = variant.match(/(\d+)\s*kg/i);
-    const gMatch = variant.match(/(\d+)\s*g/i);
-    
-    let weightInGrams = 0;
-    if (kgMatch) {
-      weightInGrams = parseInt(kgMatch[1], 10) * 1000; // Convert kg to grams
-    } else if (gMatch) {
-      weightInGrams = parseInt(gMatch[1], 10);
-    }
-    
-    if (weightInGrams === 250) {
-      return `${baseUrl}/250-g_Original.PNG`;
-    } else if (weightInGrams === 500) {
-      return `${baseUrl}/500_Manifestcoffee_Original.PNG`;
-    } else if (weightInGrams === 1000) {
-      return `${baseUrl}/woocommerce-placeholder_Original.PNG`;
-    }
-    
-    // Default to 250g if weight not found or doesn't match
-    return `${baseUrl}/250-g_Original.PNG`;
-  };
 
   // Generate HTML for order items with images (table-based for email client compatibility)
   const generateOrderItemsHTML = (items: typeof orderItems): string => {
@@ -204,7 +239,14 @@ export async function sendOrderConfirmationEmail(params: {
       const variantText = item.variant ? ` (${item.variant})` : '';
       
       // Always use placeholder image based on variant/weight
-      const itemImage = getPlaceholderImage(item.variant);
+      const itemImage = getPlaceholderImageByWeight(item.variant);
+      
+      // Debug logging
+      console.log('Email image generation:', {
+        itemName,
+        variant: item.variant,
+        imageUrl: itemImage,
+      });
       
       // Generate HTML for each item with image using table layout (email client compatible)
       return `
@@ -320,34 +362,6 @@ export async function sendOrderNotificationEmail(params: {
     emailjsPrivateKey,
   } = params;
 
-  // Helper function to get placeholder image based on variant/weight (for admin email)
-  const getAdminPlaceholderImage = (variant: string | null | undefined, baseUrl: string = 'https://manifestcoffee.com.ua'): string => {
-    if (!variant) {
-      return `${baseUrl}/250-g_Original.PNG`; // Default to 250g
-    }
-    
-    // Extract weight from variant (e.g., "250g Зерна", "1kg", "1000g" -> weight in grams)
-    const kgMatch = variant.match(/(\d+)\s*kg/i);
-    const gMatch = variant.match(/(\d+)\s*g/i);
-    
-    let weightInGrams = 0;
-    if (kgMatch) {
-      weightInGrams = parseInt(kgMatch[1], 10) * 1000; // Convert kg to grams
-    } else if (gMatch) {
-      weightInGrams = parseInt(gMatch[1], 10);
-    }
-    
-    if (weightInGrams === 250) {
-      return `${baseUrl}/250-g_Original.PNG`;
-    } else if (weightInGrams === 500) {
-      return `${baseUrl}/500_Manifestcoffee_Original.PNG`;
-    } else if (weightInGrams === 1000) {
-      return `${baseUrl}/woocommerce-placeholder_Original.PNG`;
-    }
-    
-    // Default to 250g if weight not found or doesn't match
-    return `${baseUrl}/250-g_Original.PNG`;
-  };
 
   // Generate HTML for order items with images (admin email - same as customer)
   const generateAdminOrderItemsHTML = (items: typeof orderItems): string => {
@@ -363,7 +377,14 @@ export async function sendOrderNotificationEmail(params: {
       const variantText = item.variant ? ` (${item.variant})` : '';
       
       // Always use placeholder image based on variant/weight
-      const itemImage = getAdminPlaceholderImage(item.variant);
+      const itemImage = getPlaceholderImageByWeight(item.variant);
+      
+      // Debug logging
+      console.log('Admin email image generation:', {
+        itemName,
+        variant: item.variant,
+        imageUrl: itemImage,
+      });
       
       // Generate HTML for each item with image using table layout (email client compatible)
       return `
