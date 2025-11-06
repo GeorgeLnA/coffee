@@ -161,46 +161,117 @@ export const handler: Handler = async (event, context) => {
     const maxId = fullOrders.length;
     const nextId = maxId + 1;
     
-    // Try to call the SQL function to reset the sequence
+    console.log(`Attempting to reset sequence to continue from ID ${nextId} (max order ID: ${maxId})`);
+    
+    // Method 1: Try to call the SQL RPC function if it exists (best method)
     try {
       const { error: rpcError } = await supabase.rpc('reset_orders_sequence');
       
-      if (rpcError) {
-        console.log('RPC function not available, using temp order method:', rpcError.message);
-        
-        // Fallback: Insert a temporary order with the next ID, then delete it
-        // This forces PostgreSQL to advance the sequence
-        const { data: tempOrder, error: tempError } = await supabase
+      if (!rpcError) {
+        console.log(`✓ Sequence reset successfully via RPC to continue from ID ${nextId}`);
+      } else {
+        console.log('RPC function not available, trying alternative methods:', rpcError.message);
+        throw rpcError; // Fall through to alternative methods
+      }
+    } catch (rpcError: any) {
+      // Method 2: Check current sequence state and advance it if needed
+      try {
+        // First, check what the current sequence value is by inserting a test order
+        const { data: testOrder, error: testError } = await supabase
           .from('orders')
           .insert({
-            id: nextId,
             status: 'temp',
-            customer_name: 'TEMP_DELETE_ME',
-            customer_email: 'temp@delete.me',
+            customer_name: 'TEMP_SEQUENCE_CHECK',
+            customer_email: 'temp@sequence.check',
+            customer_phone: '0000000000',
             total_price: 0,
+            currency: 'UAH',
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
           })
           .select()
           .single();
         
-        if (!tempError && tempOrder) {
-          // Delete the temp order immediately
-          await supabase
-            .from('orders')
-            .delete()
-            .eq('id', nextId);
-          
-          console.log(`Sequence reset: inserted and deleted temp order with ID ${nextId}`);
-        } else {
-          console.log('Could not reset sequence via temp order method:', tempError?.message);
+        if (testError) {
+          console.error('Cannot check sequence state:', testError.message);
+          throw testError;
         }
-      } else {
-        console.log(`Sequence reset successfully to continue from ID ${nextId}`);
+        
+        const currentSequenceId = testOrder.id;
+        console.log(`Current sequence is at ID ${currentSequenceId}, need to advance to ${nextId}`);
+        
+        // Delete the test order
+        await supabase.from('orders').delete().eq('id', currentSequenceId);
+        
+        // If sequence is behind, we need to advance it by inserting orders with specific IDs
+        if (currentSequenceId < nextId) {
+          console.log(`Sequence needs to advance from ${currentSequenceId} to ${nextId}`);
+          
+          // Insert temporary orders with IDs from currentSequenceId+1 to nextId, then delete them
+          // This forces PostgreSQL to advance the sequence
+          for (let i = currentSequenceId + 1; i <= nextId; i++) {
+            try {
+              const { data: advanceOrder, error: advanceError } = await supabase
+                .from('orders')
+                .insert({
+                  id: i,
+                  status: 'temp',
+                  customer_name: 'TEMP_DELETE_ME',
+                  customer_email: 'temp@delete.me',
+                  customer_phone: '0000000000',
+                  total_price: 0,
+                  currency: 'UAH',
+                  created_at: new Date().toISOString(),
+                  updated_at: new Date().toISOString(),
+                })
+                .select()
+                .single();
+              
+              if (!advanceError && advanceOrder) {
+                // Delete immediately to clean up
+                await supabase.from('orders').delete().eq('id', i);
+                console.log(`Advanced sequence through ID ${i}`);
+              } else {
+                console.log(`Could not insert ID ${i}, error:`, advanceError?.message);
+              }
+            } catch (e: any) {
+              console.log(`Error advancing sequence at ID ${i}:`, e?.message);
+              // Continue trying other IDs
+            }
+          }
+          
+          // Final check: insert one more test order to verify sequence is now at nextId+1
+          const { data: finalTest, error: finalError } = await supabase
+            .from('orders')
+            .insert({
+              status: 'temp',
+              customer_name: 'TEMP_FINAL_CHECK',
+              customer_email: 'temp@final.check',
+              customer_phone: '0000000000',
+              total_price: 0,
+              currency: 'UAH',
+            })
+            .select()
+            .single();
+          
+          if (!finalError && finalTest) {
+            const finalSequenceId = finalTest.id;
+            await supabase.from('orders').delete().eq('id', finalSequenceId);
+            
+            if (finalSequenceId >= nextId) {
+              console.log(`✓ Sequence successfully advanced to ${finalSequenceId} (next order will be ${finalSequenceId + 1})`);
+            } else {
+              console.warn(`⚠ Sequence is at ${finalSequenceId}, but should be at least ${nextId}`);
+            }
+          }
+        } else if (currentSequenceId >= nextId) {
+          console.log(`✓ Sequence is already at ${currentSequenceId}, which is >= ${nextId}. No reset needed.`);
+        }
+      } catch (seqError: any) {
+        console.error('Sequence reset error:', seqError?.message);
+        console.warn('WARNING: Could not properly reset sequence. Please run reset_orders_sequence.sql in Supabase SQL Editor to fix this.');
+        // Don't fail the operation, but log the warning
       }
-    } catch (seqError: any) {
-      console.log('Sequence reset error:', seqError?.message);
-      // This is not critical - the sequence will eventually catch up, but new orders might have gaps
     }
 
     return {
