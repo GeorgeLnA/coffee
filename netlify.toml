@@ -34,5 +34,9 @@
   status = 200
   to = "/.netlify/functions/api/:splat"
 
-# Note: Redirects are now handled by public/_redirects file
-# This allows static files like sitemap.xml and robots.txt to be served correctly
+# Serve sitemap.xml via function to ensure correct content-type (application/xml)
+[[redirects]]
+  force = true
+  from = "/sitemap.xml"
+  status = 200
+  to = "/.netlify/functions/sitemap"
