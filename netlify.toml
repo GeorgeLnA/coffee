@@ -8,7 +8,8 @@
 
 
 [functions]
-  external_node_modules = ["express", "@supabase/supabase-js"]
+  # Only mark express as external - @supabase/supabase-js needs to be bundled
+  external_node_modules = ["express"]
   node_bundler = "esbuild"
   
 # API Routes - Must come BEFORE SPA catch-all in _redirects
