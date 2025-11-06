@@ -602,6 +602,7 @@ export interface DBCoffeeProduct {
   image_url: string | null;
   origin: string | null;
   roast: string | null; // 'light' | 'medium' | 'dark'
+  process: string | null; // processing method
   in_stock: boolean | null;
   custom_label: string | null;
   custom_label_ru: string | null;
@@ -687,7 +688,7 @@ export function useCoffeeProducts() {
           flavorNotes,
           acidity,
           body,
-          process: '',
+          process: p.process || '',
           elevation: 0,
           inStock: !!p.in_stock,
           active: p.active !== false, // Default to true if not explicitly set to false
@@ -778,7 +779,7 @@ export function useCoffeeProduct(id: string | number) {
           : (Array.isArray(p.aftertaste_ua) ? p.aftertaste_ua : (Array.isArray(p.flavor_notes_array) ? p.flavor_notes_array : [])),
         acidity: mapLevelToString(p.acidity_level, 'low', 'medium', 'high'),
         body: mapLevelToString(p.body_level, 'light', 'medium', 'full'),
-        process: '',
+        process: p.process || '',
         elevation: 0,
         inStock: !!p.in_stock,
         active: p.active !== false,

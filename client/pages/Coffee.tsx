@@ -369,6 +369,7 @@ export default function Coffee() {
     search: "",
     origins: [],
     roasts: [],
+    processes: [],
     priceRange: [0, 1000],
     inStock: null,
   });
@@ -387,6 +388,8 @@ export default function Coffee() {
       ? (filterOptions as any).originPairs
       : defaultOriginPairs;
 
+    const roastPairs = (filterOptions as any)?.roastPairs || [];
+    
     const roastToCode = (r: string): string => {
       const v = normalize(r);
       if (['light', 'світле', 'светлое'].includes(v)) return 'light';
@@ -394,8 +397,6 @@ export default function Coffee() {
       if (['dark', 'темне', 'темное', 'дуже темне', 'очень темное', 'very-dark'].includes(v)) return 'dark';
       return v; // fallback to raw
     };
-
-    const selectedRoastCodes = filters.roasts.map(ro => roastToCode(ro));
 
     const source = (supaProducts && supaProducts.length) ? supaProducts : placeholderCoffees;
     const filtered = source.filter((coffee) => {
@@ -435,14 +436,44 @@ export default function Coffee() {
         if (!anyOriginMatch) return false;
       }
 
-      // Roast filter (normalize to codes)
-      if (selectedRoastCodes.length > 0) {
-        const productRoastCode = roastToCode(coffee.roast);
-        if (!selectedRoastCodes.includes(productRoastCode)) {
-          return false;
+      // Roast filter (match UA/RU synonyms using roastPairs)
+      if (filters.roasts.length > 0) {
+        const coffeeRoast = normalize(coffee.roast);
+        let anyRoastMatch = false;
+        for (const sel of filters.roasts) {
+          const selNorm = normalize(sel);
+          const pair = roastPairs.find((p: any) => normalize(p.ua) === selNorm || normalize(p.ru) === selNorm);
+          if (pair) {
+            const ua = normalize(pair.ua);
+            const ru = normalize(pair.ru);
+            // Match coffee roast against both UA and RU versions, or use code matching as fallback
+            if (coffeeRoast === ua || coffeeRoast === ru) {
+              anyRoastMatch = true;
+              break;
+            }
+            // Also try code matching for English values
+            const coffeeCode = roastToCode(coffee.roast);
+            const selCode = roastToCode(sel);
+            if (coffeeCode === selCode && coffeeCode !== coffeeRoast) {
+              anyRoastMatch = true;
+              break;
+            }
+          } else {
+            // Fallback to direct comparison or code matching
+            if (coffeeRoast === selNorm) {
+              anyRoastMatch = true;
+              break;
+            }
+            const coffeeCode = roastToCode(coffee.roast);
+            const selCode = roastToCode(sel);
+            if (coffeeCode === selCode) {
+              anyRoastMatch = true;
+              break;
+            }
+          }
         }
+        if (!anyRoastMatch) return false;
       }
-
 
       // Stock filter
       if (filters.inStock !== null && coffee.inStock !== filters.inStock) {
@@ -476,7 +507,7 @@ export default function Coffee() {
           return 0; // Default order (as they appear in the array)
       }
     });
-  }, [filters, sortBy, supaProducts]);
+  }, [filters, sortBy, supaProducts, filterOptions]);
 
   const handleFilterChange = (key: keyof CoffeeFilters, value: any) => {
     setFilters(prev => ({ ...prev, [key]: value }));
@@ -487,6 +518,7 @@ export default function Coffee() {
       search: "",
       origins: [],
       roasts: [],
+      processes: [],
       priceRange: [0, 100],
       inStock: null,
     });
@@ -804,13 +836,28 @@ export default function Coffee() {
                           <span className="text-sm text-gray-300">•</span>
                           <span className="text-sm text-gray-500">
                             {(() => {
-                              // Find label match in filterOptions.roasts (which are localized, ordered, as displayed in filter)
-                              const { roasts = [] } = filterOptions || {};
-                              // roastCode (as returned by filter), e.g. 'medium'
-                              const roastCode = coffee.roast && typeof coffee.roast === 'string' ? coffee.roast.toLowerCase() : '';
-                              // Try to match roast label to roastCode
-                              const label = roasts.find(r => r.toLowerCase().includes(roastCode)) || roasts.find(r => roastCode.includes(r.toLowerCase()));
-                              return label || coffee.roast || '-';
+                              // Use roastPairs to get correct language version (like origin)
+                              const { roastPairs = [] } = filterOptions || {};
+                              const normalize = (s: string) => (s || '').trim().toLowerCase();
+                              const roastValue = (coffee.roast || '').trim();
+                              const roastNorm = normalize(roastValue);
+                              
+                              // Find matching pair by checking both UA and RU values
+                              const pair = roastPairs.find((p: { ua: string; ru: string }) => {
+                                const uaNorm = normalize(p.ua);
+                                const ruNorm = normalize(p.ru);
+                                return uaNorm === roastNorm || ruNorm === roastNorm ||
+                                       uaNorm.includes(roastNorm) || roastNorm.includes(uaNorm) ||
+                                       ruNorm.includes(roastNorm) || roastNorm.includes(ruNorm);
+                              });
+                              
+                              // Return correct language version from pair
+                              if (pair) {
+                                return language === 'ru' ? pair.ru : pair.ua;
+                              }
+                              
+                              // Fallback to original value
+                              return roastValue || '-';
                             })()}
                           </span>
                         </div>

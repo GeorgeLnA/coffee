@@ -2,13 +2,32 @@ import Header from "../components/Header";
 import Footer from "../components/Footer";
 import { useCart } from "../contexts/CartContext";
 import { Minus, Plus, Trash2 } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { toast } from "@/components/ui/use-toast";
 import { useNavigate } from "react-router-dom";
+import { useLanguage } from "../contexts/LanguageContext";
+import { useEffect } from "react";
 
 export default function Basket() {
-  const { items, updateQuantity, removeItem, totalPrice } = useCart();
+  const { items, updateQuantity, removeItem, totalPrice, clear } = useCart();
   const navigate = useNavigate();
+  const { t } = useLanguage();
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  // Clear cart when returning from LiqPay payment
+  useEffect(() => {
+    const paymentReturn = searchParams.get('payment');
+    if (paymentReturn === 'return' && items.length > 0) {
+      clear();
+      // Remove the query parameter from URL
+      setSearchParams({}, { replace: true });
+      toast({
+        title: t('checkout.success.title'),
+        description: t('checkout.success.desc'),
+        variant: "default" as any
+      });
+    }
+  }, [searchParams, items.length, clear, setSearchParams, t]);
 
   async function handleCheckout() {
     // Navigate to Checkout flow instead of direct payment
@@ -18,7 +37,7 @@ export default function Basket() {
     try {
       const amount = totalPrice;
       if (amount <= 0) {
-        throw new Error("Сума замовлення повинна бути більше 0");
+        throw new Error(t('basket.error.orderAmount'));
       }
 
       // Generate unique order ID
@@ -110,10 +129,10 @@ export default function Basket() {
       console.log("Signature length:", signature.length);
       
       if (!signature || signature.trim() === '') {
-        const errorMsg = "Не вдалося згенерувати підпис для платежу. Перевірте налаштування LIQPAY_PRIVATE_KEY у файлі .env";
+        const errorMsg = t('basket.error.signature');
         console.error(errorMsg);
         toast({ 
-          title: "Помилка", 
+          title: t('basket.error.payment'), 
           description: errorMsg, 
           variant: "destructive" as any 
         });
@@ -144,8 +163,8 @@ export default function Basket() {
       
     } catch (e: any) {
       toast({ 
-        title: "Помилка", 
-        description: e?.message || "Сталася помилка при ініціалізації платежу", 
+        title: t('basket.error.payment'), 
+        description: e?.message || t('basket.error.paymentDesc'), 
         variant: "destructive" as any 
       });
     }
@@ -158,20 +177,20 @@ export default function Basket() {
       <section className="pt-28 pb-16" style={{ backgroundColor: '#361c0c' }}>
         <div className="max-w-6xl mx-auto px-6 lg:px-8">
           <h1 className="text-4xl lg:text-5xl font-black mb-8 leading-tight font-coolvetica tracking-wider" style={{ color: '#fcf4e4' }}>
-            Кошик
+            {t('basket.title')}
           </h1>
           {items.length === 0 ? (
             <div className="bg-white/10 p-8 rounded-lg" style={{ color: '#fcf4e4' }}>
-              <p className="text-lg font-medium mb-6">Ваш кошик порожній.</p>
+              <p className="text-lg font-medium mb-6">{t('basket.empty')}</p>
               <div className="flex gap-4">
                 <Link to="/coffee" className="px-6 py-3 border-2 font-black hover:bg-[#fcf4e4] hover:text-[#361c0c] transition-all duration-300 group" style={{ borderColor: '#fcf4e4', color: '#fcf4e4' }}>
                   <span className="group-hover:text-[#361c0c] transition-colors">
-                    До кави
+                    {t('basket.toCoffee')}
                   </span>
                 </Link>
                 <Link to="/water" className="px-6 py-3 border-2 font-black hover:bg-[#fcf4e4] hover:text-[#361c0c] transition-all duration-300 group" style={{ borderColor: '#fcf4e4', color: '#fcf4e4' }}>
                   <span className="group-hover:text-[#361c0c] transition-colors">
-                    До води
+                    {t('basket.toWater')}
                   </span>
                 </Link>
               </div>
@@ -190,7 +209,7 @@ export default function Basket() {
                         {item.variant && (
                           <div className="text-sm text-gray-600 mb-1">{item.variant}</div>
                         )}
-                        <div className="text-sm text-gray-600">₴{item.price.toFixed(2)} за одиницю</div>
+                        <div className="text-sm text-gray-600">₴{item.price.toFixed(2)} {t('basket.perUnit')}</div>
                       </div>
                       <div className="flex items-center justify-between w-full sm:w-auto gap-4">
                         <div className="flex items-center gap-2">
@@ -218,7 +237,7 @@ export default function Basket() {
               <div className="lg:sticky lg:top-8">
                 <div className="bg-white p-6 rounded-lg shadow">
                   <div className="flex items-center justify-between mb-4">
-                    <span className="font-bold" style={{ color: '#361c0c' }}>Підсумок</span>
+                    <span className="font-bold" style={{ color: '#361c0c' }}>{t('basket.summary')}</span>
                     <span className="font-black" style={{ color: '#361c0c' }}>₴{totalPrice.toFixed(2)}</span>
                   </div>
                   <button 
@@ -228,7 +247,7 @@ export default function Basket() {
                     style={{ borderColor: '#361c0c', color: '#361c0c' }}
                   >
                     <span className="group-hover:text-white transition-colors">
-                      Оформити замовлення
+                      {t('basket.checkout')}
                     </span>
                   </button>
                 </div>

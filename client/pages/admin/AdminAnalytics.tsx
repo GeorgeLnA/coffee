@@ -26,6 +26,7 @@ type OrderItem = {
   product_name: string;
   quantity: number;
   price: number;
+  variant: string | null;
 };
 
 export function AdminAnalytics() {
@@ -65,7 +66,7 @@ export function AdminAnalytics() {
       if (orderIds.length) {
         const { data: iData, error: iErr } = await supabase
           .from('order_items')
-          .select('*')
+          .select('id, order_id, product_id, product_name, quantity, price, variant')
           .in('order_id', orderIds);
         
         if (iErr) {
@@ -91,22 +92,72 @@ export function AdminAnalytics() {
 
   useEffect(() => { load(); }, [dateFrom, dateTo]);
 
+  // Helper function to format variant display
+  const formatVariantDisplay = (variant: string | null): string => {
+    if (!variant || variant.trim() === '') return '';
+    // Just show the variant as-is, wrapped in parentheses
+    return ` (${variant})`;
+  };
+
   const summary = useMemo(() => {
     const totalOrders = orders.length;
     const totalRevenue = orders.reduce((sum, o) => sum + (o.total_price || 0), 0);
     const avgOrderValue = totalOrders ? totalRevenue / totalOrders : 0;
-    const itemsByProduct: Record<string, { name: string; qty: number; revenue: number; }> = {};
+    // Group by product_id AND variant to break down by sizes
+    const itemsByProduct: Record<string, { name: string; variant: string | null; qty: number; revenue: number; }> = {};
     for (const it of items) {
-      const key = String(it.product_id);
-      if (!itemsByProduct[key]) itemsByProduct[key] = { name: it.product_name, qty: 0, revenue: 0 };
+      // Create a unique key combining product_id and variant
+      // Ensure variant is properly accessed - check multiple possible field names
+      const variant = (it as any).variant || (it as any).Variant || null;
+      const variantKey = variant ? String(variant).trim() : '';
+      const key = `${it.product_id}::${variantKey}`;
+      
+      if (!itemsByProduct[key]) {
+        itemsByProduct[key] = { 
+          name: it.product_name, 
+          variant: variant,
+          qty: 0, 
+          revenue: 0 
+        };
+      }
       itemsByProduct[key].qty += it.quantity || 0;
       itemsByProduct[key].revenue += (it.quantity || 0) * (it.price || 0);
     }
     const mostOrdered = Object.entries(itemsByProduct)
-      .map(([id, v]) => ({ id, ...v }))
+      .map(([key, v]) => {
+        // Always include variant in display name if it exists
+        const variantDisplay = v.variant ? ` (${v.variant})` : '';
+        const displayName = v.name + variantDisplay;
+        return {
+          ...v,
+          id: key, 
+          name: displayName, // Set name AFTER spread to ensure it's not overwritten
+        };
+      })
       .sort((a, b) => b.qty - a.qty);
-    const topRevenue = Object.entries(itemsByProduct)
-      .map(([id, v]) => ({ id, ...v }))
+    
+    // For topRevenue, group by product name only (no variant breakdown)
+    const itemsByProductNameOnly: Record<string, { name: string; qty: number; revenue: number; }> = {};
+    for (const it of items) {
+      const key = String(it.product_id);
+      if (!itemsByProductNameOnly[key]) {
+        itemsByProductNameOnly[key] = { 
+          name: it.product_name, 
+          qty: 0, 
+          revenue: 0 
+        };
+      }
+      itemsByProductNameOnly[key].qty += it.quantity || 0;
+      itemsByProductNameOnly[key].revenue += (it.quantity || 0) * (it.price || 0);
+    }
+    
+    const topRevenue = Object.entries(itemsByProductNameOnly)
+      .map(([key, v]) => ({
+        id: key,
+        name: v.name, // Just product name, no variant
+        qty: v.qty,
+        revenue: v.revenue,
+      }))
       .sort((a, b) => b.revenue - a.revenue);
 
     return { totalOrders, totalRevenue, avgOrderValue, mostOrdered, topRevenue };
@@ -205,11 +256,12 @@ export function AdminAnalytics() {
       .sort((a, b) => new Date(a.fullDate).getTime() - new Date(b.fullDate).getTime());
   }, [orders, selectedProduct, filteredItems]);
 
-  // Prepare product sales chart data
+  // Prepare product sales chart data - group by product name only (no variant breakdown)
   const productSalesData = useMemo(() => {
     const productMap = new Map<string, { name: string; quantity: number; revenue: number }>();
     
     filteredItems.forEach(item => {
+      // Group only by product_id (no variant breakdown for charts)
       const key = String(item.product_id);
       if (!productMap.has(key)) {
         productMap.set(key, { name: item.product_name, quantity: 0, revenue: 0 });

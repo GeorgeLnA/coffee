@@ -279,17 +279,19 @@ export default function Water() {
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link 
                 to="/coffee" 
-                className="px-8 py-4 bg-transparent border-2 font-black text-lg hover:bg-[#361c0c] hover:text-white transition-all duration-300"
-                style={{ borderColor: '#361c0c', color: '#361c0c' }}
+                className="px-8 py-4 bg-transparent border-2 font-black text-lg hover:bg-[#361c0c] transition-all duration-300 group"
+                style={{ borderColor: '#361c0c' }}
               >
-{settings ? (language === 'ua' ? settings.cta_view_coffee_ua : settings.cta_view_coffee_ru) || t('water.viewCoffee') : t('water.viewCoffee')}
+                <span className="text-[#361c0c] group-hover:text-white transition-colors duration-300">
+                  {settings ? (language === 'ua' ? settings.cta_view_coffee_ua : settings.cta_view_coffee_ru) || t('water.viewCoffee') : t('water.viewCoffee')}
+                </span>
               </Link>
-              <a 
-                href="#contacts" 
+              <Link 
+                to="/contact" 
                 className="px-8 py-4 bg-[#361c0c] text-[#fcf4e4] font-black text-lg hover:bg-[#fcf4e4] hover:text-[#361c0c] hover:border-[#361c0c] border-2 border-transparent transition-all duration-300"
               >
-{settings ? (language === 'ua' ? settings.cta_contact_ua : settings.cta_contact_ru) || t('water.contactUs') : t('water.contactUs')}
-              </a>
+                {settings ? (language === 'ua' ? settings.cta_contact_ua : settings.cta_contact_ru) || t('water.contactUs') : t('water.contactUs')}
+              </Link>
             </div>
           </div>
         </div>

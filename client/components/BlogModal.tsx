@@ -1,5 +1,6 @@
 import { X, Calendar, Clock, User, ArrowLeft, ArrowRight } from "lucide-react";
 import { useEffect } from "react";
+import { Link } from "react-router-dom";
 import { useLanguage } from "../contexts/LanguageContext";
 
 interface BlogModalProps {
@@ -31,7 +32,7 @@ export default function BlogModal({
   hasPrevious = false,
   hasNext = false
 }: BlogModalProps) {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
 
   // Prevent body scroll when modal is open
   useEffect(() => {
@@ -62,6 +63,102 @@ export default function BlogModal({
       document.removeEventListener('keydown', handleEscape);
     };
   }, [isOpen, onClose]);
+
+  // Parse markdown content and render with proper SEO structure
+  const renderContent = (content: string) => {
+    const lines = content.split('\n');
+    const elements: JSX.Element[] = [];
+    let key = 0;
+    let inList = false;
+    let listItems: JSX.Element[] = [];
+
+    const flushList = () => {
+      if (inList && listItems.length > 0) {
+        elements.push(
+          <ul key={key++} className="list-disc list-inside mb-4 space-y-2 ml-4">
+            {listItems}
+          </ul>
+        );
+        listItems = [];
+        inList = false;
+      }
+    };
+
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i].trim();
+      
+      if (!line) {
+        flushList();
+        continue;
+      }
+
+      // H2 headings (##)
+      if (line.startsWith('## ')) {
+        flushList();
+        const headingText = line.replace('## ', '');
+        elements.push(
+          <h2 key={key++} className="text-2xl font-black mt-8 mb-4 font-coolvetica tracking-wider" style={{ color: '#361c0c' }}>
+            {headingText}
+          </h2>
+        );
+      }
+      // Checkmark (✅)
+      else if (line.startsWith('✅ ')) {
+        flushList();
+        const summaryText = line.replace('✅ ', '');
+        elements.push(
+          <h3 key={key++} className="text-xl font-black mt-6 mb-3 font-coolvetica" style={{ color: '#361c0c' }}>
+            {summaryText}
+          </h3>
+        );
+      }
+      // Bullet points (-)
+      else if (line.startsWith('- ')) {
+        inList = true;
+        const listText = line.replace('- ', '');
+        listItems.push(
+          <li key={listItems.length} className="mb-2">
+            {listText}
+          </li>
+        );
+      }
+      // Regular paragraphs
+      else {
+        flushList();
+        // Check for links to coffee page (multiple variations)
+        const coffeeLinkMatch = line.match(/Купити свіжообсмажену каву|Купить свежообжаренный кофе|Купити свіжообсмажену каву в Києві|Купить свежообжаренный кофе в Киеве|купити каву онлайн|купить кофе онлайн|Купити каву з доставкою|Купить кофе с доставкой|купити каву онлайн Київ|купить кофе онлайн Киев|Купити каву в зернах|Купить кофе в зёрнах|купити каву в зернах Україна|купить кофе в зёрнах Украина|Купити спешіалті каву|Купить спешиалти кофе/);
+        if (coffeeLinkMatch) {
+          const beforeLink = line.substring(0, line.indexOf(coffeeLinkMatch[0]));
+          const linkText = coffeeLinkMatch[0];
+          const afterLink = line.substring(line.indexOf(coffeeLinkMatch[0]) + linkText.length);
+          
+          elements.push(
+            <p key={key++} className="mb-4 text-base sm:text-lg leading-relaxed">
+              {beforeLink}
+              <Link 
+                to="/coffee" 
+                className="font-bold underline hover:no-underline transition-all"
+                style={{ color: '#361c0c' }}
+              >
+                {linkText}
+              </Link>
+              {afterLink}
+            </p>
+          );
+        } else {
+          elements.push(
+            <p key={key++} className="mb-4 text-base sm:text-lg leading-relaxed">
+              {line}
+            </p>
+          );
+        }
+      }
+    }
+    
+    flushList(); // Flush any remaining list items
+
+    return elements;
+  };
 
   if (!isOpen || !article) return null;
 
@@ -128,8 +225,10 @@ export default function BlogModal({
           <div className="relative h-48 sm:h-64 md:h-80 overflow-hidden">
             <img 
               src={article.image} 
-              alt={article.title} 
+              alt={article.title}
+              title={article.title}
               className="w-full h-full object-cover"
+              loading="lazy"
             />
           </div>
 
@@ -160,18 +259,25 @@ export default function BlogModal({
             </div>
 
             {/* Article Body */}
-            <div className="prose prose-sm sm:prose-base md:prose-lg max-w-none" style={{ color: '#361c0c' }}>
-              <p className="text-lg sm:text-xl font-medium leading-relaxed mb-4 sm:mb-6">
+            <article className="prose prose-sm sm:prose-base md:prose-lg max-w-none" style={{ color: '#361c0c' }}>
+              <p className="text-lg sm:text-xl font-medium leading-relaxed mb-6 sm:mb-8">
                 {article.excerpt}
               </p>
-              <div className="text-base sm:text-lg leading-relaxed space-y-3 sm:space-y-4">
-                {article.content.split('\n').map((paragraph, index) => (
-                  <p key={index} className="mb-3 sm:mb-4">
-                    {paragraph}
-                  </p>
-                ))}
+              <div className="text-base sm:text-lg leading-relaxed">
+                {renderContent(article.content)}
               </div>
-            </div>
+              
+              {/* CTA Link to Coffee Page */}
+              <div className="mt-8 pt-6 border-t-2" style={{ borderColor: '#361c0c' }}>
+                <Link 
+                  to="/coffee"
+                  className="inline-flex items-center gap-2 px-6 py-3 bg-[#361c0c] text-[#fcf4e4] font-black text-lg hover:bg-[#4a2817] transition-all duration-300"
+                >
+                  <span>{language === 'ru' ? 'Купить свежообжаренный кофе' : 'Купити свіжообсмажену каву'}</span>
+                  <ArrowRight className="w-5 h-5" />
+                </Link>
+              </div>
+            </article>
           </div>
         </div>
 

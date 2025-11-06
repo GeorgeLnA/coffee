@@ -75,6 +75,7 @@ export interface CoffeeFilters {
   search: string;
   origins: string[];
   roasts: string[];
+  processes: string[];
   priceRange: [number, number];
   inStock: boolean | null;
 }

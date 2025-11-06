@@ -1,4 +1,5 @@
 import { Phone, Mail, ArrowRight, Percent, Building2, Coffee, Droplet, CupSoda, Shield, Clock, Truck } from "lucide-react";
+import { Link } from "react-router-dom";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
 import { usePageSections } from "@/hooks/use-supabase";
@@ -85,18 +86,33 @@ export default function Office() {
             {pick(office?.hero_subtitle_ua, office?.hero_subtitle_ru, t('office.subtitle'))}
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-            <a href={`tel:${office?.cta_phone || '+380501234567'}`} className="group px-8 py-4 bg-transparent border-2 font-black text-lg hover:bg-[#fcf4e4] transition-all duration-300" style={{ borderColor: '#fcf4e4', color: '#fcf4e4' }}>
-              <span className="flex items-center space-x-3 group-hover:text-[#361c0c]">
-                <Phone className="w-5 h-5" />
-                <span>{pick(office?.cta_call_text_ua, office?.cta_call_text_ru, t('office.cta.call'))}</span>
-              </span>
-            </a>
-            <a href={`mailto:${office?.cta_email || 'info@coffeemanifest.com'}`} className="group px-8 py-4 bg-transparent border-2 font-black text-lg hover:bg-[#fcf4e4] transition-all duration-300" style={{ borderColor: '#fcf4e4', color: '#fcf4e4' }}>
+            {/* Mobile: Show both buttons */}
+            <div className="flex flex-col sm:flex-row gap-4 md:hidden w-full sm:w-auto">
+              <a href={`tel:${office?.cta_phone || '+380501234567'}`} className="group px-8 py-4 bg-transparent border-2 font-black text-lg hover:bg-[#fcf4e4] transition-all duration-300" style={{ borderColor: '#fcf4e4', color: '#fcf4e4' }}>
+                <span className="flex items-center space-x-3 group-hover:text-[#361c0c]">
+                  <Phone className="w-5 h-5" />
+                  <span>{pick(office?.cta_call_text_ua, office?.cta_call_text_ru, t('office.cta.call'))}</span>
+                </span>
+              </a>
+              <a href={`mailto:${office?.cta_email || 'info@coffeemanifest.com'}`} className="group px-8 py-4 bg-transparent border-2 font-black text-lg hover:bg-[#fcf4e4] transition-all duration-300" style={{ borderColor: '#fcf4e4', color: '#fcf4e4' }}>
+                <span className="flex items-center space-x-3 group-hover:text-[#361c0c]">
+                  <Mail className="w-5 h-5" />
+                  <span>{pick(office?.cta_email_text_ua, office?.cta_email_text_ru, t('office.cta.email'))}</span>
+                </span>
+              </a>
+            </div>
+            {/* Desktop: Show single contact button */}
+            <Link 
+              to="/contact" 
+              className="hidden md:flex group px-8 py-4 bg-transparent border-2 font-black text-lg hover:bg-[#fcf4e4] transition-all duration-300" 
+              style={{ borderColor: '#fcf4e4', color: '#fcf4e4' }}
+            >
               <span className="flex items-center space-x-3 group-hover:text-[#361c0c]">
                 <Mail className="w-5 h-5" />
-                <span>{pick(office?.cta_email_text_ua, office?.cta_email_text_ru, t('office.cta.email'))}</span>
+                <span>{t('nav.contacts')}</span>
+                <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
               </span>
-            </a>
+            </Link>
           </div>
         </div>
       </section>
@@ -248,20 +264,35 @@ export default function Office() {
             {pick(office?.cta_subtitle_ua, office?.cta_subtitle_ru, t('office.cta.subtitle'))}
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-            <a href={`tel:${office?.cta_phone || '+380501234567'}`} className="group/btn px-8 py-4 bg-transparent border-2 font-black text-lg hover:bg-[#361c0c] transition-all duration-300" style={{ borderColor: '#361c0c', color: '#361c0c' }}>
-              <span className="flex items-center space-x-3 group-hover/btn:text-[#fcf4e4]">
-                <Phone className="w-5 h-5" />
-                <span>{pick(office?.cta_call_text_ua, office?.cta_call_text_ru, t('office.cta.call'))}</span>
-                <ArrowRight className="w-4 h-4 group-hover/btn:translate-x-1 transition-transform" />
-              </span>
-            </a>
-            <a href={`mailto:${office?.cta_email || 'info@coffeemanifest.com'}`} className="group/btn px-8 py-4 bg-transparent border-2 font-black text-lg hover:bg-[#361c0c] transition-all duration-300" style={{ borderColor: '#361c0c', color: '#361c0c' }}>
+            {/* Mobile: Show both buttons */}
+            <div className="flex flex-col sm:flex-row gap-4 md:hidden w-full sm:w-auto">
+              <a href={`tel:${office?.cta_phone || '+380501234567'}`} className="group/btn px-8 py-4 bg-transparent border-2 font-black text-lg hover:bg-[#361c0c] transition-all duration-300" style={{ borderColor: '#361c0c', color: '#361c0c' }}>
+                <span className="flex items-center space-x-3 group-hover/btn:text-[#fcf4e4]">
+                  <Phone className="w-5 h-5" />
+                  <span>{pick(office?.cta_call_text_ua, office?.cta_call_text_ru, t('office.cta.call'))}</span>
+                  <ArrowRight className="w-4 h-4 group-hover/btn:translate-x-1 transition-transform" />
+                </span>
+              </a>
+              <a href={`mailto:${office?.cta_email || 'info@coffeemanifest.com'}`} className="group/btn px-8 py-4 bg-transparent border-2 font-black text-lg hover:bg-[#361c0c] transition-all duration-300" style={{ borderColor: '#361c0c', color: '#361c0c' }}>
+                <span className="flex items-center space-x-3 group-hover/btn:text-[#fcf4e4]">
+                  <Mail className="w-5 h-5" />
+                  <span>{pick(office?.cta_email_text_ua, office?.cta_email_text_ru, t('office.cta.email'))}</span>
+                  <ArrowRight className="w-4 h-4 group-hover/btn:translate-x-1 transition-transform" />
+                </span>
+              </a>
+            </div>
+            {/* Desktop: Show single contact button */}
+            <Link 
+              to="/contact" 
+              className="hidden md:flex group/btn px-8 py-4 bg-transparent border-2 font-black text-lg hover:bg-[#361c0c] transition-all duration-300" 
+              style={{ borderColor: '#361c0c', color: '#361c0c' }}
+            >
               <span className="flex items-center space-x-3 group-hover/btn:text-[#fcf4e4]">
                 <Mail className="w-5 h-5" />
-                <span>{pick(office?.cta_email_text_ua, office?.cta_email_text_ru, t('office.cta.email'))}</span>
+                <span>{t('nav.contacts')}</span>
                 <ArrowRight className="w-4 h-4 group-hover/btn:translate-x-1 transition-transform" />
               </span>
-            </a>
+            </Link>
           </div>
         </div>
       </section>

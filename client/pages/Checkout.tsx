@@ -9,14 +9,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useNavigate } from "react-router-dom";
+import { useLanguage } from "../contexts/LanguageContext";
 
 type ShippingMethod = "nova_department" | "nova_courier" | "own_courier" | "nova_postomat";
 type PaymentMethod = "liqpay" | "apple_pay" | "google_pay" | "cash";
 
 export default function Checkout() {
-  const { items, totalPrice } = useCart();
+  const { items, totalPrice, clear } = useCart();
   const navigate = useNavigate();
   const { data: deliverySettings } = useDeliverySettings();
+  const { t, language } = useLanguage();
 
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
@@ -50,44 +52,44 @@ export default function Checkout() {
             const deptMatch = whDesc.match(/№(\d+)/);
             const deptNum = deptMatch ? deptMatch[1] : (department || '');
             if (deptNum) {
-              addr += addr ? `, Відділення №${deptNum}` : `Відділення №${deptNum}`;
+              addr += addr ? `, ${t('checkout.department')} №${deptNum}` : `${t('checkout.department')} №${deptNum}`;
             } else {
               addr += addr ? `, ${whDesc}` : whDesc;
             }
           } else {
             // Postomat - use reference or description
-            addr += addr ? `, Поштомат ${selectedWarehouse.substring(0, 8)}...` : `Поштомат ${selectedWarehouse.substring(0, 8)}...`;
+            addr += addr ? `, ${t('checkout.postomat')} ${selectedWarehouse.substring(0, 8)}...` : `${t('checkout.postomat')} ${selectedWarehouse.substring(0, 8)}...`;
             if (whDesc) {
               addr += ` (${whDesc})`;
             }
           }
         } else if (department) {
-          addr += addr ? `, Відділення №${department}` : `Відділення №${department}`;
+          addr += addr ? `, ${t('checkout.department')} №${department}` : `${t('checkout.department')} №${department}`;
         }
       } else if (department) {
-        addr += addr ? `, Відділення №${department}` : `Відділення №${department}`;
+        addr += addr ? `, ${t('checkout.department')} №${department}` : `${t('checkout.department')} №${department}`;
       }
-      return addr || 'Не вказано';
+      return addr || t('checkout.notSpecified');
     } else if (shippingMethod === 'nova_courier' || shippingMethod === 'own_courier') {
       // Courier: just address (no city)
-      return address || 'Не вказано';
+      return address || t('checkout.notSpecified');
     }
-    return 'Не вказано';
+    return t('checkout.notSpecified');
   };
 
   // Format shipping method display name
   const formatShippingMethodName = (): string => {
     switch (shippingMethod) {
       case 'nova_department':
-        return 'Нова Пошта (на відділення)';
+        return t('checkout.novaDepartment');
       case 'nova_postomat':
-        return 'Нова Пошта (на поштомат)';
+        return t('checkout.novaPostomat');
       case 'nova_courier':
-        return 'Нова Пошта (кур\'єром)';
+        return t('checkout.novaCourier');
       case 'own_courier':
-        return 'Власна доставка (Київ)';
+        return t('checkout.courierKyiv');
       default:
-        return 'Не вказано';
+        return t('checkout.notSpecified');
     }
   };
 
@@ -120,18 +122,18 @@ export default function Checkout() {
 
       const templateParams: Record<string, any> = {
         to_email: customerEmail,
-        to_name: fullName || 'Клієнт',
+        to_name: fullName || t('checkout.email.client'),
         order_id: orderId,
-        order_date: new Date().toLocaleDateString('uk-UA'),
+        order_date: new Date().toLocaleDateString(language === 'ru' ? 'ru-RU' : 'uk-UA'),
         order_items_html: items.length > 0 ? items.map((item: any) => {
-          const itemName = item.name || 'Товар';
+          const itemName = item.name || t('checkout.email.product');
           const variantText = item.variant ? ` (${item.variant})` : '';
           const quantity = item.quantity || 1;
           const price = item.price || 0;
           const total = (price * quantity).toFixed(2);
-          return `${itemName}${variantText} - ${quantity} шт. × ${price.toFixed(2)} грн = ${total} грн`;
-        }).join('\n') : 'Товари не знайдено',
-        customer_name: fullName || 'Клієнт',
+          return `${itemName}${variantText} - ${quantity} ${t('checkout.email.unit')} × ${price.toFixed(2)} ${t('checkout.email.currency')} = ${total} ${t('checkout.email.currency')}`;
+        }).join('\n') : t('checkout.email.productsNotFound'),
+        customer_name: fullName || t('checkout.email.client'),
         billing_address: formattedShippingAddress,
         information: formattedShippingAddress, // Alias for "Information" label
         customer_phone: phone || '—',
@@ -140,7 +142,7 @@ export default function Checkout() {
         order_notes: notes || '', // Leave empty if no notes
         order_total: `₴${totalPrice.toFixed(2)}`,
         shipping_method: formattedShippingMethod,
-        payment_method: paymentMethod === 'cash' ? 'Оплата при отриманні' : paymentMethod === 'liqpay' ? 'Онлайн оплата (LiqPay)' : paymentMethod || 'Не вказано',
+        payment_method: paymentMethod === 'cash' ? t('checkout.email.paymentCash') : paymentMethod === 'liqpay' ? t('checkout.email.paymentLiqpay') : paymentMethod || t('checkout.notSpecified'),
         reply_to: customerEmail,
         shipping_city: city || null,
         shipping_department: department || null,
@@ -159,7 +161,7 @@ export default function Checkout() {
       const admins = adminEmails.split(',').map((e) => e.trim()).filter(Boolean);
       for (const admin of admins) {
         if (!admin || !admin.includes('@')) continue;
-        const adminTemplateParams: Record<string, any> = { ...templateParams, to_email: admin.trim(), to_name: 'Адміністратор' };
+        const adminTemplateParams: Record<string, any> = { ...templateParams, to_email: admin.trim(), to_name: t('checkout.email.admin') };
         Object.keys(adminTemplateParams).forEach(key => {
           if (adminTemplateParams[key] === undefined || adminTemplateParams[key] === '') delete adminTemplateParams[key];
         });
@@ -326,7 +328,7 @@ export default function Checkout() {
       }
     }
     if (!valid) {
-      toast({ title: "Помилка", description: "Заповніть ім'я, телефон, email та дані доставки", variant: "destructive" as any });
+      toast({ title: t('checkout.error.general'), description: t('checkout.error.fillFields'), variant: "destructive" as any });
       return;
     }
     if (items.length === 0) {
@@ -383,7 +385,7 @@ export default function Checkout() {
       const data = await res.json();
       console.log("Order prepare response:", data);
       
-      if (!res.ok) throw new Error(data?.error || "Не вдалося створити замовлення");
+      if (!res.ok) throw new Error(data?.error || t('checkout.error.createOrder'));
       
       // Log email sending status if available
       if (data.emailStatus) {
@@ -423,10 +425,11 @@ export default function Checkout() {
 
       // Handle different payment methods
       if (paymentMethod === "cash" || data.paymentMethod === "cash") {
-        // For cash payment, just show success message
+        // For cash payment, clear cart and show success message
+        clear();
         toast({ 
-          title: "Замовлення оформлено!", 
-          description: "Ваше замовлення прийнято. З вами зв'яжуться для підтвердження.",
+          title: t('checkout.success.title'), 
+          description: t('checkout.success.desc'),
           variant: "default" as any 
         });
         navigate("/");
@@ -455,7 +458,7 @@ export default function Checkout() {
         form.submit();
       }
     } catch (err: any) {
-      toast({ title: "Помилка", description: err?.message || "Сталася помилка", variant: "destructive" as any });
+      toast({ title: t('checkout.error.general'), description: err?.message || t('checkout.error.general'), variant: "destructive" as any });
     } finally {
       setIsSubmitting(false);
     }
@@ -467,45 +470,45 @@ export default function Checkout() {
       <section className="pt-28 pb-16" style={{ backgroundColor: '#361c0c' }}>
         <div className="max-w-8xl mx-auto px-6 lg:px-8">
           <h1 className="text-4xl lg:text-5xl font-black mb-8 leading-tight font-coolvetica tracking-wider" style={{ color: '#fcf4e4' }}>
-            Оформлення замовлення
+            {t('checkout.title')}
           </h1>
           <form onSubmit={handleSubmit} className="bg-white p-6 rounded-lg shadow grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="md:col-span-2">
-              <div className="font-bold mb-2" style={{ color: '#361c0c' }}>Контактні дані</div>
-              <Input placeholder="ПІБ" value={fullName} onChange={e => setFullName(e.target.value)} className="mb-3" />
-              <Input placeholder="Телефон" value={phone} onChange={e => setPhone(e.target.value)} className="mb-3" />
-              <Input placeholder="Email" type="email" value={email} onChange={e => setEmail(e.target.value)} className="mb-3" />
+              <div className="font-bold mb-2" style={{ color: '#361c0c' }}>{t('checkout.contactInfo')}</div>
+              <Input placeholder={t('checkout.fullName')} value={fullName} onChange={e => setFullName(e.target.value)} className="mb-3" />
+              <Input placeholder={t('checkout.phone')} value={phone} onChange={e => setPhone(e.target.value)} className="mb-3" />
+              <Input placeholder={t('checkout.email')} type="email" value={email} onChange={e => setEmail(e.target.value)} className="mb-3" />
             </div>
 
             <div className="md:col-span-2">
-              <div className="font-bold mb-2" style={{ color: '#361c0c' }}>Доставка</div>
+              <div className="font-bold mb-2" style={{ color: '#361c0c' }}>{t('checkout.delivery')}</div>
               {hasWaterItems ? (
                 <div className="mb-3">
                   <button type="button" className="border p-3 text-left w-full border-[#361c0c] bg-[#fcf4e4] cursor-default">
-                    <div className="font-bold" style={{ color: '#361c0c' }}>Кур'єр (Київ)</div>
-                    <div className="text-sm text-gray-600">{ownCourierPrice === 0 ? 'Безкоштовно' : `₴${ownCourierPrice}`}</div>
+                    <div className="font-bold" style={{ color: '#361c0c' }}>{t('checkout.courierKyiv')}</div>
+                    <div className="text-sm text-gray-600">{ownCourierPrice === 0 ? t('checkout.free') : `₴${ownCourierPrice}`}</div>
                     {hasWaterItems && (
-                      <div className="text-xs text-gray-500 mt-1">Обов'язково для замовлень з водою</div>
+                      <div className="text-xs text-gray-500 mt-1">{t('checkout.requiredForWater')}</div>
                     )}
                   </button>
                 </div>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-3">
                   <button type="button" onClick={() => setShippingMethod('nova_department')} className={`border p-3 text-left ${shippingMethod==='nova_department' ? 'border-[#361c0c] bg-[#fcf4e4]' : 'border-gray-300 hover:border-gray-400'}`}>
-                    <div className="font-bold" style={{ color: '#361c0c' }}>(Нова Пошта) у відділення</div>
-                    <div className="text-sm text-gray-600">Оплата за тарифами перевізника</div>
+                    <div className="font-bold" style={{ color: '#361c0c' }}>{t('checkout.novaDepartment')}</div>
+                    <div className="text-sm text-gray-600">{t('checkout.carrierRates')}</div>
                   </button>
                   <button type="button" onClick={() => setShippingMethod('nova_postomat')} className={`border p-3 text-left ${shippingMethod==='nova_postomat' ? 'border-[#361c0c] bg-[#fcf4e4]' : 'border-gray-300 hover:border-gray-400'}`}>
-                    <div className="font-bold" style={{ color: '#361c0c' }}>Поштомат (Нова Пошта)</div>
-                    <div className="text-sm text-gray-600">Оплата за тарифами перевізника</div>
+                    <div className="font-bold" style={{ color: '#361c0c' }}>{t('checkout.novaPostomat')}</div>
+                    <div className="text-sm text-gray-600">{t('checkout.carrierRates')}</div>
                   </button>
                   <button type="button" onClick={() => setShippingMethod('nova_courier')} className={`border p-3 text-left ${shippingMethod==='nova_courier' ? 'border-[#361c0c] bg-[#fcf4e4]' : 'border-gray-300 hover:border-gray-400'}`}>
-                    <div className="font-bold" style={{ color: '#361c0c' }}>(Нова Пошта) кур'єром</div>
-                    <div className="text-sm text-gray-600">Оплата за тарифами перевізника</div>
+                    <div className="font-bold" style={{ color: '#361c0c' }}>{t('checkout.novaCourier')}</div>
+                    <div className="text-sm text-gray-600">{t('checkout.carrierRates')}</div>
                   </button>
                   <button type="button" onClick={() => setShippingMethod('own_courier')} className={`border p-3 text-left ${shippingMethod==='own_courier' ? 'border-[#361c0c] bg-[#fcf4e4]' : 'border-gray-300 hover:border-gray-400'}`}>
-                    <div className="font-bold" style={{ color: '#361c0c' }}>Кур'єр (Київ)</div>
-                    <div className="text-sm text-gray-600">{ownCourierPrice === 0 ? 'Безкоштовно' : `₴${ownCourierPrice}`}</div>
+                    <div className="font-bold" style={{ color: '#361c0c' }}>{t('checkout.courierKyiv')}</div>
+                    <div className="text-sm text-gray-600">{ownCourierPrice === 0 ? t('checkout.free') : `₴${ownCourierPrice}`}</div>
                   </button>
                 </div>
               )}
@@ -516,7 +519,7 @@ export default function Checkout() {
                   {(shippingMethod === 'nova_department' || shippingMethod === 'nova_postomat') && (
                 <>
                   <div className="relative mb-2">
-                    <Input placeholder="Місто" value={cityQuery} onChange={e => { setCityQuery(e.target.value); setCityRef(""); setCity(""); }} />
+                    <Input placeholder={t('checkout.city')} value={cityQuery} onChange={e => { setCityQuery(e.target.value); setCityRef(""); setCity(""); }} />
                     {showCityDropdown && settlements.length > 0 && (
                       <div className="absolute left-0 right-0 top-full mt-1 border border-gray-300 rounded bg-white shadow-lg max-h-56 overflow-auto z-50">
                         {settlements.slice(0, 12).map((s: any, i: number) => (
@@ -529,7 +532,7 @@ export default function Checkout() {
                   </div>
                       {city && !cityRef && (
                     <div className="text-sm text-orange-600 mb-2">
-                      Оберіть місто зі списку, щоб побачити {shippingMethod === 'nova_postomat' ? 'поштомати' : 'відділення'}
+                      {t('checkout.selectCityFromList')} {shippingMethod === 'nova_postomat' ? t('checkout.postomats') : t('checkout.departments')}
                     </div>
                   )}
                     <div className="mb-3">
@@ -551,7 +554,7 @@ export default function Checkout() {
                           }
                         }}>
                         <SelectTrigger>
-                          <SelectValue placeholder={loadingWarehouses ? "Завантаження..." : shippingMethod === 'nova_postomat' ? "Оберіть поштомат" : "Оберіть відділення"} />
+                          <SelectValue placeholder={loadingWarehouses ? t('checkout.loading') : shippingMethod === 'nova_postomat' ? t('checkout.selectPostomat') : t('checkout.selectDepartment')} />
                         </SelectTrigger>
                         <SelectContent>
                           {warehouses.length > 0 ? (
@@ -562,7 +565,7 @@ export default function Checkout() {
                             ))
                           ) : (
                             <SelectItem value="no-data" disabled>
-                              {cityRef ? (loadingWarehouses ? "Завантаження..." : shippingMethod === 'nova_postomat' ? "Немає доступних поштоматів" : "Немає доступних відділень") : "Спочатку оберіть місто"}
+                              {cityRef ? (loadingWarehouses ? t('checkout.loading') : shippingMethod === 'nova_postomat' ? t('checkout.noPostomats') : t('checkout.noDepartments')) : t('checkout.selectCityFirst')}
                             </SelectItem>
                           )}
                         </SelectContent>
@@ -572,32 +575,32 @@ export default function Checkout() {
                   )}
                   {/* Address field for courier options (no city field) */}
                   {(shippingMethod === 'nova_courier' || shippingMethod === 'own_courier') && (
-                    <Input placeholder="Адреса доставки" value={address} onChange={e => setAddress(e.target.value)} className="mb-3" />
+                    <Input placeholder={t('checkout.deliveryAddress')} value={address} onChange={e => setAddress(e.target.value)} className="mb-3" />
                   )}
                 </>
               )}
               {hasWaterItems && (
-                <Input placeholder="Адреса доставки" value={address} onChange={e => setAddress(e.target.value)} className="mb-3" />
+                <Input placeholder={t('checkout.deliveryAddress')} value={address} onChange={e => setAddress(e.target.value)} className="mb-3" />
               )}
               
               {!isFreeDelivery && (
                 <div className="text-sm text-gray-700 mb-4">
                   {isNovaPoshtaMethod 
-                    ? `Додайте товарів на ₴${(freeDeliveryThreshold - totalPrice).toFixed(2)} для безкоштовної доставки Новою Поштою`
+                    ? t('checkout.addItemsForFreeDeliveryNova').replace('{amount}', (freeDeliveryThreshold - totalPrice).toFixed(2))
                     : shippingMethod === 'own_courier' && ownCourierPrice > 0
-                    ? `Додайте товарів на ₴${(freeDeliveryThreshold - totalPrice).toFixed(2)} для безкоштовної доставки`
+                    ? t('checkout.addItemsForFreeDelivery').replace('{amount}', (freeDeliveryThreshold - totalPrice).toFixed(2))
                     : null
                   }
                 </div>
               )}
               
-              <div className="font-bold mb-2" style={{ color: '#361c0c' }}>Спосіб оплати</div>
+              <div className="font-bold mb-2" style={{ color: '#361c0c' }}>{t('checkout.paymentMethod')}</div>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-3">
                 <button type="button" onClick={() => setPaymentMethod('liqpay')} className={`border p-3 text-left flex items-center gap-2 ${paymentMethod==='liqpay' ? 'border-[#361c0c] bg-[#fcf4e4]' : 'border-gray-300 hover:border-gray-400'}`}>
                   <img src="/unnamed (2).png" alt="LiqPay" className="w-6 h-6 object-contain" />
                   <div>
                     <div className="font-bold" style={{ color: '#361c0c' }}>LiqPay</div>
-                    <div className="text-sm text-gray-600">Картка онлайн</div>
+                    <div className="text-sm text-gray-600">{t('checkout.cardOnline')}</div>
                   </div>
                 </button>
                 <button type="button" onClick={() => setPaymentMethod('apple_pay')} className={`border p-3 text-left flex items-center gap-2 ${paymentMethod==='apple_pay' ? 'border-[#361c0c] bg-[#fcf4e4]' : 'border-gray-300 hover:border-gray-400'}`}>
@@ -606,7 +609,7 @@ export default function Checkout() {
                   </svg>
                   <div>
                     <div className="font-bold" style={{ color: '#361c0c' }}>Apple Pay</div>
-                    <div className="text-sm text-gray-600">Онлайн оплата</div>
+                    <div className="text-sm text-gray-600">{t('checkout.onlinePayment')}</div>
                   </div>
                 </button>
                 <button type="button" onClick={() => setPaymentMethod('google_pay')} className={`border p-3 text-left flex items-center gap-2 ${paymentMethod==='google_pay' ? 'border-[#361c0c] bg-[#fcf4e4]' : 'border-gray-300 hover:border-gray-400'}`}>
@@ -618,24 +621,24 @@ export default function Checkout() {
                   </svg>
                   <div>
                     <div className="font-bold" style={{ color: '#361c0c' }}>Google Pay</div>
-                    <div className="text-sm text-gray-600">Онлайн оплата</div>
+                    <div className="text-sm text-gray-600">{t('checkout.onlinePayment')}</div>
                   </div>
                 </button>
                 <button type="button" onClick={() => setPaymentMethod('cash')} className={`border p-3 text-left ${paymentMethod==='cash' ? 'border-[#361c0c] bg-[#fcf4e4]' : 'border-gray-300 hover:border-gray-400'}`}>
-                  <div className="font-bold" style={{ color: '#361c0c' }}>Готівка</div>
-                  <div className="text-sm text-gray-600">При отриманні</div>
+                  <div className="font-bold" style={{ color: '#361c0c' }}>{t('checkout.cash')}</div>
+                  <div className="text-sm text-gray-600">{t('checkout.uponReceipt')}</div>
                 </button>
               </div>
             </div>
 
             <div className="md:col-span-2">
-              <div className="font-bold mb-2" style={{ color: '#361c0c' }}>Коментар</div>
-              <Textarea placeholder="Примітки до замовлення" value={notes} onChange={e => setNotes(e.target.value)} />
+              <div className="font-bold mb-2" style={{ color: '#361c0c' }}>{t('checkout.comment')}</div>
+              <Textarea placeholder={t('checkout.orderNotes')} value={notes} onChange={e => setNotes(e.target.value)} />
             </div>
 
             <aside className="order-1 md:order-none md:col-span-1 md:col-start-3 md:row-start-1 md:row-end-4 md:sticky md:top-28 self-start">
               <div className="border rounded-lg p-4 shadow-sm bg-white">
-                <div className="font-bold mb-3" style={{ color: '#361c0c' }}>Підсумок замовлення</div>
+                <div className="font-bold mb-3" style={{ color: '#361c0c' }}>{t('checkout.orderSummary')}</div>
                 
                 {/* Order Items List */}
                 <div className="mb-4 pb-4 border-b border-gray-200">
@@ -665,19 +668,19 @@ export default function Checkout() {
                 </div>
 
                 <div className="space-y-1 text-sm text-gray-700 mb-4">
-                  <div className="flex justify-between"><span>Товари</span><span>₴{totalPrice.toFixed(2)}</span></div>
+                  <div className="flex justify-between"><span>{t('checkout.items')}</span><span>₴{totalPrice.toFixed(2)}</span></div>
                   <div className="flex justify-between items-start">
-                    <span className="pr-2">Доставка</span>
+                    <span className="pr-2">{t('checkout.shipping')}</span>
                     <span className="text-right">
                       {isFreeDelivery && isNovaPoshtaMethod
-                        ? 'Безкоштовно'
+                        ? t('checkout.free')
                         : shippingMethod === 'own_courier' 
-                        ? (shippingPrice === 0 ? 'Безкоштовно' : `₴${shippingPrice.toFixed(2)}`)
-                        : <span className="text-xs leading-tight">Оплата за тарифами<br />перевізника</span>
+                        ? (shippingPrice === 0 ? t('checkout.free') : `₴${shippingPrice.toFixed(2)}`)
+                        : <span className="text-xs leading-tight">{t('checkout.carrierRates')}</span>
                       }
                     </span>
                   </div>
-                  <div className="flex justify-between font-black" style={{ color: '#361c0c' }}><span>До сплати</span><span>₴{(totalPrice + shippingPrice).toFixed(2)}</span></div>
+                  <div className="flex justify-between font-black" style={{ color: '#361c0c' }}><span>{t('checkout.total')}</span><span>₴{(totalPrice + shippingPrice).toFixed(2)}</span></div>
                 </div>
                 <button 
                   disabled={isSubmitting} 
@@ -686,7 +689,7 @@ export default function Checkout() {
                   style={{ borderColor: '#361c0c', color: '#361c0c' }}
                 >
                   <span className="group-hover:text-white transition-colors">
-                    {isSubmitting ? 'Зачекайте...' : 'Перейти до оплати'}
+                    {isSubmitting ? t('checkout.wait') : t('checkout.proceedToPayment')}
                   </span>
                 </button>
               </div>
