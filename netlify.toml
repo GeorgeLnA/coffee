@@ -40,3 +40,10 @@
   from = "/sitemap.xml"
   status = 200
   to = "/.netlify/functions/sitemap"
+
+# Diagnostic endpoint for environment variable checking
+[[redirects]]
+  force = true
+  from = "/.netlify/functions/env-check"
+  status = 200
+  to = "/.netlify/functions/env-check"
