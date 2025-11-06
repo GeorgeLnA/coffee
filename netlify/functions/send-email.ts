@@ -161,6 +161,35 @@ export async function sendOrderConfirmationEmail(params: {
     return `${day}.${month}.${year}`;
   };
 
+  // Helper function to get placeholder image based on variant/weight
+  const getPlaceholderImage = (variant: string | null | undefined, baseUrl: string = 'https://manifestcoffee.com.ua'): string => {
+    if (!variant) {
+      return `${baseUrl}/250-g_Original.PNG`; // Default to 250g
+    }
+    
+    // Extract weight from variant (e.g., "250g Зерна", "1kg", "1000g" -> weight in grams)
+    const kgMatch = variant.match(/(\d+)\s*kg/i);
+    const gMatch = variant.match(/(\d+)\s*g/i);
+    
+    let weightInGrams = 0;
+    if (kgMatch) {
+      weightInGrams = parseInt(kgMatch[1], 10) * 1000; // Convert kg to grams
+    } else if (gMatch) {
+      weightInGrams = parseInt(gMatch[1], 10);
+    }
+    
+    if (weightInGrams === 250) {
+      return `${baseUrl}/250-g_Original.PNG`;
+    } else if (weightInGrams === 500) {
+      return `${baseUrl}/500_Manifestcoffee_Original.PNG`;
+    } else if (weightInGrams === 1000) {
+      return `${baseUrl}/woocommerce-placeholder_Original.PNG`;
+    }
+    
+    // Default to 250g if weight not found or doesn't match
+    return `${baseUrl}/250-g_Original.PNG`;
+  };
+
   // Generate HTML for order items with images (table-based for email client compatibility)
   const generateOrderItemsHTML = (items: typeof orderItems): string => {
     if (!items || items.length === 0) {
@@ -173,7 +202,9 @@ export async function sendOrderConfirmationEmail(params: {
       const itemPrice = item.price || 0;
       const itemTotal = (itemPrice * itemQuantity).toFixed(2);
       const variantText = item.variant ? ` (${item.variant})` : '';
-      const itemImage = item.image || '';
+      
+      // Always use placeholder image based on variant/weight
+      const itemImage = getPlaceholderImage(item.variant);
       
       // Generate HTML for each item with image using table layout (email client compatible)
       return `
@@ -183,11 +214,7 @@ export async function sendOrderConfirmationEmail(params: {
               <table cellpadding="0" cellspacing="0" border="0" width="100%">
                 <tr>
                   <td width="80" style="padding-right: 15px; vertical-align: top;">
-                    ${itemImage ? `
-                      <img src="${itemImage}" alt="${itemName}" width="80" height="80" style="width: 80px; height: 80px; object-fit: cover; border-radius: 8px; display: block; border: 0;" />
-                    ` : `
-                      <div style="width: 80px; height: 80px; background-color: #f5f5f5; border-radius: 8px; display: block; text-align: center; line-height: 80px; color: #999; font-size: 11px;">No Image</div>
-                    `}
+                    <img src="${itemImage}" alt="${itemName}" width="80" height="80" style="width: 80px; height: 80px; object-fit: cover; border-radius: 8px; display: block; border: 0;" />
                   </td>
                   <td style="vertical-align: top;">
                     <div style="font-size: 16px; font-weight: 600; color: #1f0a03; margin-bottom: 5px; line-height: 1.4;">${itemName}${variantText}</div>
@@ -293,6 +320,35 @@ export async function sendOrderNotificationEmail(params: {
     emailjsPrivateKey,
   } = params;
 
+  // Helper function to get placeholder image based on variant/weight (for admin email)
+  const getAdminPlaceholderImage = (variant: string | null | undefined, baseUrl: string = 'https://manifestcoffee.com.ua'): string => {
+    if (!variant) {
+      return `${baseUrl}/250-g_Original.PNG`; // Default to 250g
+    }
+    
+    // Extract weight from variant (e.g., "250g Зерна", "1kg", "1000g" -> weight in grams)
+    const kgMatch = variant.match(/(\d+)\s*kg/i);
+    const gMatch = variant.match(/(\d+)\s*g/i);
+    
+    let weightInGrams = 0;
+    if (kgMatch) {
+      weightInGrams = parseInt(kgMatch[1], 10) * 1000; // Convert kg to grams
+    } else if (gMatch) {
+      weightInGrams = parseInt(gMatch[1], 10);
+    }
+    
+    if (weightInGrams === 250) {
+      return `${baseUrl}/250-g_Original.PNG`;
+    } else if (weightInGrams === 500) {
+      return `${baseUrl}/500_Manifestcoffee_Original.PNG`;
+    } else if (weightInGrams === 1000) {
+      return `${baseUrl}/woocommerce-placeholder_Original.PNG`;
+    }
+    
+    // Default to 250g if weight not found or doesn't match
+    return `${baseUrl}/250-g_Original.PNG`;
+  };
+
   // Generate HTML for order items with images (admin email - same as customer)
   const generateAdminOrderItemsHTML = (items: typeof orderItems): string => {
     if (!items || items.length === 0) {
@@ -305,7 +361,9 @@ export async function sendOrderNotificationEmail(params: {
       const itemPrice = Number(item.price) || 0;
       const itemTotal = (itemPrice * itemQuantity).toFixed(2);
       const variantText = item.variant ? ` (${item.variant})` : '';
-      const itemImage = item.image || '';
+      
+      // Always use placeholder image based on variant/weight
+      const itemImage = getAdminPlaceholderImage(item.variant);
       
       // Generate HTML for each item with image using table layout (email client compatible)
       return `
@@ -315,11 +373,7 @@ export async function sendOrderNotificationEmail(params: {
               <table cellpadding="0" cellspacing="0" border="0" width="100%">
                 <tr>
                   <td width="80" style="padding-right: 15px; vertical-align: top;">
-                    ${itemImage ? `
-                      <img src="${itemImage}" alt="${itemName}" width="80" height="80" style="width: 80px; height: 80px; object-fit: cover; border-radius: 8px; display: block; border: 0;" />
-                    ` : `
-                      <div style="width: 80px; height: 80px; background-color: #f5f5f5; border-radius: 8px; display: block; text-align: center; line-height: 80px; color: #999; font-size: 11px;">No Image</div>
-                    `}
+                    <img src="${itemImage}" alt="${itemName}" width="80" height="80" style="width: 80px; height: 80px; object-fit: cover; border-radius: 8px; display: block; border: 0;" />
                   </td>
                   <td style="vertical-align: top;">
                     <div style="font-size: 16px; font-weight: 600; color: #1f0a03; margin-bottom: 5px; line-height: 1.4;">${itemName}${variantText}</div>
