@@ -172,6 +172,24 @@ function getPlaceholderImageByWeight(variant: string | null | undefined): string
 }
 
 /**
+ * Resolve the most appropriate image URL for an order item.
+ * Prefer the actual product image if available, otherwise fallback to weight-based placeholder.
+ */
+function getOrderItemImageUrl(item: { image?: string | null; variant?: string | null }): string {
+  const rawImage = item.image?.trim();
+  if (rawImage) {
+    if (/^https?:\/\//i.test(rawImage)) {
+      return rawImage;
+    }
+    if (rawImage.startsWith("//")) {
+      return `https:${rawImage}`;
+    }
+  }
+
+  return getPlaceholderImageByWeight(item.variant);
+}
+
+/**
  * Send order confirmation email to customer
  */
 export async function sendOrderConfirmationEmail(params: {
@@ -238,14 +256,14 @@ export async function sendOrderConfirmationEmail(params: {
       const itemTotal = (itemPrice * itemQuantity).toFixed(2);
       const variantText = item.variant ? ` (${item.variant})` : '';
       
-      // Always use placeholder image based on variant/weight
-      const itemImage = getPlaceholderImageByWeight(item.variant);
+      const itemImage = getOrderItemImageUrl(item);
       
       // Debug logging
       console.log('Email image generation:', {
         itemName,
         variant: item.variant,
         imageUrl: itemImage,
+        hasCustomImage: !!item.image,
       });
       
       // Generate HTML for each item with image using table layout (email client compatible)
@@ -376,14 +394,14 @@ export async function sendOrderNotificationEmail(params: {
       const itemTotal = (itemPrice * itemQuantity).toFixed(2);
       const variantText = item.variant ? ` (${item.variant})` : '';
       
-      // Always use placeholder image based on variant/weight
-      const itemImage = getPlaceholderImageByWeight(item.variant);
+      const itemImage = getOrderItemImageUrl(item);
       
       // Debug logging
       console.log('Admin email image generation:', {
         itemName,
         variant: item.variant,
         imageUrl: itemImage,
+        hasCustomImage: !!item.image,
       });
       
       // Generate HTML for each item with image using table layout (email client compatible)
