@@ -193,23 +193,22 @@ export default function Checkout() {
   const courierPrice = deliverySettings?.courier_price || 200;
   const freeDeliveryThreshold = deliverySettings?.free_delivery_threshold || 1500;
 
-  // Check if order qualifies for free delivery (for Nova Poshta methods)
-  const isFreeDelivery = totalPrice >= freeDeliveryThreshold;
-  const isNovaPoshtaMethod = shippingMethod === 'nova_department' || shippingMethod === 'nova_postomat' || shippingMethod === 'nova_courier';
+  const isNovaPoshtaMethod =
+    shippingMethod === 'nova_department' ||
+    shippingMethod === 'nova_postomat' ||
+    shippingMethod === 'nova_courier';
+  const qualifiesForFreeDelivery = isNovaPoshtaMethod && totalPrice >= freeDeliveryThreshold;
 
   const shippingPrice = useMemo(() => {
-    // Free delivery applies to all methods when over threshold
-    if (isFreeDelivery) return 0;
     if (shippingMethod === "own_courier") return courierPrice;
     // Nova Poshta pricing handled on delivery, but show 0 here when free delivery applies
     return 0;
-  }, [shippingMethod, totalPrice, freeDeliveryThreshold, courierPrice, isFreeDelivery]);
+  }, [shippingMethod, courierPrice]);
 
   // Calculate price specifically for own_courier button display
   const ownCourierPrice = useMemo(() => {
-    if (isFreeDelivery) return 0;
     return courierPrice;
-  }, [totalPrice, freeDeliveryThreshold, courierPrice, isFreeDelivery]);
+  }, [courierPrice]);
 
   // Load warehouses when city is selected
   const loadWarehouses = async () => {
@@ -583,14 +582,9 @@ export default function Checkout() {
                 <Input placeholder={t('checkout.deliveryAddress')} value={address} onChange={e => setAddress(e.target.value)} className="mb-3" />
               )}
               
-              {!isFreeDelivery && (
-                <div className="text-sm text-gray-700 mb-4">
-                  {isNovaPoshtaMethod 
-                    ? t('checkout.addItemsForFreeDeliveryNova').replace('{amount}', (freeDeliveryThreshold - totalPrice).toFixed(2))
-                    : shippingMethod === 'own_courier' && ownCourierPrice > 0
-                    ? t('checkout.addItemsForFreeDelivery').replace('{amount}', (freeDeliveryThreshold - totalPrice).toFixed(2))
-                    : null
-                  }
+              {isNovaPoshtaMethod && !qualifiesForFreeDelivery && (
+                <div className="text-sm text-gray-700 mb-4 font-bold">
+                  {t('checkout.addItemsForFreeDeliveryNova').replace('{amount}', (freeDeliveryThreshold - totalPrice).toFixed(2))}
                 </div>
               )}
               
@@ -672,7 +666,7 @@ export default function Checkout() {
                   <div className="flex justify-between items-start">
                     <span className="pr-2">{t('checkout.shipping')}</span>
                     <span className="text-right">
-                      {isFreeDelivery && isNovaPoshtaMethod
+                      {qualifiesForFreeDelivery
                         ? t('checkout.free')
                         : shippingMethod === 'own_courier' 
                         ? (shippingPrice === 0 ? t('checkout.free') : `₴${shippingPrice.toFixed(2)}`)
