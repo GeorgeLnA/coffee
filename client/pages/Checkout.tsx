@@ -413,9 +413,13 @@ export default function Checkout() {
           } else {
             shouldFallback = true; // no status info, attempt fallback
           }
-          // Never run fallback in production - rely on server-side EmailJS
-          if (import.meta.env.PROD) {
-            console.warn('[Email Fallback] Disabled in production; relying on server-side email.');
+          // Never run fallback outside local dev. Only allow on localhost.
+          const isLocalhost = typeof window !== 'undefined' && (
+            window.location.hostname === 'localhost' ||
+            window.location.hostname === '127.0.0.1'
+          );
+          if (!isLocalhost) {
+            console.warn('[Email Fallback] Disabled outside localhost; relying on server-side email.');
             shouldFallback = false;
           }
           if (shouldFallback) {
