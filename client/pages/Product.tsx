@@ -434,6 +434,32 @@ export default function Product() {
     return product?.image || "/250-g_Original.PNG";
   }, [sizesOptions, selectedSizeIdx, product]);
 
+  const variantLabel = useMemo(() => {
+    const grindText = (selectedGrind || 'beans') === 'beans' ? t('product.grindBeans') : t('product.grindGround');
+    if (!sizesOptions.length) {
+      return `${selectedWeight} - ${grindText}`;
+    }
+    const current = sizesOptions[selectedSizeIdx] || sizesOptions[0];
+    const weightFromSize = current?.weight
+      ? (current.weight % 1000 === 0 ? `${current.weight / 1000}kg` : `${current.weight}g`)
+      : '';
+    const baseWeight = weightFromSize || selectedWeight || '';
+    const labelText = (current?.label || '').trim();
+    const parts: string[] = [];
+    if (baseWeight) {
+      parts.push(baseWeight);
+    }
+    if (labelText) {
+      const lowerLabel = labelText.toLowerCase();
+      const lowerWeight = baseWeight.toLowerCase();
+      if (!lowerLabel.includes(lowerWeight) && lowerLabel !== lowerWeight) {
+        parts.push(labelText);
+      }
+    }
+    parts.push(grindText);
+    return parts.filter(Boolean).join(' - ');
+  }, [selectedGrind, sizesOptions, selectedSizeIdx, selectedWeight, t]);
+
   const [selectedImage, setSelectedImage] = useState(0);
 
   return (
@@ -755,7 +781,7 @@ export default function Product() {
                       image: product!.image,
                       price: finalPrice / quantity, // unit price
                       quantity: quantity,
-                      variant: `${sizesOptions.length ? (sizesOptions[selectedSizeIdx]?.label || '') : selectedWeight} ${(selectedGrind || 'beans') === 'beans' ? t('product.grindBeans') : t('product.grindGround')}`,
+                      variant: variantLabel,
                       type: 'coffee'
                     });
                     

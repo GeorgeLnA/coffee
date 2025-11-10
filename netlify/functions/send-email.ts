@@ -108,85 +108,121 @@ export async function sendEmailViaEmailJS(params: {
   }
 }
 
-/**
- * Helper function to get product image based on variant/weight
- * Uses Supabase-hosted images for each weight
- * Shared between customer and admin email functions
- */
-function getPlaceholderImageByWeight(variant: string | null | undefined): string {
-  console.log('getPlaceholderImageByWeight called with variant:', variant);
-  
-  // Image URLs from Supabase storage
-  const imageUrls = {
-    250: 'https://umynzgzlqdphgrzixhsc.supabase.co/storage/v1/object/public/media/coffee/1761665796405-250gr.png',
-    500: 'https://umynzgzlqdphgrzixhsc.supabase.co/storage/v1/object/public/media/coffee/sizes/1761665813027-500gr.png',
-    1000: 'https://umynzgzlqdphgrzixhsc.supabase.co/storage/v1/object/public/media/coffee/sizes/1761665827913-1000gr.png',
-  };
-  
-  if (!variant) {
-    console.log('No variant, using default 250g image');
-    return imageUrls[250]; // Default to 250g
-  }
-  
-  // Extract weight from variant (e.g., "250g Зерна", "1kg", "1000g" -> weight in grams)
-  // Try multiple patterns to catch different formats
-  const kgMatch = variant.match(/(\d+)\s*kg/i);
-  const gMatch = variant.match(/(\d+)\s*g/i);
-  const numberMatch = variant.match(/(\d+)/); // Fallback: just get any number
-  
-  let weightInGrams = 0;
-  if (kgMatch) {
-    weightInGrams = parseInt(kgMatch[1], 10) * 1000; // Convert kg to grams
-    console.log('Found kg match:', kgMatch[1], '->', weightInGrams, 'grams');
-  } else if (gMatch) {
-    weightInGrams = parseInt(gMatch[1], 10);
-    console.log('Found g match:', gMatch[1], '->', weightInGrams, 'grams');
-  } else if (numberMatch) {
-    // Fallback: if we find a number, assume it's grams
-    const num = parseInt(numberMatch[1], 10);
-    if (num >= 1000) {
-      weightInGrams = num;
-    } else if (num === 1 && variant.toLowerCase().includes('kg')) {
-      weightInGrams = 1000;
-    } else {
-      weightInGrams = num;
-    }
-    console.log('Found number match:', numberMatch[1], '->', weightInGrams, 'grams (fallback)');
-  }
-  
-  let imageUrl = '';
-  if (weightInGrams === 250) {
-    imageUrl = imageUrls[250];
-  } else if (weightInGrams === 500) {
-    imageUrl = imageUrls[500];
-  } else if (weightInGrams === 1000) {
-    imageUrl = imageUrls[1000];
-  } else {
-    // Default to 250g if weight not found or doesn't match
-    imageUrl = imageUrls[250];
-    console.log('Weight not matched, using default 250g. Weight was:', weightInGrams);
-  }
-  
-  console.log('Final image URL:', imageUrl);
-  return imageUrl;
+const WEIGHT_IMAGE_SOURCES: Record<number, string[]> = {
+  250: [
+    'https://manifestcoffee.com.ua/1761665796405-250gr.png',
+    'https://umynzgzlqdphgrzixhsc.supabase.co/storage/v1/object/public/media/coffee/1761665796405-250gr.png',
+  ],
+  500: [
+    'https://manifestcoffee.com.ua/1761665813027-500gr.png',
+    'https://umynzgzlqdphgrzixhsc.supabase.co/storage/v1/object/public/media/coffee/sizes/1761665813027-500gr.png',
+  ],
+  1000: [
+    'https://manifestcoffee.com.ua/1761665827913-1000gr.png',
+    'https://umynzgzlqdphgrzixhsc.supabase.co/storage/v1/object/public/media/coffee/sizes/1761665827913-1000gr.png',
+  ],
+};
+
+const DEFAULT_WEIGHT_GRAMS = 250;
+
+function normalizeNumber(value: number): number {
+  if (value <= 0 || Number.isNaN(value)) return DEFAULT_WEIGHT_GRAMS;
+  if (value < 300) return 250;
+  if (value < 800) return 500;
+  return 1000;
 }
 
-/**
- * Resolve the most appropriate image URL for an order item.
- * Prefer the actual product image if available, otherwise fallback to weight-based placeholder.
- */
-function getOrderItemImageUrl(item: { image?: string | null; variant?: string | null }): string {
-  const rawImage = item.image?.trim();
-  if (rawImage) {
-    if (/^https?:\/\//i.test(rawImage)) {
-      return rawImage;
-    }
-    if (rawImage.startsWith("//")) {
-      return `https:${rawImage}`;
+function normalizeWeightToken(token: string): string {
+  return token
+    .toLowerCase()
+    .replace(/[‐‑‒–—―]/g, '-') // normalize dashes
+    .replace(/кг|к\.г\.?|кілограм(и|ів)?|килограмм(ы)?/g, 'kg')
+    .replace(/грам(и|ів|мів|м|мів)?|гр\.?|г\b|г\./g, 'g')
+    .replace(/,/g, '.')
+    .replace(/\u00a0/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function parseWeightFromText(source: string | null | undefined): number | null {
+  if (!source) return null;
+  const normalized = normalizeWeightToken(source);
+
+  const kgMatch = normalized.match(/(\d+(?:\.\d+)?)\s*kg/);
+  if (kgMatch) {
+    const kgValue = parseFloat(kgMatch[1]);
+    if (!Number.isNaN(kgValue)) {
+      return Math.round(kgValue * 1000);
     }
   }
 
-  return getPlaceholderImageByWeight(item.variant);
+  const gMatch = normalized.match(/(\d+(?:\.\d+)?)\s*g\b/);
+  if (gMatch) {
+    const gValue = parseFloat(gMatch[1]);
+    if (!Number.isNaN(gValue)) {
+      return Math.round(gValue);
+    }
+  }
+
+  const standaloneNumber = normalized.match(/(\d+(?:\.\d+)?)/);
+  if (standaloneNumber) {
+    const numericValue = parseFloat(standaloneNumber[1]);
+    if (!Number.isNaN(numericValue)) {
+      if (normalized.includes('kg')) {
+        return Math.round(numericValue * 1000);
+      }
+      if (numericValue <= 5 && normalized.includes('0.') && normalized.includes('kg')) {
+        return Math.round(numericValue * 1000);
+      }
+      if (numericValue > 10 && numericValue < 2000) {
+        return Math.round(numericValue);
+      }
+      if (numericValue === 1 && normalized.includes('kg')) {
+        return 1000;
+      }
+    }
+  }
+
+  return null;
+}
+
+function resolveWeightInGrams(item: { variant?: string | null; name?: string | null; product_name?: string | null; weight?: number | null; size?: string | null }): number {
+  const directWeight = Number((item as any)?.weight);
+  if (!Number.isNaN(directWeight) && directWeight > 0) {
+    return normalizeNumber(directWeight);
+  }
+
+  const sources = [
+    item.variant,
+    item.name,
+    (item as any)?.product_name,
+    (item as any)?.option,
+    (item as any)?.title,
+    item.size,
+  ];
+
+  for (const source of sources) {
+    const parsed = parseWeightFromText(source as string | undefined);
+    if (parsed) {
+      return normalizeNumber(parsed);
+    }
+  }
+
+  return DEFAULT_WEIGHT_GRAMS;
+}
+
+function getWeightBasedImageUrl(item: { variant?: string | null; name?: string | null; product_name?: string | null; weight?: number | null; size?: string | null }): string {
+  const weight = resolveWeightInGrams(item);
+  const candidates = WEIGHT_IMAGE_SOURCES[weight] || [];
+  const imageUrl = candidates[0] || candidates[1] || WEIGHT_IMAGE_SOURCES[DEFAULT_WEIGHT_GRAMS][0];
+  console.log('Resolved weight image', {
+    weight,
+    variant: item.variant,
+    name: item.name,
+    product_name: (item as any)?.product_name,
+    selectedImage: imageUrl,
+  });
+  return imageUrl;
 }
 
 /**
@@ -256,14 +292,13 @@ export async function sendOrderConfirmationEmail(params: {
       const itemTotal = (itemPrice * itemQuantity).toFixed(2);
       const variantText = item.variant ? ` (${item.variant})` : '';
       
-      const itemImage = getOrderItemImageUrl(item);
+      const itemImage = getWeightBasedImageUrl(item);
       
       // Debug logging
       console.log('Email image generation:', {
         itemName,
         variant: item.variant,
         imageUrl: itemImage,
-        hasCustomImage: !!item.image,
       });
       
       // Generate HTML for each item with image using table layout (email client compatible)
@@ -342,7 +377,7 @@ export async function sendOrderConfirmationEmail(params: {
  * Send order notification email to admin
  */
 export async function sendOrderNotificationEmail(params: {
-  adminEmails: string[]; // Can be multiple emails (comma-separated or array)
+  adminEmails: string[] | string; // Can be multiple emails (comma-separated or array)
   customerName: string;
   customerEmail: string;
   customerPhone: string;
@@ -394,14 +429,13 @@ export async function sendOrderNotificationEmail(params: {
       const itemTotal = (itemPrice * itemQuantity).toFixed(2);
       const variantText = item.variant ? ` (${item.variant})` : '';
       
-      const itemImage = getOrderItemImageUrl(item);
+      const itemImage = getWeightBasedImageUrl(item);
       
       // Debug logging
       console.log('Admin email image generation:', {
         itemName,
         variant: item.variant,
         imageUrl: itemImage,
-        hasCustomImage: !!item.image,
       });
       
       // Generate HTML for each item with image using table layout (email client compatible)

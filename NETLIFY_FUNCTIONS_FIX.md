@@ -149,3 +149,4 @@ curl "https://manifestcoffee.com.ua/.netlify/functions/api/settlements?cityName=
 5. If functions don't exist, trigger a fresh deploy
 6. Check build logs for errors
 
+

@@ -80,3 +80,4 @@ Route through the Express wrapper function instead:
 - Function should log the received HTTP method
 - After deployment, check logs to see what method is actually received
 
+
