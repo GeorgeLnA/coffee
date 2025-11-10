@@ -207,6 +207,20 @@ export default function Header() {
           ></div>
           {/* Mobile menu slides from right full screen */}
           <div className={`fixed top-0 right-0 h-full w-full transform transition-transform duration-[1500ms] ease-[cubic-bezier(0.16,1,0.3,1)] ${isMobileMenuOpen ? 'translate-x-0' : 'translate-x-full'}`} style={{ backgroundColor: '#361c0c' }}>
+              <Link
+                to="/basket"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className={`absolute top-6 right-[88px] flex items-center gap-2 px-4 py-2 rounded-full transition-all duration-300 ${isMobileMenuOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+                style={{ backgroundColor: '#fcf4e4', color: '#361c0c' }}
+              >
+                <ShoppingCart className="w-5 h-5" />
+                <span className="font-bold text-sm">{t('mobile.cart')}</span>
+                {totalQuantity > 0 && (
+                  <span className="ml-1 inline-flex items-center justify-center rounded-full px-2 py-0.5 text-xs font-black" style={{ backgroundColor: '#361c0c', color: '#fcf4e4' }}>
+                    {totalQuantity}
+                  </span>
+                )}
+              </Link>
               <div className="px-6 pt-24 pb-8 space-y-8">
               <nav className="space-y-6">
                 <Link to="/coffee" className="block text-white font-bold text-2xl hover:text-white/80 transition-colors">
@@ -238,21 +252,6 @@ export default function Header() {
                 </Link>
               </nav>
                 
-                <div className="pt-8 border-t border-white/20">
-                  {/* Basket Button */}
-                  <div className="mb-6">
-                    <Link to="/basket" className="relative w-full flex items-center justify-center space-x-2 py-4 font-bold hover:bg-[#fcf4e4] hover:text-[#361c0c] transition-all duration-300" style={{ backgroundColor: '#fcf4e4' + '20', color: '#fcf4e4' }}>
-                      <ShoppingCart className="w-5 h-5" />
-                      <span>{t('mobile.cart')}</span>
-                      {totalQuantity > 0 && (
-                        <div className="absolute -top-1 -right-1 w-5 h-5 flex items-center justify-center" style={{ backgroundColor: '#fcf4e4' }}>
-                          <span className="font-bold text-xs" style={{ color: '#361c0c' }}>{totalQuantity}</span>
-                        </div>
-                      )}
-                    </Link>
-                  </div>
-                  
-                </div>
               </div>
             </div>
             
