@@ -407,9 +407,9 @@ export default function Checkout() {
           if (data.emailStatus) {
             const attempted = !!data.emailStatus.attempted;
             const configured = !!data.emailStatus.configured;
-            const details = (data.emailStatus as any).details;
-            const failedDetail = details && ((details.customer && details.customer.success === false) || (details.admin && details.admin.success === false));
-            shouldFallback = !attempted || !configured || !!failedDetail;
+            // Only fallback when server email wasn't attempted or not configured.
+            // Do NOT fallback on individual send failures to avoid client 422 due to domain restrictions.
+            shouldFallback = !attempted || !configured;
           } else {
             shouldFallback = true; // no status info, attempt fallback
           }
