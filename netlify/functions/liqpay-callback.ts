@@ -456,7 +456,11 @@ export const handler: Handler = async (event, context) => {
                 .select("*")
                 .eq("order_id", orderDataResult.id);
 
-              if (!itemsError && savedOrderItems && savedOrderItems.length > 0) {
+              const itemsForEmail = (!itemsError && savedOrderItems && savedOrderItems.length > 0)
+                ? savedOrderItems
+                : (Array.isArray(orderData?.items) ? orderData.items : []);
+
+              if (itemsForEmail && itemsForEmail.length > 0) {
                 console.log("=== EMAIL SENDING DEBUG (ONLINE PAYMENT) ===");
                 const emailConfig = resolveEmailJSConfig();
                 const emailjsServiceId = emailConfig.serviceId;
@@ -484,11 +488,11 @@ export const handler: Handler = async (event, context) => {
                 if (emailConfig.configured) {
                   console.log("EmailJS configured, proceeding to send emails...");
                   // Prepare order items for email
-                  const emailItems = savedOrderItems.map((item: any) => ({
-                    name: item.product_name || "Невідомий товар",
-                    quantity: item.quantity || 1,
+                  const emailItems = itemsForEmail.map((item: any) => ({
+                    name: item.product_name || item.name || "Невідомий товар",
+                    quantity: Number(item.quantity) || 1,
                     price: Number(item.price) || 0,
-                    image: item.product_image || null,
+                    image: item.product_image || item.image || item.image_url || null,
                     variant: item.variant || null,
                   }));
 

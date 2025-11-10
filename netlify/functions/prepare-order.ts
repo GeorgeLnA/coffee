@@ -237,7 +237,7 @@ export const handler: Handler = async (event, context) => {
           console.log("insertedItems exists:", !!insertedItems);
           console.log("insertedItems length:", insertedItems?.length);
           
-          if (orderData && orderData.customer_email && insertedItems && insertedItems.length > 0) {
+          if (orderData && orderData.customer_email) {
             try {
               console.log("=== EMAIL SENDING DEBUG (CASH ORDER) ===");
               const emailConfig = resolveEmailJSConfig();
@@ -266,11 +266,14 @@ export const handler: Handler = async (event, context) => {
               if (emailjsServiceId && emailjsTemplateIdCustomer && emailjsTemplateIdAdmin && emailjsPublicKey) {
                 console.log("EmailJS configured, proceeding to send emails...");
                 // Prepare order items for email (only use data we have)
-                const emailItems = insertedItems.map((item: any) => ({
-                  name: item.product_name || "Невідомий товар",
-                  quantity: item.quantity || 1,
+                const sourceItems = (insertedItems && insertedItems.length > 0)
+                  ? insertedItems
+                  : (Array.isArray(orderData.items) ? orderData.items : (Array.isArray(items) ? items : []));
+                const emailItems = sourceItems.map((item: any) => ({
+                  name: item.product_name || item.name || "Невідомий товар",
+                  quantity: Number(item.quantity) || 1,
                   price: Number(item.price) || 0,
-                  image: item.product_image || null,
+                  image: item.product_image || item.image || item.image_url || null,
                   variant: item.variant || null,
                 }));
 

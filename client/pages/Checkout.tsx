@@ -413,6 +413,11 @@ export default function Checkout() {
           } else {
             shouldFallback = true; // no status info, attempt fallback
           }
+          // Never run fallback in production - rely on server-side EmailJS
+          if (import.meta.env.PROD) {
+            console.warn('[Email Fallback] Disabled in production; relying on server-side email.');
+            shouldFallback = false;
+          }
           if (shouldFallback) {
             console.log('[Email Fallback] Trying client-side EmailJS send...');
             await sendOrderEmailsClientSide(data?.orderId);
