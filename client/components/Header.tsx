@@ -210,13 +210,12 @@ export default function Header() {
               <Link
                 to="/basket"
                 onClick={() => setIsMobileMenuOpen(false)}
-                className={`absolute top-6 right-[88px] flex items-center gap-2 px-4 py-2 rounded-full transition-all duration-300 ${isMobileMenuOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
-                style={{ backgroundColor: '#fcf4e4', color: '#361c0c' }}
+                className={`absolute top-6 right-[88px] w-12 h-12 flex items-center justify-center transition-all duration-300 ${isMobileMenuOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+                style={{ backgroundColor: '#fcf4e4' + '20' }}
               >
-                <ShoppingCart className="w-5 h-5" />
-                <span className="font-bold text-sm">{t('mobile.cart')}</span>
+                <ShoppingCart className="w-6 h-6" style={{ color: '#fcf4e4' }} />
                 {totalQuantity > 0 && (
-                  <span className="ml-1 inline-flex items-center justify-center rounded-full px-2 py-0.5 text-xs font-black" style={{ backgroundColor: '#361c0c', color: '#fcf4e4' }}>
+                  <span className="absolute -top-1 -right-1 inline-flex items-center justify-center rounded-full px-2 py-0.5 text-xs font-black" style={{ backgroundColor: '#fcf4e4', color: '#361c0c' }}>
                     {totalQuantity}
                   </span>
                 )}
