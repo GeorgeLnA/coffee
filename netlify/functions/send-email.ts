@@ -110,16 +110,19 @@ export async function sendEmailViaEmailJS(params: {
 
 const WEIGHT_IMAGE_SOURCES: Record<number, string[]> = {
   250: [
-    'https://manifestcoffee.com.ua/1761665796405-250gr.png',
     'https://umynzgzlqdphgrzixhsc.supabase.co/storage/v1/object/public/media/coffee/1761665796405-250gr.png',
+    'https://manifestcoffee.com.ua/1761665796405-250gr.png',
+    'https://manifestcoffee.com.ua/manifest-site-logo.png',
   ],
   500: [
-    'https://manifestcoffee.com.ua/1761665813027-500gr.png',
     'https://umynzgzlqdphgrzixhsc.supabase.co/storage/v1/object/public/media/coffee/sizes/1761665813027-500gr.png',
+    'https://manifestcoffee.com.ua/1761665813027-500gr.png',
+    'https://manifestcoffee.com.ua/manifest-site-logo.png',
   ],
   1000: [
-    'https://manifestcoffee.com.ua/1761665827913-1000gr.png',
     'https://umynzgzlqdphgrzixhsc.supabase.co/storage/v1/object/public/media/coffee/sizes/1761665827913-1000gr.png',
+    'https://manifestcoffee.com.ua/1761665827913-1000gr.png',
+    'https://manifestcoffee.com.ua/manifest-site-logo.png',
   ],
 };
 
@@ -214,7 +217,9 @@ function resolveWeightInGrams(item: { variant?: string | null; name?: string | n
 function getWeightBasedImageUrl(item: { variant?: string | null; name?: string | null; product_name?: string | null; weight?: number | null; size?: string | null }): string {
   const weight = resolveWeightInGrams(item);
   const candidates = WEIGHT_IMAGE_SOURCES[weight] || [];
-  const imageUrl = candidates[0] || candidates[1] || WEIGHT_IMAGE_SOURCES[DEFAULT_WEIGHT_GRAMS][0];
+  const fallbackPool = WEIGHT_IMAGE_SOURCES[DEFAULT_WEIGHT_GRAMS] || [];
+  const imageUrl = [...candidates, ...fallbackPool].find((url) => typeof url === 'string' && url.length > 0) 
+    || 'https://manifestcoffee.com.ua/manifest-site-logo.png';
   console.log('Resolved weight image', {
     weight,
     variant: item.variant,
@@ -531,9 +536,11 @@ export async function sendOrderNotificationEmail(params: {
   };
 
   // Handle multiple admin emails (comma-separated string or array)
-  const emailArray = Array.isArray(adminEmails)
+  const emailArray = (Array.isArray(adminEmails)
     ? adminEmails
-    : adminEmails.split(",").map((e) => e.trim()).filter(Boolean);
+    : adminEmails.split(","))
+    .map((e) => e.trim())
+    .filter((e) => !!e);
 
   // Debug logging for notes
   console.log("=== ADMIN EMAIL NOTES DEBUG (sendOrderNotificationEmail) ===");

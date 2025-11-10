@@ -2,6 +2,7 @@ import type { Handler } from "@netlify/functions";
 import crypto from "crypto";
 import { createClient } from "@supabase/supabase-js";
 import { sendOrderConfirmationEmail, sendOrderNotificationEmail } from "./send-email";
+import { resolveEmailJSConfig, maskForLogs } from "../../shared/emailjs-config";
 
 /**
  * Create Supabase client
@@ -457,27 +458,30 @@ export const handler: Handler = async (event, context) => {
 
               if (!itemsError && savedOrderItems && savedOrderItems.length > 0) {
                 console.log("=== EMAIL SENDING DEBUG (ONLINE PAYMENT) ===");
-                const emailjsServiceId = process.env.EMAILJS_SERVICE_ID;
-                const emailjsTemplateIdCustomer = process.env.EMAILJS_TEMPLATE_ID_CUSTOMER;
-                const emailjsTemplateIdAdmin = process.env.EMAILJS_TEMPLATE_ID_ADMIN;
-                const emailjsPublicKey = process.env.EMAILJS_PUBLIC_KEY;
-                const emailjsPrivateKey = process.env.EMAILJS_PRIVATE_KEY; // Private key for server-side REST API
-                const adminEmails = process.env.ADMIN_EMAILS || "davidnuk877@gmail.com";
+                const emailConfig = resolveEmailJSConfig();
+                const emailjsServiceId = emailConfig.serviceId;
+                const emailjsTemplateIdCustomer = emailConfig.templateIdCustomer;
+                const emailjsTemplateIdAdmin = emailConfig.templateIdAdmin;
+                const emailjsPublicKey = emailConfig.publicKey;
+                const emailjsPrivateKey = emailConfig.privateKey; // Private key for server-side REST API
+                const adminEmails = emailConfig.adminEmails || "davidnuk877@gmail.com";
 
                 console.log("Environment check:", {
                   hasServiceId: !!emailjsServiceId,
                   hasCustomerTemplate: !!emailjsTemplateIdCustomer,
                   hasAdminTemplate: !!emailjsTemplateIdAdmin,
                   hasPublicKey: !!emailjsPublicKey,
-                  serviceId: emailjsServiceId || "NOT SET",
-                  customerTemplate: emailjsTemplateIdCustomer || "NOT SET",
-                  adminTemplate: emailjsTemplateIdAdmin || "NOT SET",
-                  publicKey: emailjsPublicKey ? `${emailjsPublicKey.substring(0, 4)}...` : "NOT SET",
+                  serviceId: maskForLogs(emailjsServiceId),
+                  customerTemplate: maskForLogs(emailjsTemplateIdCustomer),
+                  adminTemplate: maskForLogs(emailjsTemplateIdAdmin),
+                  publicKey: maskForLogs(emailjsPublicKey),
+                  privateKeySource: emailConfig.sources.privateKey || "NOT SET",
                   adminEmails: adminEmails,
+                  adminEmailsSource: emailConfig.sources.adminEmails || "NOT SET",
                 });
 
                 // Only send if EmailJS is configured
-                if (emailjsServiceId && emailjsTemplateIdCustomer && emailjsTemplateIdAdmin && emailjsPublicKey) {
+                if (emailConfig.configured) {
                   console.log("EmailJS configured, proceeding to send emails...");
                   // Prepare order items for email
                   const emailItems = savedOrderItems.map((item: any) => ({

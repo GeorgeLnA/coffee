@@ -1,4 +1,5 @@
 import type { Handler } from '@netlify/functions';
+import { resolveEmailJSConfig, maskForLogs } from '../../shared/emailjs-config';
 
 /**
  * Compare deployment configurations between two Netlify sites
@@ -9,6 +10,8 @@ export const handler: Handler = async (event, context) => {
     'Content-Type': 'application/json',
     'Access-Control-Allow-Origin': '*',
   };
+
+  const emailConfig = resolveEmailJSConfig();
 
   // Check if functions are accessible
   const functionChecks = {
@@ -50,9 +53,34 @@ export const handler: Handler = async (event, context) => {
       },
       
       // EmailJS
-      EMAILJS_SERVICE_ID: {
-        present: !!process.env.EMAILJS_SERVICE_ID,
-        preview: process.env.EMAILJS_SERVICE_ID ? `${process.env.EMAILJS_SERVICE_ID.substring(0, 8)}...` : 'missing',
+      EMAILJS: {
+        configured: emailConfig.configured,
+        serviceId: {
+          present: !emailConfig.missing.serviceId,
+          preview: maskForLogs(emailConfig.serviceId),
+          source: emailConfig.sources.serviceId || 'missing',
+        },
+        templateIdCustomer: {
+          present: !emailConfig.missing.templateIdCustomer,
+          preview: maskForLogs(emailConfig.templateIdCustomer),
+          source: emailConfig.sources.templateIdCustomer || 'missing',
+        },
+        templateIdAdmin: {
+          present: !emailConfig.missing.templateIdAdmin,
+          preview: maskForLogs(emailConfig.templateIdAdmin),
+          source: emailConfig.sources.templateIdAdmin || 'missing',
+        },
+        publicKey: {
+          present: !emailConfig.missing.publicKey,
+          preview: maskForLogs(emailConfig.publicKey),
+          source: emailConfig.sources.publicKey || 'missing',
+        },
+        privateKeySource: emailConfig.sources.privateKey || 'missing',
+        adminEmails: {
+          present: !!emailConfig.adminEmails,
+          value: emailConfig.adminEmails || 'missing',
+          source: emailConfig.sources.adminEmails || 'missing',
+        },
       },
     },
     

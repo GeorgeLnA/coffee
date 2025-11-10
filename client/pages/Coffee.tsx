@@ -16,6 +16,7 @@ import AddToCartModal from "../components/AddToCartModal";
 import { useToast } from "../hooks/use-toast";
 import { useCoffeeProducts, useFilterOptions } from "../hooks/use-supabase";
 import { CoffeeLabel } from "../components/CoffeeLabel";
+import { getWeightString } from "../lib/weight";
 
 
 // Helper function to get translated description
@@ -925,7 +926,10 @@ export default function Coffee() {
                                       image: coffee.image,
                                       price: coffee.price,
                                       quantity: 1,
-                                      variant: `${(coffee.weight && coffee.weight > 0) ? (coffee.weight % 1000 === 0 ? `${coffee.weight / 1000}kg` : `${coffee.weight}g`) : '250g'} - ${t('product.grindBeans')}`, // Default to beans if not selected
+                                      variant: `${(() => {
+                                        const weightLabel = getWeightString(coffee.weight ?? null, '');
+                                        return weightLabel || '250g';
+                                      })()} - ${t('product.grindBeans')}`, // Default to beans if not selected
                                       type: 'coffee'
                                     });
                                     

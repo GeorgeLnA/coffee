@@ -2,6 +2,7 @@ import type { Handler } from "@netlify/functions";
 import crypto from "crypto";
 import { createClient } from "@supabase/supabase-js";
 import { sendOrderConfirmationEmail, sendOrderNotificationEmail } from "./send-email";
+import { resolveEmailJSConfig, maskForLogs } from "../../shared/emailjs-config";
 
 /**
  * Helper function to base64 encode
@@ -239,23 +240,26 @@ export const handler: Handler = async (event, context) => {
           if (orderData && orderData.customer_email && insertedItems && insertedItems.length > 0) {
             try {
               console.log("=== EMAIL SENDING DEBUG (CASH ORDER) ===");
-              const emailjsServiceId = process.env.EMAILJS_SERVICE_ID;
-              const emailjsTemplateIdCustomer = process.env.EMAILJS_TEMPLATE_ID_CUSTOMER;
-              const emailjsTemplateIdAdmin = process.env.EMAILJS_TEMPLATE_ID_ADMIN;
-              const emailjsPublicKey = process.env.EMAILJS_PUBLIC_KEY;
-              const emailjsPrivateKey = process.env.EMAILJS_PRIVATE_KEY; // Private key for server-side REST API
-              const adminEmails = process.env.ADMIN_EMAILS || "davidnuk877@gmail.com";
+              const emailConfig = resolveEmailJSConfig();
+              const emailjsServiceId = emailConfig.serviceId;
+              const emailjsTemplateIdCustomer = emailConfig.templateIdCustomer;
+              const emailjsTemplateIdAdmin = emailConfig.templateIdAdmin;
+              const emailjsPublicKey = emailConfig.publicKey;
+              const emailjsPrivateKey = emailConfig.privateKey; // Private key for server-side REST API
+              const adminEmails = emailConfig.adminEmails || "davidnuk877@gmail.com";
 
               console.log("Environment check:", {
                 hasServiceId: !!emailjsServiceId,
                 hasCustomerTemplate: !!emailjsTemplateIdCustomer,
                 hasAdminTemplate: !!emailjsTemplateIdAdmin,
                 hasPublicKey: !!emailjsPublicKey,
-                serviceId: emailjsServiceId || "NOT SET",
-                customerTemplate: emailjsTemplateIdCustomer || "NOT SET",
-                adminTemplate: emailjsTemplateIdAdmin || "NOT SET",
-                publicKey: emailjsPublicKey ? `${emailjsPublicKey.substring(0, 4)}...` : "NOT SET",
+                serviceId: maskForLogs(emailjsServiceId),
+                customerTemplate: maskForLogs(emailjsTemplateIdCustomer),
+                adminTemplate: maskForLogs(emailjsTemplateIdAdmin),
+                publicKey: maskForLogs(emailjsPublicKey),
+                privateKeySource: emailConfig.sources.privateKey || "NOT SET",
                 adminEmails: adminEmails,
+                adminEmailsSource: emailConfig.sources.adminEmails || "NOT SET",
               });
 
               // Only send if EmailJS is configured
@@ -429,21 +433,22 @@ export const handler: Handler = async (event, context) => {
       let emailStatus: any = { attempted: false, reason: "orderData or items not saved" };
       if (orderData && orderData.customer_email) {
         // Check if EmailJS is configured and if email sending was attempted
-        const emailjsServiceId = process.env.EMAILJS_SERVICE_ID;
-        const emailjsTemplateIdCustomer = process.env.EMAILJS_TEMPLATE_ID_CUSTOMER;
-        const emailjsTemplateIdAdmin = process.env.EMAILJS_TEMPLATE_ID_ADMIN;
-        const emailjsPublicKey = process.env.EMAILJS_PUBLIC_KEY;
-        const isConfigured = !!(emailjsServiceId && emailjsTemplateIdCustomer && emailjsTemplateIdAdmin && emailjsPublicKey);
+        const emailConfig = resolveEmailJSConfig();
+        const emailjsServiceId = emailConfig.serviceId;
+        const emailjsTemplateIdCustomer = emailConfig.templateIdCustomer;
+        const emailjsTemplateIdAdmin = emailConfig.templateIdAdmin;
+        const emailjsPublicKey = emailConfig.publicKey;
+        const isConfigured = emailConfig.configured;
         
         emailStatus = {
           attempted: true,
           configured: isConfigured,
           // Include which variables are missing for debugging
           missingVars: {
-            serviceId: !emailjsServiceId,
-            customerTemplate: !emailjsTemplateIdCustomer,
-            adminTemplate: !emailjsTemplateIdAdmin,
-            publicKey: !emailjsPublicKey,
+            serviceId: emailConfig.missing.serviceId,
+            customerTemplate: emailConfig.missing.templateIdCustomer,
+            adminTemplate: emailConfig.missing.templateIdAdmin,
+            publicKey: emailConfig.missing.publicKey,
           },
           details: emailResults,
         };

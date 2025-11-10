@@ -1,14 +1,16 @@
 import { RequestHandler } from "express";
 import { sendOrderConfirmationEmail, sendOrderNotificationEmail } from "../../netlify/functions/send-email";
+import { resolveEmailJSConfig, maskForLogs } from "../../shared/emailjs-config";
 
 export const testEmail: RequestHandler = async (req, res) => {
   try {
     // Check if EmailJS is configured
-    const emailjsServiceId = process.env.EMAILJS_SERVICE_ID;
-    const emailjsTemplateIdCustomer = process.env.EMAILJS_TEMPLATE_ID_CUSTOMER;
-    const emailjsTemplateIdAdmin = process.env.EMAILJS_TEMPLATE_ID_ADMIN;
-    const emailjsPublicKey = process.env.EMAILJS_PUBLIC_KEY;
-    const adminEmails = process.env.ADMIN_EMAILS || "dovedem2014@gmail.com,manifestcava@gmail.com";
+    const emailConfig = resolveEmailJSConfig();
+    const emailjsServiceId = emailConfig.serviceId;
+    const emailjsTemplateIdCustomer = emailConfig.templateIdCustomer;
+    const emailjsTemplateIdAdmin = emailConfig.templateIdAdmin;
+    const emailjsPublicKey = emailConfig.publicKey;
+    const adminEmails = emailConfig.adminEmails || "dovedem2014@gmail.com,manifestcava@gmail.com";
 
     if (!emailjsServiceId || !emailjsTemplateIdCustomer || !emailjsTemplateIdAdmin || !emailjsPublicKey) {
       return res.status(400).json({
@@ -20,11 +22,12 @@ export const testEmail: RequestHandler = async (req, res) => {
           EMAILJS_PUBLIC_KEY: !emailjsPublicKey,
         },
         env: {
-          EMAILJS_SERVICE_ID: emailjsServiceId || "NOT SET",
-          EMAILJS_TEMPLATE_ID_CUSTOMER: emailjsTemplateIdCustomer || "NOT SET",
-          EMAILJS_TEMPLATE_ID_ADMIN: emailjsTemplateIdAdmin || "NOT SET",
-          EMAILJS_PUBLIC_KEY: emailjsPublicKey ? `${emailjsPublicKey.substring(0, 4)}...` : "NOT SET",
+          EMAILJS_SERVICE_ID: maskForLogs(emailjsServiceId),
+          EMAILJS_TEMPLATE_ID_CUSTOMER: maskForLogs(emailjsTemplateIdCustomer),
+          EMAILJS_TEMPLATE_ID_ADMIN: maskForLogs(emailjsTemplateIdAdmin),
+          EMAILJS_PUBLIC_KEY: maskForLogs(emailjsPublicKey),
           ADMIN_EMAILS: adminEmails,
+          SOURCES: emailConfig.sources,
         },
       });
     }
@@ -79,6 +82,7 @@ export const testEmail: RequestHandler = async (req, res) => {
         emailjsServiceId: emailjsServiceId,
         emailjsTemplateIdCustomer: emailjsTemplateIdCustomer,
         emailjsPublicKey: emailjsPublicKey,
+        emailjsPrivateKey: emailConfig.privateKey,
       });
       results.customer = customerResult;
     } catch (error: any) {
@@ -102,6 +106,7 @@ export const testEmail: RequestHandler = async (req, res) => {
         emailjsServiceId: emailjsServiceId,
         emailjsTemplateIdAdmin: emailjsTemplateIdAdmin,
         emailjsPublicKey: emailjsPublicKey,
+        emailjsPrivateKey: emailConfig.privateKey,
       });
       results.admin = adminResult;
     } catch (error: any) {
@@ -115,8 +120,9 @@ export const testEmail: RequestHandler = async (req, res) => {
         serviceId: emailjsServiceId,
         customerTemplate: emailjsTemplateIdCustomer,
         adminTemplate: emailjsTemplateIdAdmin,
-        publicKey: emailjsPublicKey.substring(0, 4) + "...",
+        publicKey: maskForLogs(emailjsPublicKey),
         adminEmails: adminEmails,
+        sources: emailConfig.sources,
       },
       testData: {
         orderId: testData.orderId,

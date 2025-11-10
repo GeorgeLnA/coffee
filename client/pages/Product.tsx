@@ -26,6 +26,7 @@ import { useLanguage } from "../contexts/LanguageContext";
 import { useCart } from "../contexts/CartContext";
 import { useToast } from "../hooks/use-toast";
 import { useCoffeeProduct, useFilterOptions, translateProcessValue } from "../hooks/use-supabase";
+import { getWeightString } from "../lib/weight";
 
 // Helper function to get translated description
 const getCoffeeDescription = (coffeeId: string, language: string) => {
@@ -436,29 +437,20 @@ export default function Product() {
 
   const variantLabel = useMemo(() => {
     const grindText = (selectedGrind || 'beans') === 'beans' ? t('product.grindBeans') : t('product.grindGround');
+
+    const fallbackWeight = getWeightString(selectedWeight, '') || selectedWeight || '250g';
+
     if (!sizesOptions.length) {
-      return `${selectedWeight} - ${grindText}`;
+      return `${fallbackWeight} - ${grindText}`;
     }
+
     const current = sizesOptions[selectedSizeIdx] || sizesOptions[0];
-    const weightFromSize = current?.weight
-      ? (current.weight % 1000 === 0 ? `${current.weight / 1000}kg` : `${current.weight}g`)
-      : '';
-    const baseWeight = weightFromSize || selectedWeight || '';
-    const labelText = (current?.label || '').trim();
-    const parts: string[] = [];
-    if (baseWeight) {
-      parts.push(baseWeight);
-    }
-    if (labelText) {
-      const lowerLabel = labelText.toLowerCase();
-      const lowerWeight = baseWeight.toLowerCase();
-      if (!lowerLabel.includes(lowerWeight) && lowerLabel !== lowerWeight) {
-        parts.push(labelText);
-      }
-    }
-    parts.push(grindText);
-    return parts.filter(Boolean).join(' - ');
-  }, [selectedGrind, sizesOptions, selectedSizeIdx, selectedWeight, t]);
+    const weightFromSize = getWeightString(current?.weight, '');
+    const weightFromLabel = getWeightString(current?.label, '');
+    const baseWeight = weightFromSize || weightFromLabel || fallbackWeight;
+
+    return `${baseWeight} - ${grindText}`;
+  }, [selectedGrind, selectedSizeIdx, selectedWeight, sizesOptions, t]);
 
   const [selectedImage, setSelectedImage] = useState(0);
 
