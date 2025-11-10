@@ -5,6 +5,22 @@ import type { Handler } from "@netlify/functions";
  * This is called from other Netlify functions (server-side)
  * Uses private key for server-side REST API calls
  */
+function sanitizeEmail(email: string | null | undefined): string | null {
+  if (!email) return null;
+  const trimmed = String(email).trim();
+  if (!trimmed) return null;
+  return trimmed;
+}
+
+function isValidEmail(email: string | null | undefined): boolean {
+  if (!email) return false;
+  const trimmed = sanitizeEmail(email);
+  if (!trimmed) return false;
+  // Simple validation (same as many front-end checks)
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(trimmed);
+}
+
 export async function sendEmailViaEmailJS(params: {
   serviceId: string;
   templateId: string;
@@ -14,6 +30,14 @@ export async function sendEmailViaEmailJS(params: {
 }): Promise<{ success: boolean; error?: string }> {
   try {
     const { serviceId, templateId, publicKey, privateKey, templateParams } = params;
+    const toEmailRaw = templateParams?.to_email;
+    const toEmailSanitized = sanitizeEmail(toEmailRaw);
+    if (!isValidEmail(toEmailSanitized)) {
+      const errMsg = `Invalid recipient email: "${toEmailRaw ?? ""}"`;
+      console.error(errMsg);
+      return { success: false, error: errMsg };
+    }
+    templateParams.to_email = toEmailSanitized;
 
     // For server-side REST API, EmailJS expects public key in user_id and private key in accessToken
     const keyType = privateKey ? "PRIVATE+PUBLIC" : "PUBLIC_ONLY";
@@ -351,8 +375,9 @@ export async function sendOrderConfirmationEmail(params: {
       ? "Онлайн оплата (LiqPay)"
       : paymentMethod || "Онлайн оплата";
 
+  const sanitizedCustomerEmail = sanitizeEmail(customerEmail);
   const templateParams = {
-    to_email: customerEmail,
+    to_email: sanitizedCustomerEmail,
     to_name: customerName,
     order_id: orderId,
     order_date: formatDate(orderDate),
@@ -539,8 +564,8 @@ export async function sendOrderNotificationEmail(params: {
   const emailArray = (Array.isArray(adminEmails)
     ? adminEmails
     : adminEmails.split(","))
-    .map((e) => e.trim())
-    .filter((e) => !!e);
+    .map((e) => sanitizeEmail(e))
+    .filter((e): e is string => !!e && isValidEmail(e));
 
   // Debug logging for notes
   console.log("=== ADMIN EMAIL NOTES DEBUG (sendOrderNotificationEmail) ===");
@@ -553,7 +578,7 @@ export async function sendOrderNotificationEmail(params: {
   const results = await Promise.all(
     emailArray.map((adminEmail) => {
       const templateParams = {
-        to_email: adminEmail,
+        to_email: sanitizeEmail(adminEmail),
         customer_name: customerName,
         customer_email: customerEmail,
         customer_phone: customerPhone,
