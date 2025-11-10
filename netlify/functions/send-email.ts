@@ -21,6 +21,11 @@ function isValidEmail(email: string | null | undefined): boolean {
   return emailRegex.test(trimmed);
 }
 
+const DEFAULT_EMAILJS_ORIGIN =
+  process.env.EMAILJS_ALLOWED_ORIGIN ||
+  process.env.PUBLIC_SITE_URL ||
+  "https://manifestcoffee.com.ua";
+
 export async function sendEmailViaEmailJS(params: {
   serviceId: string;
   templateId: string;
@@ -78,10 +83,14 @@ export async function sendEmailViaEmailJS(params: {
       template_params_keys: Object.keys(templateParams),
     });
 
+    const originHeader = DEFAULT_EMAILJS_ORIGIN;
+
     const response = await fetch(emailjsUrl, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        Origin: originHeader,
+        Referer: originHeader,
       },
       body: JSON.stringify(requestBody),
     });
@@ -354,6 +363,25 @@ export async function sendOrderConfirmationEmail(params: {
     }).join('');
   };
 
+  const generateOrderItemsText = (items: typeof orderItems): string => {
+    if (!items || items.length === 0) {
+      return "Товари не знайдено";
+    }
+
+    return items
+      .map((item) => {
+        const name = item.name || "Невідомий товар";
+        const variant = item.variant ? ` (${item.variant})` : "";
+        const quantity = item.quantity || 1;
+        const price = item.price || 0;
+        const total = (price * quantity).toFixed(2);
+        return `• ${name}${variant}: ${quantity} шт × ${price.toFixed(
+          2,
+        )} грн = ${total} грн`;
+      })
+      .join("\n");
+  };
+
   // Format shipping method (handle both raw method codes and pre-formatted strings)
   const shippingMethodText = shippingMethod 
     ? (shippingMethod === 'nova_department' 
@@ -382,6 +410,7 @@ export async function sendOrderConfirmationEmail(params: {
     order_id: orderId,
     order_date: formatDate(orderDate),
     order_items_html: generateOrderItemsHTML(orderItems),
+    order_items_text: generateOrderItemsText(orderItems),
     customer_name: customerName,
     billing_address: shippingAddress, // For billing, we use shipping address (displayed as "Information")
     information: shippingAddress, // Alias for "Information" label
@@ -493,12 +522,20 @@ export async function sendOrderNotificationEmail(params: {
   };
 
   // Format order items for email (text version for simple templates)
-  const itemsList = orderItems
-    .map((item) => {
-      const variantText = item.variant ? ` (${item.variant})` : "";
-      return `${item.name}${variantText} x${item.quantity} - ₴${(item.price * item.quantity).toFixed(2)}`;
-    })
-    .join("\n");
+  const itemsList =
+    orderItems && orderItems.length > 0
+      ? orderItems
+          .map((item) => {
+            const variantText = item.variant ? ` (${item.variant})` : "";
+            const qty = item.quantity || 1;
+            const price = Number(item.price) || 0;
+            const total = (price * qty).toFixed(2);
+            return `• ${item.name}${variantText}: ${qty} шт × ${price.toFixed(
+              2,
+            )} грн = ${total} грн`;
+          })
+          .join("\n")
+      : "Товари не знайдено";
 
   // Use shipping address directly (already formatted by caller)
   // Only rebuild if shippingAddress is empty but we have city/department
@@ -585,7 +622,8 @@ export async function sendOrderNotificationEmail(params: {
         order_id: orderId,
         order_date: formatDate(orderId),
         order_items_html: generateAdminOrderItemsHTML(orderItems),
-        order_items: itemsList, // Text version for simple templates
+        order_items: itemsList, // Legacy text field
+        order_items_text: itemsList,
         billing_address: shippingDetails,
         information: shippingDetails, // Alias for "Information" label
         shipping_address: shippingDetails,

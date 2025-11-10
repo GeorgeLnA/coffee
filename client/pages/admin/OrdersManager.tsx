@@ -16,9 +16,10 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Trash2, Edit2, Check, X, Plus, XCircle } from "lucide-react";
+import { Trash2, Edit2, Check, X, Plus, XCircle, Mail } from "lucide-react";
 import { format, differenceInDays } from "date-fns";
 import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, useDraggable, useDroppable, MouseSensor, TouchSensor, useSensor, useSensors } from "@dnd-kit/core";
+import { toast } from "@/hooks/use-toast";
 
 type Order = {
   id: number;
@@ -349,6 +350,8 @@ export function OrdersManager() {
   const [deleteClientEmail, setDeleteClientEmail] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [isSendingTestEmail, setIsSendingTestEmail] = useState(false);
+  const [testEmailStatus, setTestEmailStatus] = useState<{ message: string; type: "success" | "error" } | null>(null);
 
   // Default columns
   const defaultColumns: PipelineColumn[] = [
@@ -373,6 +376,38 @@ export function OrdersManager() {
 
   // Edit mode state for showing/hiding delete buttons
   const [isEditMode, setIsEditMode] = useState(false);
+
+  const sanitizeStatusId = (status: string) =>
+    `column-${status.replace(/[^a-z0-9_-]/gi, "-").replace(/-{2,}/g, "-")}`.toLowerCase();
+
+  const prettifyStatusTitle = (status: string) => {
+    if (!status) return "Інше";
+    const normalized = status
+      .replace(/[_-]+/g, " ")
+      .replace(/\s+/g, " ")
+      .trim()
+      .toLowerCase();
+    const map: Record<string, string> = {
+      ordered: "Замовлено",
+      pending: "Замовлено",
+      processing: "Обробляється",
+      done: "Виконано",
+      cancelled: "Скасовано",
+      cancelled_by_customer: "Скасовано клієнтом",
+      cancelled_by_admin: "Скасовано менеджером",
+      refunded: "Повернення",
+      shipped: "Відправлено",
+      delivered: "Доставлено",
+      hold: "На утриманні",
+    };
+    if (map[normalized]) {
+      return map[normalized];
+    }
+    return normalized
+      .split(" ")
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(" ");
+  };
 
   // dnd-kit sensors for better drag behavior
   const sensors = useSensors(
@@ -434,48 +469,59 @@ export function OrdersManager() {
     setLoading(true);
     setError(null);
     try {
-      const { data: oData, error: oErr } = await supabase
-        .from('orders')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(100);
-      
-      if (oErr) throw oErr;
-      
-      const ordersList = (oData || []) as Order[];
-      
-      // Load items for each order with all fields including variant
-      const ordersWithItems = await Promise.all(
-        ordersList.map(async (order) => {
-          const { data: items, error: itemsError } = await supabase
-            .from('order_items')
-            .select('id, order_id, product_id, product_name, product_image, quantity, price, variant')
-            .eq('order_id', order.id);
-          if (itemsError) {
-            console.error('Error loading order items:', itemsError);
-          } else {
-            // Debug: Log what we're getting from database
-            console.log(`Order #${order.id} items:`, items?.map((it: any) => ({
-              name: it.product_name,
-              variant: it.variant,
-              hasVariant: !!it.variant,
-            })));
-          }
-          return { ...order, items: items || [] };
-        })
-      );
-      
-      // Debug: Log order data to verify what we're getting
-      console.log('Loaded orders sample:', ordersWithItems.slice(0, 2).map((o: any) => ({
-        id: o.id,
-        order_id: o.order_id,
-        shipping_department: o.shipping_department,
-        shipping_method: o.shipping_method,
-        payment_method: o.payment_method,
-        itemsCount: o.items?.length,
-        firstItemVariant: o.items?.[0]?.variant,
-      })));
-      
+      const pageSize = 200;
+      let page = 0;
+      let hasMore = true;
+      let ordersList: Order[] = [];
+
+      while (hasMore) {
+        const from = page * pageSize;
+        const to = from + pageSize - 1;
+        const { data, error } = await supabase
+          .from("orders")
+          .select("*")
+          .order("created_at", { ascending: false })
+          .range(from, to);
+
+        if (error) throw error;
+
+        const batch = (data || []) as Order[];
+        ordersList = ordersList.concat(batch);
+
+        if (batch.length < pageSize) {
+          hasMore = false;
+        } else {
+          page += 1;
+        }
+      }
+
+      const orderIds = ordersList.map((order) => order.id);
+      const itemsByOrder = new Map<number, OrderItem[]>();
+
+      if (orderIds.length > 0) {
+        const { data: itemsData, error: itemsError } = await supabase
+          .from("order_items")
+          .select(
+            "id, order_id, product_id, product_name, product_image, quantity, price, variant"
+          )
+          .in("order_id", orderIds);
+
+        if (itemsError) {
+          console.error("Error loading order items:", itemsError);
+        } else {
+          (itemsData || []).forEach((item: any) => {
+            const list = itemsByOrder.get(item.order_id) || [];
+            list.push(item as OrderItem);
+            itemsByOrder.set(item.order_id, list);
+          });
+        }
+      }
+
+      const ordersWithItems = ordersList.map((order) => ({
+        ...order,
+        items: itemsByOrder.get(order.id) || [],
+      }));
+
       setOrders(ordersWithItems);
     } catch (e: any) {
       setError(e.message);
@@ -484,6 +530,38 @@ export function OrdersManager() {
   };
 
   useEffect(() => { load(); }, []);
+
+  useEffect(() => {
+    if (orders.length === 0) return;
+
+    setColumns((prev) => {
+      const existingStatuses = new Set(prev.map((col) => col.status));
+      const newColumns: PipelineColumn[] = [];
+
+      orders.forEach((order) => {
+        const status = order.status;
+        if (!status) return;
+        if (status === "ordered" || status === "pending") return;
+
+        if (!existingStatuses.has(status)) {
+          existingStatuses.add(status);
+          newColumns.push({
+            id: sanitizeStatusId(status),
+            status,
+            title: prettifyStatusTitle(status),
+            bgColor: "bg-gray-50",
+            badgeColor: "bg-gray-100 text-gray-800",
+          });
+        }
+      });
+
+      if (newColumns.length === 0) {
+        return prev;
+      }
+
+      return [...prev, ...newColumns];
+    });
+  }, [orders]);
 
   const renumberOrders = async () => {
     if (!confirm('Ви впевнені, що хочете перенумерувати всі замовлення? Це оновить ID замовлень (Замовлення #1, #2, #3...). Ця операція незворотна!')) {
@@ -613,7 +691,10 @@ export function OrdersManager() {
       }
       return col.status === status;
     });
-    return column?.title || status || '—';
+    if (column?.title) return column.title;
+    if (!status) return '—';
+    if (status === 'pending') return prettifyStatusTitle('ordered');
+    return prettifyStatusTitle(status);
   };
 
   // Handlers for editing column titles
@@ -665,6 +746,110 @@ export function OrdersManager() {
     setNewColumnStatus("");
     setNewColumnBgColor("bg-gray-50");
     setNewColumnBadgeColor("bg-gray-100 text-gray-800");
+  };
+
+  const handleSendTestEmail = async () => {
+    if (isSendingTestEmail) return;
+    setIsSendingTestEmail(true);
+    setTestEmailStatus(null);
+
+    const payload = {
+      customerEmail: "davidnuk877@gmail.com",
+      customerName: "Тестовий клієнт (адмінка)",
+      customerPhone: "+380501234567",
+      shippingMethod: "nova_postomat",
+      paymentMethod: "liqpay",
+      shippingAddress: "м. Київ, поштомат №6026 (тестове замовлення)",
+      orderNotes: "Тестовий запуск email з адмін-панелі.",
+      orderId: `ADMIN-TEST-${Date.now()}`,
+      items: [
+        {
+          name: "Manifest Espresso Blend",
+          quantity: 1,
+          price: 350,
+          variant: "500g В зернах",
+        },
+        {
+          name: "Manifest Water 18.9L",
+          quantity: 2,
+          price: 75,
+          variant: "18.9L",
+        },
+      ],
+    };
+
+    try {
+      const response = await fetch("/api/test-email", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const text = await response.text();
+      let data: any = {};
+      try {
+        data = text ? JSON.parse(text) : {};
+      } catch (parseError) {
+        console.error("Failed to parse test-email response:", parseError, text);
+      }
+
+      const customerResult = data?.results?.customer;
+      const adminResult = data?.results?.admin;
+
+      if (!response.ok || data?.success === false) {
+        const parts: string[] = [];
+        if (customerResult && customerResult.success === false) {
+          parts.push(
+            `клієнтський лист: ${customerResult.error || "невідома помилка"}`
+          );
+        }
+        if (adminResult && adminResult.success === false) {
+          parts.push(
+            `адмін-сповіщення: ${adminResult.error || "невідома помилка"}`
+          );
+        }
+        const errorDetails = parts.join("; ");
+        const message =
+          errorDetails ||
+          data?.error ||
+          data?.message ||
+          "Не вдалося надіслати тестовий email";
+        throw new Error(message);
+      }
+
+      const email = data?.testData?.customerEmail || payload.customerEmail;
+      const orderId = data?.testData?.orderId || payload.orderId;
+      const adminStatus =
+        adminResult && adminResult.success === false
+          ? `Стан адмін-сповіщення: помилка (${adminResult.error || "невідома причина"})`
+          : "Стан адмін-сповіщення: успішно";
+
+      setTestEmailStatus({
+        message: `Тестовий лист успішно надіслано на ${email} (замовлення ${orderId}). ${adminStatus}`,
+        type: "success",
+      });
+
+      toast({
+        title: "Тестовий email надіслано",
+        description: `Перевірте ${email} для підтвердження. ${adminStatus}`,
+      });
+    } catch (error: any) {
+      const message =
+        error?.message || "Не вдалося надіслати тестовий email";
+      setTestEmailStatus({
+        message: `Помилка відправки: ${message}`,
+        type: "error",
+      });
+      toast({
+        title: "Помилка відправки тестового email",
+        description: message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsSendingTestEmail(false);
+    }
   };
 
   // Handler for removing column
@@ -1067,8 +1252,26 @@ export function OrdersManager() {
             <div>
               <h3 className="text-lg font-semibold">Пайплайн</h3>
               <p className="text-sm text-gray-600">Всього замовлень: {orders.length}</p>
+              {testEmailStatus && (
+                <p
+                  className={`text-xs mt-1 ${
+                    testEmailStatus.type === "error" ? "text-red-600" : "text-green-600"
+                  }`}
+                >
+                  {testEmailStatus.message}
+                </p>
+              )}
             </div>
             <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                onClick={handleSendTestEmail}
+                disabled={isSendingTestEmail}
+                className="flex items-center gap-2"
+              >
+                <Mail className="w-4 h-4" />
+                {isSendingTestEmail ? "Надсилаємо..." : "Тестовий email"}
+              </Button>
               <Button
                 variant={isEditMode ? "default" : "outline"}
                 onClick={() => setIsEditMode(!isEditMode)}

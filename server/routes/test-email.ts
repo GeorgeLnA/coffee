@@ -32,37 +32,118 @@ export const testEmail: RequestHandler = async (req, res) => {
       });
     }
 
-    // Test data
-    const testData = {
-      orderId: "TEST-" + Date.now(),
-      orderDate: new Date().toLocaleDateString("uk-UA", {
+    const DEFAULT_IMAGE =
+      "https://coffeemanifest.com.ua/wp-content/uploads/2024/03/logo_manifest.png";
+
+    const body = (req.body && typeof req.body === "object") ? req.body : {};
+
+    const customerEmail =
+      typeof body.customerEmail === "string" && body.customerEmail.trim()
+        ? body.customerEmail.trim()
+        : "test@example.com";
+    const customerName =
+      typeof body.customerName === "string" && body.customerName.trim()
+        ? body.customerName.trim()
+        : "Тестовий Користувач";
+    const customerPhone =
+      typeof body.customerPhone === "string" && body.customerPhone.trim()
+        ? body.customerPhone.trim()
+        : "+380501234567";
+    const orderId =
+      typeof body.orderId === "string" && body.orderId.trim()
+        ? body.orderId.trim()
+        : "TEST-" + Date.now();
+    const orderDate =
+      body.orderDate ||
+      new Date().toLocaleDateString("uk-UA", {
         day: "2-digit",
         month: "2-digit",
         year: "numeric",
-      }),
-      customerName: "Тестовий Користувач",
-      customerEmail: req.body.customerEmail || "test@example.com",
-      customerPhone: "+380501234567",
-      orderTotal: "₴500.00",
-      shippingMethod: "Нова Пошта",
-      paymentMethod: "Онлайн (LiqPay)",
-      billingAddress: "вул. Тестова, 1, м. Київ",
-      shippingAddress: "вул. Тестова, 1, м. Київ, Відділення №1",
-      orderNotes: "Це тестове замовлення",
-      emailItems: [
-        {
-          name: "Кава Ефіопія Гуджі",
-          quantity: 2,
-          price: 250,
-          image: "https://coffeemanifest.com.ua/wp-content/uploads/2024/03/logo_manifest.png",
-          variant: "250g В зернах",
-        },
-      ],
+      });
+
+    const rawItems = Array.isArray(body.items) ? body.items : [];
+    const normalizeItem = (item: any, index: number) => {
+      const quantity = Number(item?.quantity) || 1;
+      const price = Number(item?.price) || 0;
+      return {
+        name:
+          typeof item?.name === "string" && item.name.trim()
+            ? item.name.trim()
+            : `Тестовий товар ${index + 1}`,
+        quantity,
+        price,
+        image:
+          typeof item?.image === "string" && item.image.trim()
+            ? item.image.trim()
+            : DEFAULT_IMAGE,
+        variant:
+          typeof item?.variant === "string" ? item.variant : "",
+      };
     };
 
-    const results = {
-      customer: null as any,
-      admin: null as any,
+    const emailItems =
+      rawItems.length > 0
+        ? rawItems.map((item, index) => normalizeItem(item, index))
+        : [
+            normalizeItem(
+              {
+                name: "Кава Ефіопія Гуджі",
+                quantity: 2,
+                price: 250,
+                variant: "250g В зернах",
+              },
+              0,
+            ),
+          ];
+
+    const orderTotalNumber = emailItems.reduce(
+      (sum, item) =>
+        sum + (Number(item.price) || 0) * (Number(item.quantity) || 1),
+      0,
+    );
+
+    const shippingMethod =
+      typeof body.shippingMethod === "string" && body.shippingMethod.trim()
+        ? body.shippingMethod.trim()
+        : "Нова Пошта";
+    const paymentMethod =
+      typeof body.paymentMethod === "string" && body.paymentMethod.trim()
+        ? body.paymentMethod.trim()
+        : "Онлайн (LiqPay)";
+    const shippingAddress =
+      typeof body.shippingAddress === "string" && body.shippingAddress.trim()
+        ? body.shippingAddress.trim()
+        : "вул. Тестова, 1, м. Київ, Відділення №1";
+    const billingAddress =
+      typeof body.billingAddress === "string" && body.billingAddress.trim()
+        ? body.billingAddress.trim()
+        : shippingAddress;
+    const orderNotes =
+      typeof body.orderNotes === "string" && body.orderNotes.trim()
+        ? body.orderNotes.trim()
+        : "Це тестове замовлення";
+
+    const testData = {
+      orderId,
+      orderDate,
+      customerName,
+      customerEmail,
+      customerPhone,
+      orderTotal: orderTotalNumber,
+      shippingMethod,
+      paymentMethod,
+      billingAddress,
+      shippingAddress,
+      orderNotes,
+      emailItems,
+    };
+
+    const results: {
+      customer: { success: boolean; error?: string } | null;
+      admin: { success: boolean; error?: string } | null;
+    } = {
+      customer: null,
+      admin: null,
     };
 
     // Test customer email
@@ -73,7 +154,7 @@ export const testEmail: RequestHandler = async (req, res) => {
         customerPhone: testData.customerPhone,
         orderId: testData.orderId,
         orderDate: testData.orderDate,
-        orderTotal: 500,
+        orderTotal: testData.orderTotal || 0,
         orderItems: testData.emailItems,
         shippingAddress: testData.shippingAddress,
         shippingMethod: testData.shippingMethod,
@@ -97,7 +178,7 @@ export const testEmail: RequestHandler = async (req, res) => {
         customerEmail: testData.customerEmail,
         customerPhone: testData.customerPhone,
         orderId: testData.orderId,
-        orderTotal: 500,
+        orderTotal: testData.orderTotal || 0,
         orderItems: testData.emailItems,
         shippingAddress: testData.shippingAddress,
         shippingMethod: testData.shippingMethod,
@@ -113,9 +194,15 @@ export const testEmail: RequestHandler = async (req, res) => {
       results.admin = { success: false, error: error.message };
     }
 
-    res.json({
-      success: true,
-      message: "Test emails sent",
+    const customerSuccess = !!results.customer?.success;
+    const adminSuccess = !!results.admin?.success;
+    const overallSuccess = customerSuccess && adminSuccess;
+
+    const responseBody = {
+      success: overallSuccess,
+      message: overallSuccess
+        ? "Test emails sent"
+        : "One or more emails failed to send",
       config: {
         serviceId: emailjsServiceId,
         customerTemplate: emailjsTemplateIdCustomer,
@@ -127,9 +214,17 @@ export const testEmail: RequestHandler = async (req, res) => {
       testData: {
         orderId: testData.orderId,
         customerEmail: testData.customerEmail,
+        orderTotal: testData.orderTotal,
+        itemsCount: testData.emailItems.length,
       },
       results,
-    });
+    };
+
+    if (overallSuccess) {
+      res.json(responseBody);
+    } else {
+      res.status(500).json(responseBody);
+    }
   } catch (error: any) {
     console.error("Test email error:", error);
     res.status(500).json({

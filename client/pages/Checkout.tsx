@@ -217,7 +217,19 @@ export default function Checkout() {
     try {
       console.log('Loading warehouses for cityRef:', cityRef);
       const typeParam = shippingMethod === 'nova_postomat' ? 'postomat' : 'department';
-      const res = await fetch(`/api/warehouses?cityRef=${cityRef}&type=${typeParam}`);
+      const params = new URLSearchParams();
+      params.append("cityRef", cityRef);
+      params.append("type", typeParam);
+      const cityNameParam = (city || cityQuery || "").trim();
+      if (cityNameParam) {
+        params.append("cityName", cityNameParam);
+      }
+      params.append("countryCode", "UA");
+      const res = await fetch(`/api/warehouses?${params.toString()}`, {
+        headers: {
+          "Accept-Language": language === "ru" ? "ru" : "uk",
+        },
+      });
       const data = await res.json();
       console.log('Warehouses API response:', data);
       
