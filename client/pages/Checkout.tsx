@@ -51,6 +51,8 @@ export default function Checkout() {
   const [department, setDepartment] = useState("");
   const [warehouses, setWarehouses] = useState<any[]>([]);
   const [selectedWarehouse, setSelectedWarehouse] = useState("");
+  const [manualWarehouseEnabled, setManualWarehouseEnabled] = useState(false);
+  const [manualWarehouseValue, setManualWarehouseValue] = useState("");
   const [loadingWarehouses, setLoadingWarehouses] = useState(false);
   const [loadingMoreWarehouses, setLoadingMoreWarehouses] = useState(false);
   const [warehouseMeta, setWarehouseMeta] =
@@ -61,41 +63,43 @@ export default function Checkout() {
 
   // Format shipping address based on shipping method
   const formatShippingAddress = (): string => {
-    if (shippingMethod === 'nova_department' || shippingMethod === 'nova_postomat') {
-      // Nova Poshta: city + department/postomat
-      let addr = city || '';
-      if (selectedWarehouse) {
-        const selectedWh = warehouses.find((wh: any) => wh.Ref === selectedWarehouse);
-        if (selectedWh) {
-          const whDesc = selectedWh.Description || selectedWh.ShortAddress || '';
-          if (shippingMethod === 'nova_department') {
-            // Extract department number from description
-            const deptMatch = whDesc.match(/№(\d+)/);
-            const deptNum = deptMatch ? deptMatch[1] : (department || '');
-            if (deptNum) {
-              addr += addr ? `, ${t('checkout.department')} №${deptNum}` : `${t('checkout.department')} №${deptNum}`;
-            } else {
-              addr += addr ? `, ${whDesc}` : whDesc;
-            }
+    let addr = city || '';
+    const manualActive = manualWarehouseEnabled && manualWarehouseValue.trim();
+    if (manualActive) {
+      const manualLabel =
+        shippingMethod === 'nova_postomat'
+          ? `${t('checkout.postomat')} ${manualWarehouseValue.trim()}`
+          : `${t('checkout.department')} №${manualWarehouseValue.trim()}`;
+      addr = addr ? `${addr}, ${manualLabel}` : manualLabel;
+      return addr || t('checkout.notSpecified');
+    }
+    if (selectedWarehouse) {
+      const selectedWh = warehouses.find((wh: any) => wh.Ref === selectedWarehouse);
+      if (selectedWh) {
+        const whDesc = selectedWh.Description || selectedWh.ShortAddress || '';
+        if (shippingMethod === 'nova_department') {
+          // Extract department number from description
+          const deptMatch = whDesc.match(/№(\d+)/);
+          const deptNum = deptMatch ? deptMatch[1] : (department || '');
+          if (deptNum) {
+            addr += addr ? `, ${t('checkout.department')} №${deptNum}` : `${t('checkout.department')} №${deptNum}`;
           } else {
-            // Postomat - use reference or description
-            addr += addr ? `, ${t('checkout.postomat')} ${selectedWarehouse.substring(0, 8)}...` : `${t('checkout.postomat')} ${selectedWarehouse.substring(0, 8)}...`;
-            if (whDesc) {
-              addr += ` (${whDesc})`;
-            }
+            addr += addr ? `, ${whDesc}` : whDesc;
           }
-        } else if (department) {
-          addr += addr ? `, ${t('checkout.department')} №${department}` : `${t('checkout.department')} №${department}`;
+        } else {
+          // Postomat - use reference or description
+          addr += addr ? `, ${t('checkout.postomat')} ${selectedWarehouse.substring(0, 8)}...` : `${t('checkout.postomat')} ${selectedWarehouse.substring(0, 8)}...`;
+          if (whDesc) {
+            addr += ` (${whDesc})`;
+          }
         }
       } else if (department) {
         addr += addr ? `, ${t('checkout.department')} №${department}` : `${t('checkout.department')} №${department}`;
       }
-      return addr || t('checkout.notSpecified');
-    } else if (shippingMethod === 'nova_courier' || shippingMethod === 'own_courier') {
-      // Courier: just address (no city)
-      return address || t('checkout.notSpecified');
+    } else if (department) {
+      addr += addr ? `, ${t('checkout.department')} №${department}` : `${t('checkout.department')} №${department}`;
     }
-    return t('checkout.notSpecified');
+    return addr || t('checkout.notSpecified');
   };
 
   // Format shipping method display name
@@ -415,10 +419,9 @@ export default function Checkout() {
   // Load warehouses when cityRef changes
   useEffect(() => {
     if (cityRef && (shippingMethod === 'nova_department' || shippingMethod === 'nova_postomat')) {
-      setSelectedWarehouse("");
-      setDepartment("");
-      setWarehouses([]);
-      setWarehouseMeta({ ...DEFAULT_WAREHOUSE_META });
+      setSelectedWarehouse(""); // Clear selection when switching between postomat/department
+      setManualWarehouseEnabled(false);
+      setManualWarehouseValue("");
       loadWarehouses(1, false);
     } else {
       setWarehouseMeta({ ...DEFAULT_WAREHOUSE_META });
@@ -431,6 +434,8 @@ export default function Checkout() {
     if (shippingMethod !== 'nova_department' && shippingMethod !== 'nova_postomat') {
       setSelectedWarehouse("");
       setWarehouses([]);
+      setManualWarehouseEnabled(false);
+      setManualWarehouseValue("");
       setWarehouseMeta({ ...DEFAULT_WAREHOUSE_META });
       setLoadingWarehouses(false);
       setLoadingMoreWarehouses(false);
@@ -502,17 +507,14 @@ export default function Checkout() {
     const phoneValid = phone.trim().length >= 7;
     let valid = !!fullName && phoneValid && emailValid;
     
-    if (hasWaterItems) {
-      // For water orders, only own_courier is allowed, need address
-      valid = valid && !!address;
+    const hasWarehouses = (shippingMethod === 'nova_department' || shippingMethod === 'nova_postomat');
+    const hasWaterRestriction = hasWaterItems && shippingMethod !== 'own_courier';
+    const manualActive = manualWarehouseEnabled && manualWarehouseValue.trim().length > 0;
+    if (shippingMethod === 'nova_department' || shippingMethod === 'nova_postomat') {
+      const hasWarehouseSelection = manualActive || !!selectedWarehouse;
+      valid = valid && !!cityRef && hasWarehouseSelection;
     } else {
-      // For non-water orders, check based on shipping method
-      if (shippingMethod === 'nova_department' || shippingMethod === 'nova_postomat') {
-        valid = valid && !!cityRef && !!selectedWarehouse;
-      } else {
-        // For courier options, only address is required (no city)
-        valid = valid && !!address;
-      }
+      valid = valid && !!address;
     }
     if (!valid) {
       toast({ title: t('checkout.error.general'), description: t('checkout.error.fillFields'), variant: "destructive" as any });
@@ -540,8 +542,8 @@ export default function Checkout() {
         city,
         cityRef,
         address,
-        warehouseRef: selectedWarehouse,
-        department: department || null,
+        warehouseRef: manualActive ? `manual::${manualWarehouseValue.trim()}` : selectedWarehouse,
+        department: manualActive ? manualWarehouseValue.trim() : (department || null),
       });
       console.log('Payment method:', paymentMethod);
       
@@ -552,8 +554,8 @@ export default function Checkout() {
           city, 
           cityRef, 
           address, 
-          warehouseRef: selectedWarehouse, 
-          department: department || null,
+          warehouseRef: manualActive ? `manual::${manualWarehouseValue.trim()}` : selectedWarehouse,
+          department: manualActive ? manualWarehouseValue.trim() : (department || null),
           price: shippingPrice 
         },
         payment: { method: paymentMethod },
@@ -732,7 +734,9 @@ export default function Checkout() {
                     </div>
                   )}
                     <div className="mb-3">
-                        <Select value={selectedWarehouse} onValueChange={(value) => {
+                        <Select value={manualWarehouseEnabled ? '' : selectedWarehouse} onValueChange={(value) => {
+                          setManualWarehouseEnabled(false);
+                          setManualWarehouseValue("");
                           setSelectedWarehouse(value);
                           // Extract department number from selected warehouse
                           const selectedWh = warehouses.find((wh: any) => wh.Ref === value);
@@ -791,6 +795,49 @@ export default function Checkout() {
                           )}
                         </SelectContent>
                       </Select>
+                      {(shippingMethod === 'nova_department' || shippingMethod === 'nova_postomat') && (
+                        <div className="mt-2">
+                          {!manualWarehouseEnabled ? (
+                            <button
+                              type="button"
+                              className="text-sm text-[#361c0c] underline hover:no-underline"
+                              onClick={() => {
+                                setManualWarehouseEnabled(true);
+                                setManualWarehouseValue("");
+                                setSelectedWarehouse("");
+                                setDepartment("");
+                              }}
+                            >
+                              {shippingMethod === 'nova_postomat'
+                                ? t('checkout.manualPromptPostomat')
+                                : t('checkout.manualPromptDepartment')}
+                            </button>
+                          ) : (
+                            <div className="space-y-2">
+                              <Input
+                                placeholder={t('checkout.manualEntryPlaceholder')}
+                                value={manualWarehouseValue}
+                                onChange={(e) => {
+                                  const value = e.target.value;
+                                  setManualWarehouseValue(value);
+                                  setDepartment(value.trim());
+                                }}
+                              />
+                              <button
+                                type="button"
+                                className="text-sm text-[#361c0c] underline hover:no-underline"
+                                onClick={() => {
+                                  setManualWarehouseEnabled(false);
+                                  setManualWarehouseValue("");
+                                  setDepartment("");
+                                }}
+                              >
+                                {t('checkout.cancelManualEntry')}
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                     </>
                   )}

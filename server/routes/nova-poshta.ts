@@ -123,6 +123,13 @@ export const getWarehouses: RequestHandler = async (req, res) => {
     }
     requestedPageSize = Math.min(Math.max(requestedPageSize, 25), 500);
 
+    console.log('getWarehouses request debug:', {
+      cityRef,
+      type,
+      requestedPage,
+      requestedPageSize,
+    });
+
     if (!cityRef) {
       return res.json({
         status: "200",
@@ -185,6 +192,7 @@ export const getWarehouses: RequestHandler = async (req, res) => {
         };
 
         const firstPage = await fetchPage(1);
+        console.log('Nova Poshta page 1 count (server route):', Array.isArray(firstPage?.data) ? firstPage.data.length : 0);
 
         let totalCount = 0;
         const info = firstPage.info || firstPage.Info || {};
@@ -211,6 +219,9 @@ export const getWarehouses: RequestHandler = async (req, res) => {
         ) {
           const nextPage = await fetchPage(page);
           fetchedCount = allWarehouses.length;
+          console.log(
+            `Nova Poshta page ${page} count (server route): ${Array.isArray(nextPage?.data) ? nextPage.data.length : 0}, total accumulated: ${fetchedCount}`
+          );
 
           if (!Number.isFinite(totalCount) && nextPage.data.length < limit) {
             break;
@@ -464,6 +475,10 @@ export const getWarehouses: RequestHandler = async (req, res) => {
     const rawCount = allWarehouses.length + novapostResults.length;
     const uniqueCount = uniqueWarehouses.length;
 
+    console.log(
+      `Fetched ${uniqueCount} unique warehouses (raw ${rawCount}) across city ${cityRef} (server route, type: ${type || "all"})`
+    );
+ 
     const isPostomatWarehouse = (wh: any) => {
       const typeOfWarehouse = String(wh.TypeOfWarehouse || "").trim();
       if (typeOfWarehouse === "9") {
@@ -528,16 +543,17 @@ export const getWarehouses: RequestHandler = async (req, res) => {
       return containsKeyword;
     };
 
-    let filteredData = (() => {
-      if (type === "postomat") {
-        return uniqueWarehouses.filter(isPostomatWarehouse);
-      }
-      if (type === "department") {
-        return uniqueWarehouses.filter((wh: any) => !isPostomatWarehouse(wh));
-      }
-      return uniqueWarehouses;
-    })();
-
+    const filteredData = (() => {
+       if (type === "postomat") {
+         return uniqueWarehouses.filter(isPostomatWarehouse);
+       }
+       if (type === "department") {
+         return uniqueWarehouses.filter((wh: any) => !isPostomatWarehouse(wh));
+       }
+       return uniqueWarehouses;
+     })();
+    console.log(`Filtered data count for type "${type || "all"}" (server route):`, filteredData.length);
+ 
     let usedPostomatFallback = false;
 
     const sortedData = filteredData.sort((a: any, b: any) => {
@@ -606,6 +622,10 @@ export const getWarehouses: RequestHandler = async (req, res) => {
       }
     }
 
+    console.log(
+      `Final data count before pagination (server route): ${finalData.length} (cityRef: ${cityRef}, type: ${type || "all"})`
+    );
+
     const totalResults = finalData.length;
 
     let page = requestedPage;
@@ -624,6 +644,9 @@ export const getWarehouses: RequestHandler = async (req, res) => {
         ? finalData.slice(startIndex, endIndex)
         : [];
 
+    console.log(
+      `Returning ${paginatedData.length} warehouses for page ${page}/${totalPages} (server route). hasMore=${hasMore}`
+    );
     const hasMore = endIndex < totalResults;
 
     return res.json({

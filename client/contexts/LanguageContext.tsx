@@ -343,6 +343,10 @@ const translations = {
     'checkout.loading': 'Завантаження...',
     'checkout.noPostomats': 'Немає доступних поштоматів',
     'checkout.noDepartments': 'Немає доступних відділень',
+    'checkout.manualPromptDepartment': 'Не знайшли відділення? Вкажіть номер вручну.',
+    'checkout.manualPromptPostomat': 'Не знайшли поштомат? Вкажіть номер вручну.',
+    'checkout.manualEntryPlaceholder': 'Введіть номер',
+    'checkout.cancelManualEntry': 'Повернутись до списку',
     'checkout.loadMoreWarehouses': 'Завантажити ще відділення',
     'checkout.loadingMoreWarehouses': 'Завантаження...',
     'checkout.noMoreWarehouses': 'Більше відділень не знайдено',
@@ -720,6 +724,10 @@ const translations = {
     'checkout.loading': 'Загрузка...',
     'checkout.noPostomats': 'Нет доступных почтоматов',
     'checkout.noDepartments': 'Нет доступных отделений',
+    'checkout.manualPromptDepartment': 'Не нашли отделение? Укажите номер вручную.',
+    'checkout.manualPromptPostomat': 'Не нашли почтомат? Укажите номер вручную.',
+    'checkout.manualEntryPlaceholder': 'Введите номер',
+    'checkout.cancelManualEntry': 'Вернуться к списку',
     'checkout.loadMoreWarehouses': 'Загрузить ещё отделения',
     'checkout.loadingMoreWarehouses': 'Загрузка...',
     'checkout.noMoreWarehouses': 'Больше отделений не найдено',
@@ -765,7 +773,15 @@ const translations = {
   }
 };
 
-const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
+const defaultLanguageContext: LanguageContextType = {
+  language: 'ua',
+  setLanguage: () => {
+    console.warn('Calling setLanguage without LanguageProvider');
+  },
+  t: (key: string) => translations.ua[key as keyof typeof translations.ua] || key,
+};
+
+const LanguageContext = createContext<LanguageContextType>(defaultLanguageContext);
 
 export const LanguageProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [language, setLanguage] = useState<Language>('ua');
@@ -783,8 +799,5 @@ export const LanguageProvider: React.FC<{ children: ReactNode }> = ({ children }
 
 export const useLanguage = () => {
   const context = useContext(LanguageContext);
-  if (context === undefined) {
-    throw new Error('useLanguage must be used within a LanguageProvider');
-  }
   return context;
 };
