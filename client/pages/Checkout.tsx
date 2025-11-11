@@ -231,6 +231,45 @@ export default function Checkout() {
     return courierPrice;
   }, [courierPrice]);
 
+  const makeWarehouseKey = (wh: any): string => {
+    return (
+      wh?.Ref ||
+      wh?.SiteKey ||
+      wh?.Number ||
+      wh?.PostomatNumber ||
+      wh?.Description ||
+      wh?.ShortAddress ||
+      ""
+    );
+  };
+
+  const mergeWarehouseLists = (
+    existing: any[],
+    incoming: any[]
+  ): { list: any[]; added: number } => {
+    const result: any[] = [...existing];
+    const seen = new Set<string>();
+    for (const wh of existing) {
+      const key = makeWarehouseKey(wh);
+      if (key) {
+        seen.add(key);
+      }
+    }
+    let added = 0;
+    for (const wh of incoming) {
+      const key = makeWarehouseKey(wh);
+      if (key && seen.has(key)) {
+        continue;
+      }
+      if (key) {
+        seen.add(key);
+      }
+      result.push(wh);
+      added += 1;
+    }
+    return { list: result, added };
+  };
+
   // Load warehouses when city is selected
   const loadWarehouses = async (page: number = 1, append = false) => {
     const currentCityRef = cityRef;
@@ -291,35 +330,13 @@ export default function Checkout() {
       }
 
       const items = Array.isArray(data?.data) ? data.data : [];
-      let nextWarehouses: any[] = [];
-
-      if (append) {
-        setWarehouses((prev) => {
-          const seen = new Set(
-            prev.map(
-              (wh: any) =>
-                wh?.Ref || wh?.SiteKey || wh?.Number || wh?.Description || ""
-            )
-          );
-          const filtered = items.filter((wh: any) => {
-            const key =
-              wh?.Ref || wh?.SiteKey || wh?.Number || wh?.Description || "";
-            if (!key) {
-              return true;
-            }
-            if (seen.has(key)) {
-              return false;
-            }
-            seen.add(key);
-            return true;
-          });
-          nextWarehouses = [...prev, ...filtered];
-          return nextWarehouses;
-        });
-      } else {
-        nextWarehouses = items;
-        setWarehouses(nextWarehouses);
-      }
+      const existingList = append ? warehouses : [];
+      const { list: mergedList, added: addedCount } = mergeWarehouseLists(
+        existingList,
+        items
+      );
+      const newLength = mergedList.length;
+      setWarehouses(mergedList);
 
       const meta = data?.meta || {};
       const metaPage =
@@ -331,11 +348,11 @@ export default function Checkout() {
       const totalFromMeta =
         typeof meta.total === "number" && meta.total >= 0
           ? meta.total
-          : nextWarehouses.length;
+          : mergedList.length;
       const hasMoreFromMeta =
         typeof meta.hasMore === "boolean"
           ? meta.hasMore
-          : nextWarehouses.length < totalFromMeta;
+          : mergedList.length < totalFromMeta;
       const nextPageFromMeta =
         typeof meta.nextPage === "number" && meta.nextPage > metaPage
           ? meta.nextPage
@@ -350,6 +367,16 @@ export default function Checkout() {
         hasMore: hasMoreFromMeta,
         nextPage: nextPageFromMeta,
       });
+
+      if (
+        !append &&
+        hasMoreFromMeta &&
+        newLength < metaPageSize &&
+        addedCount > 0
+      ) {
+        const targetPage = nextPageFromMeta ?? metaPage + 1;
+        await loadWarehouses(targetPage, true);
+      }
 
       if (!data?.success && data?.status !== "200") {
         console.warn("Warehouses API returned unexpected response shape:", data);

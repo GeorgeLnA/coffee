@@ -211,8 +211,6 @@ export const handler: Handler = async (event, context) => {
         .trim();
 
     const existingNumbers = new Set<string>();
-    const novapostNumberTracker =
-      type === "postomat" ? new Set<string>() : null;
     for (const wh of warehouseMap.values()) {
       const normalized = normalizeNumber(
         wh.Number ||
@@ -228,8 +226,7 @@ export const handler: Handler = async (event, context) => {
     }
 
     const novapostResults: any[] = [];
-    const shouldFetchNovapost =
-      type === "postomat" || type === "" || !type || !event.queryStringParameters?.type;
+    const shouldFetchNovapost = false; // Disable Novapost overlay to match department logic exactly
 
     if (shouldFetchNovapost) {
       const novapostApiKey =
@@ -430,18 +427,11 @@ export const handler: Handler = async (event, context) => {
             mapped.ShortAddress ||
             mapped.Ref
         );
+        if (normalizedNumber && existingNumbers.has(normalizedNumber)) {
+          continue;
+        }
         if (normalizedNumber) {
-          if (existingNumbers.has(normalizedNumber) && type !== "postomat") {
-            continue;
-          }
-          if (type === "postomat") {
-            if (novapostNumberTracker?.has(normalizedNumber)) {
-              continue;
-            }
-            novapostNumberTracker?.add(normalizedNumber);
-          } else {
-            existingNumbers.add(normalizedNumber);
-          }
+          existingNumbers.add(normalizedNumber);
         }
         warehouseMap.set(mapped.Ref, mapped);
       }
@@ -527,14 +517,6 @@ export const handler: Handler = async (event, context) => {
     })();
 
     let usedPostomatFallback = false;
-
-    if (type === "postomat" && filteredData.length === 0) {
-      console.warn(
-        `No postomats detected for cityRef ${cityRef}. Returning all warehouses as fallback.`
-      );
-      filteredData = uniqueWarehouses;
-      usedPostomatFallback = true;
-    }
 
     const sortedData = filteredData.sort((a: any, b: any) => {
       const descA = String(a.Description || "");
