@@ -256,23 +256,9 @@ export const getWarehouses: RequestHandler = async (req, res) => {
       warehouseMap.set(ref, wh);
     }
 
-    const existingNumbers = new Set<string>();
-    for (const wh of warehouseMap.values()) {
-      const normalized = normalizeNumber(
-        wh.Number ||
-          wh.PostomatNumber ||
-          wh.SiteKey ||
-          wh.Description ||
-          wh.ShortAddress ||
-          wh.Ref
-      );
-      if (normalized) {
-        existingNumbers.add(normalized);
-      }
-    }
-
     const novapostResults: any[] = [];
-    const shouldFetchNovapost = false; // Disable Novapost overlay to match department logic exactly
+    const shouldFetchNovapost =
+      type === "postomat" || type === "" || !type || !req.query.type;
 
     if (shouldFetchNovapost) {
       const novapostApiKey =
@@ -470,19 +456,6 @@ export const getWarehouses: RequestHandler = async (req, res) => {
         if (!division) continue;
         const mapped = mapDivisionToWarehouse(division);
         if (!mapped?.Ref) continue;
-        const normalizedNumber = normalizeNumber(
-          mapped.Number ||
-            mapped.SiteKey ||
-            mapped.Description ||
-            mapped.ShortAddress ||
-            mapped.Ref
-        );
-        if (normalizedNumber && existingNumbers.has(normalizedNumber)) {
-          continue;
-        }
-        if (normalizedNumber) {
-          existingNumbers.add(normalizedNumber);
-        }
         warehouseMap.set(mapped.Ref, mapped);
       }
     }

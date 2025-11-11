@@ -331,11 +331,7 @@ export default function Checkout() {
 
       const items = Array.isArray(data?.data) ? data.data : [];
       const existingList = append ? warehouses : [];
-      const { list: mergedList, added: addedCount } = mergeWarehouseLists(
-        existingList,
-        items
-      );
-      const newLength = mergedList.length;
+      const { list: mergedList } = mergeWarehouseLists(existingList, items);
       setWarehouses(mergedList);
 
       const meta = data?.meta || {};
@@ -368,15 +364,7 @@ export default function Checkout() {
         nextPage: nextPageFromMeta,
       });
 
-      if (
-        !append &&
-        hasMoreFromMeta &&
-        newLength < metaPageSize &&
-        addedCount > 0
-      ) {
-        const targetPage = nextPageFromMeta ?? metaPage + 1;
-        await loadWarehouses(targetPage, true);
-      }
+      // No auto-fetch fallback; rely on explicit user scroll or button to load more
 
       if (!data?.success && data?.status !== "200") {
         console.warn("Warehouses API returned unexpected response shape:", data);
