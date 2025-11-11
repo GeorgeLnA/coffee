@@ -257,6 +257,8 @@ export const getWarehouses: RequestHandler = async (req, res) => {
     }
 
     const existingNumbers = new Set<string>();
+    const novapostNumberTracker =
+      type === "postomat" ? new Set<string>() : null;
     for (const wh of warehouseMap.values()) {
       const normalized = normalizeNumber(
         wh.Number ||
@@ -478,11 +480,18 @@ export const getWarehouses: RequestHandler = async (req, res) => {
             mapped.ShortAddress ||
             mapped.Ref
         );
-        if (normalizedNumber && existingNumbers.has(normalizedNumber)) {
-          continue;
-        }
         if (normalizedNumber) {
-          existingNumbers.add(normalizedNumber);
+          if (existingNumbers.has(normalizedNumber) && type !== "postomat") {
+            continue;
+          }
+          if (type === "postomat") {
+            if (novapostNumberTracker?.has(normalizedNumber)) {
+              continue;
+            }
+            novapostNumberTracker?.add(normalizedNumber);
+          } else {
+            existingNumbers.add(normalizedNumber);
+          }
         }
         warehouseMap.set(mapped.Ref, mapped);
       }
