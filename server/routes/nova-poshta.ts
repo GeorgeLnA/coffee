@@ -3,6 +3,10 @@ import type { RequestHandler } from "express";
 // Nova Poshta API
 const NP_API_URL = "https://api.novaposhta.ua/v2.0/json/";
 
+const NOVAPOST_API_BASE_URL =
+  process.env.NOVAPOST_API_BASE_URL ||
+  "https://api-stage.novapost.pl/v.1.0/divisions";
+
 // Search settlements (cities) with fallback to getCities
 export const searchSettlements: RequestHandler = async (req, res) => {
   try {

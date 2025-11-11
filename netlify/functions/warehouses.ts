@@ -60,6 +60,7 @@ export const handler: Handler = async (event, context) => {
     const maxPages = 20; // Safety guard (~10k records max)
     const allWarehouses: any[] = [];
     const fetchedSources: string[] = [];
+    let novaPoshtaPagesFetched = 0;
 
     if (apiKey) {
       try {
@@ -96,6 +97,7 @@ export const handler: Handler = async (event, context) => {
         };
 
         const firstPage = await fetchPage(1);
+        novaPoshtaPagesFetched = 1;
 
         let totalCount = 0;
         const info = firstPage.info || firstPage.Info || {};
@@ -121,6 +123,7 @@ export const handler: Handler = async (event, context) => {
               fetchedCount === (page - 1) * limit))
         ) {
           const nextPage = await fetchPage(page);
+          novaPoshtaPagesFetched += 1;
           fetchedCount = allWarehouses.length;
 
           if (!Number.isFinite(totalCount) && nextPage.data.length < limit) {
@@ -397,9 +400,7 @@ export const handler: Handler = async (event, context) => {
     const uniqueCount = uniqueWarehouses.length;
 
     console.log(
-      `Fetched ${uniqueCount} unique warehouses (raw ${rawCount}) across ${
-        page - 1
-      } page(s) for city ${cityRef}`
+      `Fetched ${uniqueCount} unique warehouses (raw ${rawCount}) across ${novaPoshtaPagesFetched} nova-poshta page(s) for city ${cityRef}`
     );
 
     if (uniqueWarehouses.length === 0) {
