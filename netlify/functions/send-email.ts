@@ -63,6 +63,32 @@ function normalizeImageSource(value: unknown): string | null {
   return trimmed;
 }
 
+function formatShippingMethod(method?: string | null): string {
+  const key = String(method || "").toLowerCase().trim();
+  switch (key) {
+    case "nova_department":
+    case "nova poshta department":
+      return "Нова Пошта (відділення)";
+    case "nova_postomat":
+    case "nova poshta postomat":
+      return "Нова Пошта (поштомат)";
+    case "nova_courier":
+    case "nova poshta courier":
+      return "Нова Пошта (кур'єр)";
+    case "own_courier":
+    case "own courier":
+      return "Власна доставка (Київ)";
+    case "pickup":
+    case "self_pickup":
+    case "self pickup":
+      return "Самовивіз";
+    case "ukrposhta":
+      return "Укрпошта";
+    default:
+      return method && method.length > 0 ? method : "Не вказано";
+  }
+}
+
 export async function sendEmailViaEmailJS(params: {
   serviceId: string;
   templateId: string;
@@ -450,17 +476,7 @@ export async function sendOrderConfirmationEmail(params: {
   };
 
   // Format shipping method (handle both raw method codes and pre-formatted strings)
-  const shippingMethodText = shippingMethod 
-    ? (shippingMethod === 'nova_department' 
-        ? 'Нова Пошта (на відділення)' 
-        : shippingMethod === 'nova_postomat'
-        ? 'Нова Пошта (на поштомат)'
-        : shippingMethod === 'nova_courier'
-        ? 'Нова Пошта (кур\'єром)'
-        : shippingMethod === 'own_courier'
-        ? 'Власна доставка (Київ)'
-        : shippingMethod) // Use as-is if already formatted
-    : 'Не вказано';
+  const shippingMethodText = formatShippingMethod(shippingMethod);
 
   // Format payment method (handle both raw codes and pre-formatted strings)
   const paymentMethodText =
@@ -621,17 +637,7 @@ export async function sendOrderNotificationEmail(params: {
   }
 
   // Format shipping method (handle both raw method codes and pre-formatted strings)
-  const shippingMethodText = shippingMethod 
-    ? (shippingMethod === 'nova_department' 
-        ? 'Нова Пошта (на відділення)' 
-        : shippingMethod === 'nova_postomat'
-        ? 'Нова Пошта (на поштомат)'
-        : shippingMethod === 'nova_courier'
-        ? 'Нова Пошта (кур\'єром)'
-        : shippingMethod === 'own_courier'
-        ? 'Власна доставка (Київ)'
-        : shippingMethod) // Use as-is if already formatted
-    : 'Не вказано';
+  const shippingMethodText = formatShippingMethod(shippingMethod);
 
   // Format payment method (handle both raw codes and pre-formatted strings)
   const paymentMethodText =
