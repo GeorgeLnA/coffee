@@ -48,11 +48,51 @@ export const handler: Handler = async (event, context) => {
       type,
     });
     
+    const pageParamRaw =
+      event.queryStringParameters?.page ||
+      event.queryStringParameters?.pageNumber ||
+      event.queryStringParameters?.p ||
+      "";
+    let requestedPage = parseInt(String(pageParamRaw || "1"), 10);
+    if (!Number.isFinite(requestedPage) || requestedPage < 1) {
+      requestedPage = 1;
+    }
+
+    const pageSizeParamRaw =
+      event.queryStringParameters?.pageSize ||
+      event.queryStringParameters?.perPage ||
+      event.queryStringParameters?.limit ||
+      "";
+    let requestedPageSize = parseInt(String(pageSizeParamRaw || "100"), 10);
+    if (!Number.isFinite(requestedPageSize) || requestedPageSize <= 0) {
+      requestedPageSize = 100;
+    }
+    requestedPageSize = Math.min(Math.max(requestedPageSize, 25), 500);
+
     if (!cityRef) {
       return {
         statusCode: 200,
         headers,
-        body: JSON.stringify({ data: [] }),
+        body: JSON.stringify({
+          status: "200",
+          success: true,
+          data: [],
+          meta: {
+            total: 0,
+            returned: 0,
+            page: requestedPage,
+            pageSize: requestedPageSize,
+            totalPages: 1,
+            hasMore: false,
+            nextPage: null,
+            prevPage: null,
+            rawCount: 0,
+            uniqueCount: 0,
+            sources: [],
+            novaPoshtaPagesFetched: 0,
+            fallbackToAllWarehouses: false,
+          },
+        }),
       };
     }
 
@@ -306,6 +346,9 @@ export const handler: Handler = async (event, context) => {
               }
             }
           }
+          if (novapostResults.length > 0) {
+            fetchedSources.push("novapost");
+          }
         } catch (novapostErr) {
           console.error("Failed to fetch Novapost divisions:", novapostErr);
         }
@@ -403,14 +446,6 @@ export const handler: Handler = async (event, context) => {
       `Fetched ${uniqueCount} unique warehouses (raw ${rawCount}) across ${novaPoshtaPagesFetched} nova-poshta page(s) for city ${cityRef}`
     );
 
-    if (uniqueWarehouses.length === 0) {
-      return {
-        statusCode: 200,
-        headers,
-        body: JSON.stringify({ status: "200", data: [] }),
-      };
-    }
-
     const isPostomatWarehouse = (wh: any) => {
       const typeOfWarehouse = String(wh.TypeOfWarehouse || "").trim();
       if (typeOfWarehouse === "9") {
@@ -472,7 +507,7 @@ export const handler: Handler = async (event, context) => {
       return containsKeyword;
     };
 
-    const filteredData = (() => {
+    let filteredData = (() => {
       if (type === "postomat") {
         return uniqueWarehouses.filter(isPostomatWarehouse);
       }
@@ -482,15 +517,14 @@ export const handler: Handler = async (event, context) => {
       return uniqueWarehouses;
     })();
 
+    let usedPostomatFallback = false;
+
     if (type === "postomat" && filteredData.length === 0) {
       console.warn(
         `No postomats detected for cityRef ${cityRef}. Returning all warehouses as fallback.`
       );
-      return {
-        statusCode: 200,
-        headers,
-        body: JSON.stringify({ status: "200", data: uniqueWarehouses }),
-      };
+      filteredData = uniqueWarehouses;
+      usedPostomatFallback = true;
     }
 
     const sortedData = filteredData.sort((a: any, b: any) => {
@@ -559,10 +593,49 @@ export const handler: Handler = async (event, context) => {
       }
     }
 
+    const totalResults = finalData.length;
+
+    let page = requestedPage;
+    let pageSize = requestedPageSize;
+
+    const totalPages =
+      totalResults > 0 ? Math.ceil(totalResults / pageSize) : 1;
+    if (page > totalPages) {
+      page = totalPages;
+    }
+
+    const startIndex = (page - 1) * pageSize;
+    const endIndex = Math.min(startIndex + pageSize, totalResults);
+    const paginatedData =
+      startIndex >= 0 && startIndex < totalResults
+        ? finalData.slice(startIndex, endIndex)
+        : [];
+
+    const hasMore = endIndex < totalResults;
+
     return {
       statusCode: 200,
       headers,
-      body: JSON.stringify({ status: "200", data: finalData }),
+      body: JSON.stringify({
+        status: "200",
+        success: true,
+        data: paginatedData,
+        meta: {
+          total: totalResults,
+          returned: paginatedData.length,
+          page,
+          pageSize,
+          totalPages,
+          hasMore,
+          nextPage: hasMore ? page + 1 : null,
+          prevPage: page > 1 ? page - 1 : null,
+          rawCount,
+          uniqueCount,
+          sources: fetchedSources,
+          novaPoshtaPagesFetched,
+          fallbackToAllWarehouses: usedPostomatFallback,
+        },
+      }),
     };
   } catch (error: any) {
     console.error("Error in warehouses function:", error);

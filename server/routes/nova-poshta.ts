@@ -102,8 +102,47 @@ export const getWarehouses: RequestHandler = async (req, res) => {
         req.query.postomatNumber ||
         "")?.toString().trim() || "";
 
+    const pageParamRawInput =
+      req.query.pageNumber ?? req.query.page ?? req.query.p ?? "1";
+    const pageParamRaw = Array.isArray(pageParamRawInput)
+      ? pageParamRawInput[0]
+      : pageParamRawInput;
+    let requestedPage = parseInt(String(pageParamRaw || "1"), 10);
+    if (!Number.isFinite(requestedPage) || requestedPage < 1) {
+      requestedPage = 1;
+    }
+
+    const pageSizeParamRawInput =
+      req.query.pageSize ?? req.query.perPage ?? req.query.limit ?? "100";
+    const pageSizeParamRaw = Array.isArray(pageSizeParamRawInput)
+      ? pageSizeParamRawInput[0]
+      : pageSizeParamRawInput;
+    let requestedPageSize = parseInt(String(pageSizeParamRaw || "100"), 10);
+    if (!Number.isFinite(requestedPageSize) || requestedPageSize <= 0) {
+      requestedPageSize = 100;
+    }
+    requestedPageSize = Math.min(Math.max(requestedPageSize, 25), 500);
+
     if (!cityRef) {
-      return res.json({ data: [] });
+      return res.json({
+        status: "200",
+        success: true,
+        data: [],
+        meta: {
+          total: 0,
+          returned: 0,
+          page: requestedPage,
+          pageSize: requestedPageSize,
+          totalPages: 1,
+          hasMore: false,
+          nextPage: null,
+          prevPage: null,
+          rawCount: 0,
+          uniqueCount: 0,
+          sources: [],
+          fallbackToAllWarehouses: false,
+        },
+      });
     }
 
     const limit = 500;
@@ -355,6 +394,9 @@ export const getWarehouses: RequestHandler = async (req, res) => {
               }
             }
           }
+          if (novapostResults.length > 0) {
+            fetchedSources.push("novapost");
+          }
         } catch (err) {
           console.error("Failed to fetch Novapost divisions:", err);
         }
@@ -447,6 +489,8 @@ export const getWarehouses: RequestHandler = async (req, res) => {
     }
 
     const uniqueWarehouses = Array.from(warehouseMap.values());
+    const rawCount = allWarehouses.length + novapostResults.length;
+    const uniqueCount = uniqueWarehouses.length;
 
     const isPostomatWarehouse = (wh: any) => {
       const typeOfWarehouse = String(wh.TypeOfWarehouse || "").trim();
@@ -512,7 +556,7 @@ export const getWarehouses: RequestHandler = async (req, res) => {
       return containsKeyword;
     };
 
-    const filteredData = (() => {
+    let filteredData = (() => {
       if (type === "postomat") {
         return uniqueWarehouses.filter(isPostomatWarehouse);
       }
@@ -522,11 +566,14 @@ export const getWarehouses: RequestHandler = async (req, res) => {
       return uniqueWarehouses;
     })();
 
+    let usedPostomatFallback = false;
+
     if (type === "postomat" && filteredData.length === 0) {
       console.warn(
         `No postomats detected for cityRef ${cityRef}. Returning all warehouses as fallback.`
       );
-      return res.json({ status: "200", data: uniqueWarehouses });
+      filteredData = uniqueWarehouses;
+      usedPostomatFallback = true;
     }
 
     const sortedData = filteredData.sort((a: any, b: any) => {
@@ -595,7 +642,45 @@ export const getWarehouses: RequestHandler = async (req, res) => {
       }
     }
 
-    return res.json({ status: "200", data: finalData });
+    const totalResults = finalData.length;
+
+    let page = requestedPage;
+    let pageSize = requestedPageSize;
+
+    const totalPages =
+      totalResults > 0 ? Math.ceil(totalResults / pageSize) : 1;
+    if (page > totalPages) {
+      page = totalPages;
+    }
+
+    const startIndex = (page - 1) * pageSize;
+    const endIndex = Math.min(startIndex + pageSize, totalResults);
+    const paginatedData =
+      startIndex >= 0 && startIndex < totalResults
+        ? finalData.slice(startIndex, endIndex)
+        : [];
+
+    const hasMore = endIndex < totalResults;
+
+    return res.json({
+      status: "200",
+      success: true,
+      data: paginatedData,
+      meta: {
+        total: totalResults,
+        returned: paginatedData.length,
+        page,
+        pageSize,
+        totalPages,
+        hasMore,
+        nextPage: hasMore ? page + 1 : null,
+        prevPage: page > 1 ? page - 1 : null,
+        rawCount,
+        uniqueCount,
+        sources: fetchedSources,
+        fallbackToAllWarehouses: usedPostomatFallback,
+      },
+    });
   } catch (e: any) {
     console.error("getWarehouses error", e);
     return res.status(500).json({ error: e?.message || "Failed to fetch warehouses" });

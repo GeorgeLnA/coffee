@@ -2,6 +2,7 @@ import Header from "../components/Header";
 import Footer from "../components/Footer";
 import { useCart } from "../contexts/CartContext";
 import { useState, useMemo, useEffect } from "react";
+import type { UIEvent } from "react";
 import emailjs from "@emailjs/browser";
 import { useDeliverySettings } from "../hooks/use-supabase";
 import { toast } from "@/components/ui/use-toast";
@@ -13,6 +14,23 @@ import { useLanguage } from "../contexts/LanguageContext";
 
 type ShippingMethod = "nova_department" | "nova_courier" | "own_courier" | "nova_postomat";
 type PaymentMethod = "liqpay" | "apple_pay" | "google_pay" | "cash";
+
+type WarehouseMeta = {
+  page: number;
+  pageSize: number;
+  total: number;
+  hasMore: boolean;
+  nextPage: number | null;
+};
+
+const WAREHOUSE_PAGE_SIZE = 100;
+const DEFAULT_WAREHOUSE_META: WarehouseMeta = {
+  page: 1,
+  pageSize: WAREHOUSE_PAGE_SIZE,
+  total: 0,
+  hasMore: false,
+  nextPage: null,
+};
 
 export default function Checkout() {
   const { items, totalPrice, clear } = useCart();
@@ -34,6 +52,9 @@ export default function Checkout() {
   const [warehouses, setWarehouses] = useState<any[]>([]);
   const [selectedWarehouse, setSelectedWarehouse] = useState("");
   const [loadingWarehouses, setLoadingWarehouses] = useState(false);
+  const [loadingMoreWarehouses, setLoadingMoreWarehouses] = useState(false);
+  const [warehouseMeta, setWarehouseMeta] =
+    useState<WarehouseMeta>({ ...DEFAULT_WAREHOUSE_META });
   const [settlements, setSettlements] = useState<any[]>([]);
   const [showCityDropdown, setShowCityDropdown] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -211,45 +232,182 @@ export default function Checkout() {
   }, [courierPrice]);
 
   // Load warehouses when city is selected
-  const loadWarehouses = async () => {
-    if (!cityRef || (shippingMethod !== 'nova_department' && shippingMethod !== 'nova_postomat')) return;
-    setLoadingWarehouses(true);
+  const loadWarehouses = async (page: number = 1, append = false) => {
+    const currentCityRef = cityRef;
+    const currentShippingMethod = shippingMethod;
+    const isNovaMethod =
+      currentShippingMethod === "nova_department" ||
+      currentShippingMethod === "nova_postomat";
+
+    if (!currentCityRef || !isNovaMethod) {
+      return;
+    }
+
+    const pageSize = warehouseMeta.pageSize || WAREHOUSE_PAGE_SIZE;
+
+    if (append) {
+      if (loadingMoreWarehouses || loadingWarehouses) {
+        return;
+      }
+      setLoadingMoreWarehouses(true);
+    } else {
+      setLoadingWarehouses(true);
+      setWarehouseMeta({ ...DEFAULT_WAREHOUSE_META, pageSize });
+    }
+
     try {
-      console.log('Loading warehouses for cityRef:', cityRef);
-      const typeParam = shippingMethod === 'nova_postomat' ? 'postomat' : 'department';
+      console.log(
+        "Loading warehouses for cityRef:",
+        currentCityRef,
+        "page:",
+        page,
+        "append:",
+        append
+      );
+
+      const typeParam =
+        currentShippingMethod === "nova_postomat" ? "postomat" : "department";
       const params = new URLSearchParams();
-      params.append("cityRef", cityRef);
+      params.append("cityRef", currentCityRef);
       params.append("type", typeParam);
       const cityNameParam = (city || cityQuery || "").trim();
       if (cityNameParam) {
         params.append("cityName", cityNameParam);
       }
       params.append("countryCode", "UA");
+      params.append("page", String(page));
+      params.append("pageSize", String(pageSize));
+
       const res = await fetch(`/api/warehouses?${params.toString()}`, {
         headers: {
           "Accept-Language": language === "ru" ? "ru" : "uk",
         },
       });
       const data = await res.json();
-      console.log('Warehouses API response:', data);
-      
-      if (data?.success && Array.isArray(data.data)) {
-        setWarehouses(data.data);
-      } else if (data.status === '200' && Array.isArray(data.data)) {
-        setWarehouses(data.data);
+      console.log("Warehouses API response:", data);
+
+      if (cityRef !== currentCityRef || shippingMethod !== currentShippingMethod) {
+        return;
+      }
+
+      const items = Array.isArray(data?.data) ? data.data : [];
+      let nextWarehouses: any[] = [];
+
+      if (append) {
+        setWarehouses((prev) => {
+          const seen = new Set(
+            prev.map(
+              (wh: any) =>
+                wh?.Ref || wh?.SiteKey || wh?.Number || wh?.Description || ""
+            )
+          );
+          const filtered = items.filter((wh: any) => {
+            const key =
+              wh?.Ref || wh?.SiteKey || wh?.Number || wh?.Description || "";
+            if (!key) {
+              return true;
+            }
+            if (seen.has(key)) {
+              return false;
+            }
+            seen.add(key);
+            return true;
+          });
+          nextWarehouses = [...prev, ...filtered];
+          return nextWarehouses;
+        });
+      } else {
+        nextWarehouses = items;
+        setWarehouses(nextWarehouses);
+      }
+
+      const meta = data?.meta || {};
+      const metaPage =
+        typeof meta.page === "number" && meta.page > 0 ? meta.page : page;
+      const metaPageSize =
+        typeof meta.pageSize === "number" && meta.pageSize > 0
+          ? meta.pageSize
+          : pageSize;
+      const totalFromMeta =
+        typeof meta.total === "number" && meta.total >= 0
+          ? meta.total
+          : nextWarehouses.length;
+      const hasMoreFromMeta =
+        typeof meta.hasMore === "boolean"
+          ? meta.hasMore
+          : nextWarehouses.length < totalFromMeta;
+      const nextPageFromMeta =
+        typeof meta.nextPage === "number" && meta.nextPage > metaPage
+          ? meta.nextPage
+          : hasMoreFromMeta
+          ? metaPage + 1
+          : null;
+
+      setWarehouseMeta({
+        page: metaPage,
+        pageSize: metaPageSize,
+        total: totalFromMeta,
+        hasMore: hasMoreFromMeta,
+        nextPage: nextPageFromMeta,
+      });
+
+      if (!data?.success && data?.status !== "200") {
+        console.warn("Warehouses API returned unexpected response shape:", data);
       }
     } catch (err) {
-      console.error('Failed to load warehouses:', err);
+      console.error("Failed to load warehouses:", err);
+      if (!append) {
+        setWarehouses([]);
+        setWarehouseMeta({ ...DEFAULT_WAREHOUSE_META });
+      }
     } finally {
-      setLoadingWarehouses(false);
+      if (append) {
+        setLoadingMoreWarehouses(false);
+      } else {
+        setLoadingWarehouses(false);
+      }
+    }
+  };
+
+  const loadMoreWarehouses = async () => {
+    if (
+      !warehouseMeta.hasMore ||
+      loadingMoreWarehouses ||
+      loadingWarehouses
+    ) {
+      return;
+    }
+    const nextPage =
+      warehouseMeta.nextPage ?? warehouseMeta.page + 1;
+    await loadWarehouses(nextPage, true);
+  };
+
+  const handleWarehouseScroll = (event: UIEvent<HTMLDivElement>) => {
+    if (
+      !warehouseMeta.hasMore ||
+      loadingMoreWarehouses ||
+      loadingWarehouses
+    ) {
+      return;
+    }
+    const target = event.currentTarget;
+    const threshold = 24;
+    if (target.scrollTop + target.clientHeight >= target.scrollHeight - threshold) {
+      loadMoreWarehouses();
     }
   };
 
   // Load warehouses when cityRef changes
   useEffect(() => {
     if (cityRef && (shippingMethod === 'nova_department' || shippingMethod === 'nova_postomat')) {
-      setSelectedWarehouse(""); // Clear selection when switching between postomat/department
-      loadWarehouses();
+      setSelectedWarehouse("");
+      setDepartment("");
+      setWarehouses([]);
+      setWarehouseMeta({ ...DEFAULT_WAREHOUSE_META });
+      loadWarehouses(1, false);
+    } else {
+      setWarehouseMeta({ ...DEFAULT_WAREHOUSE_META });
+      setLoadingMoreWarehouses(false);
     }
   }, [cityRef, shippingMethod]);
 
@@ -258,6 +416,9 @@ export default function Checkout() {
     if (shippingMethod !== 'nova_department' && shippingMethod !== 'nova_postomat') {
       setSelectedWarehouse("");
       setWarehouses([]);
+      setWarehouseMeta({ ...DEFAULT_WAREHOUSE_META });
+      setLoadingWarehouses(false);
+      setLoadingMoreWarehouses(false);
     }
   }, [shippingMethod]);
 
@@ -576,13 +737,38 @@ export default function Checkout() {
                         <SelectTrigger>
                           <SelectValue placeholder={loadingWarehouses ? t('checkout.loading') : shippingMethod === 'nova_postomat' ? t('checkout.selectPostomat') : t('checkout.selectDepartment')} />
                         </SelectTrigger>
-                        <SelectContent>
+                        <SelectContent onViewportScroll={handleWarehouseScroll}>
                           {warehouses.length > 0 ? (
-                            warehouses.map((wh: any) => (
-                              <SelectItem key={wh.Ref} value={wh.Ref}>
-                                {wh.Description} - {wh.ShortAddress}
-                              </SelectItem>
-                            ))
+                            <>
+                              {warehouses.map((wh: any) => (
+                                <SelectItem key={wh.Ref} value={wh.Ref}>
+                                  {wh.Description} - {wh.ShortAddress}
+                                </SelectItem>
+                              ))}
+                              {warehouseMeta.hasMore && (
+                                <div className="px-2 pb-2 pt-1">
+                                  <button
+                                    type="button"
+                                    onClick={(event) => {
+                                      event.preventDefault();
+                                      event.stopPropagation();
+                                      loadMoreWarehouses();
+                                    }}
+                                    className="w-full rounded-md border border-dashed border-[#361c0c] bg-white px-3 py-2 text-sm font-semibold text-[#361c0c] transition hover:bg-[#fcf4e4] disabled:cursor-not-allowed disabled:opacity-60"
+                                    disabled={loadingMoreWarehouses}
+                                  >
+                                    {loadingMoreWarehouses
+                                      ? t('checkout.loadingMoreWarehouses')
+                                      : t('checkout.loadMoreWarehouses')}
+                                  </button>
+                                </div>
+                              )}
+                              {!warehouseMeta.hasMore && warehouses.length > 0 && (
+                                <div className="px-3 pb-2 pt-1 text-xs text-gray-500">
+                                  {t('checkout.noMoreWarehouses')}
+                                </div>
+                              )}
+                            </>
                           ) : (
                             <SelectItem value="no-data" disabled>
                               {cityRef ? (loadingWarehouses ? t('checkout.loading') : shippingMethod === 'nova_postomat' ? t('checkout.noPostomats') : t('checkout.noDepartments')) : t('checkout.selectCityFirst')}
