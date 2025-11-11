@@ -26,6 +26,43 @@ const DEFAULT_EMAILJS_ORIGIN =
   process.env.PUBLIC_SITE_URL ||
   "https://manifestcoffee.com.ua";
 
+function normalizeImageSource(value: unknown): string | null {
+  if (value == null) return null;
+
+  const raw =
+    typeof value === "string"
+      ? value
+      : typeof value === "number"
+      ? String(value)
+      : "";
+  const trimmed = raw.trim();
+  if (!trimmed) return null;
+
+  if (/^https?:\/\//i.test(trimmed) || trimmed.startsWith("data:")) {
+    return trimmed;
+  }
+
+  if (trimmed.startsWith("//")) {
+    return `https:${trimmed}`;
+  }
+
+  const supabaseUrl =
+    (process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || "").replace(
+      /\/+$/,
+      ""
+    );
+
+  if (supabaseUrl) {
+    if (trimmed.startsWith("storage/v1/")) {
+      return `${supabaseUrl}/${trimmed}`;
+    }
+    const path = trimmed.replace(/^\/+/, "");
+    return `${supabaseUrl}/storage/v1/object/public/${path}`;
+  }
+
+  return trimmed;
+}
+
 export async function sendEmailViaEmailJS(params: {
   serviceId: string;
   templateId: string;
@@ -263,6 +300,36 @@ function getWeightBasedImageUrl(item: { variant?: string | null; name?: string |
   return imageUrl;
 }
 
+function resolveItemImageUrl(item: any): string {
+  const directSources: Array<[string, unknown]> = [
+    ["image", item?.image],
+    ["product_image", item?.product_image],
+    ["image_url", item?.image_url],
+    ["imageUrl", item?.imageUrl],
+    ["selectedImage", item?.selectedImage],
+    ["coverImage", item?.coverImage],
+    ["variantImage", item?.variantImage],
+    ["product.image_url", item?.product?.image_url],
+  ];
+
+  for (const [key, candidate] of directSources) {
+    const normalized = normalizeImageSource(candidate);
+    if (normalized) {
+      console.log("Resolved item image from order data", {
+        sourceKey: key,
+        urlSample: normalized.substring(0, 120),
+      });
+      return normalized;
+    }
+  }
+
+  console.log("Falling back to weight-based image for item", {
+    name: item?.name || item?.product_name,
+    variant: item?.variant,
+  });
+  return getWeightBasedImageUrl(item);
+}
+
 /**
  * Send order confirmation email to customer
  */
@@ -330,7 +397,7 @@ export async function sendOrderConfirmationEmail(params: {
       const itemTotal = (itemPrice * itemQuantity).toFixed(2);
       const variantText = item.variant ? ` (${item.variant})` : '';
       
-      const itemImage = getWeightBasedImageUrl(item);
+      const itemImage = resolveItemImageUrl(item);
       
       // Debug logging
       console.log('Email image generation:', {
@@ -488,7 +555,7 @@ export async function sendOrderNotificationEmail(params: {
       const itemTotal = (itemPrice * itemQuantity).toFixed(2);
       const variantText = item.variant ? ` (${item.variant})` : '';
       
-      const itemImage = getWeightBasedImageUrl(item);
+      const itemImage = resolveItemImageUrl(item);
       
       // Debug logging
       console.log('Admin email image generation:', {
