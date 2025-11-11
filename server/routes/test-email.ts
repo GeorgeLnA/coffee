@@ -123,6 +123,22 @@ export const testEmail: RequestHandler = async (req, res) => {
         ? body.orderNotes.trim()
         : "Це тестове замовлення";
 
+    const shippingMethodKey = (shippingMethod || '').toLowerCase();
+    let shippingPriceNumber: number | null = null;
+    if (typeof body.shippingPrice === 'number') {
+      shippingPriceNumber = body.shippingPrice;
+    } else if (typeof body.shippingPrice === 'string' && body.shippingPrice.trim() !== '') {
+      const parsed = Number(body.shippingPrice);
+      if (!Number.isNaN(parsed)) {
+        shippingPriceNumber = parsed;
+      }
+    }
+    const shippingFreeFlag = Boolean(body.shippingFree);
+    const shippingCarrierRatesFlag =
+      typeof body.shippingCarrierRates === 'boolean'
+        ? Boolean(body.shippingCarrierRates)
+        : ['nova_department', 'nova_postomat', 'nova_courier'].includes(shippingMethodKey);
+
     const testData = {
       orderId,
       orderDate,
@@ -131,6 +147,9 @@ export const testEmail: RequestHandler = async (req, res) => {
       customerPhone,
       orderTotal: orderTotalNumber,
       shippingMethod,
+      shippingPrice: shippingPriceNumber,
+      shippingFree: shippingFreeFlag,
+      shippingCarrierRates: shippingCarrierRatesFlag,
       paymentMethod,
       billingAddress,
       shippingAddress,
@@ -158,6 +177,9 @@ export const testEmail: RequestHandler = async (req, res) => {
         orderItems: testData.emailItems,
         shippingAddress: testData.shippingAddress,
         shippingMethod: testData.shippingMethod,
+        shippingCost: testData.shippingPrice,
+        shippingCostIsFree: testData.shippingFree,
+        shippingCarrierRates: testData.shippingCarrierRates,
         paymentMethod: testData.paymentMethod,
         orderNotes: testData.orderNotes,
         emailjsServiceId: emailjsServiceId,
@@ -182,6 +204,9 @@ export const testEmail: RequestHandler = async (req, res) => {
         orderItems: testData.emailItems,
         shippingAddress: testData.shippingAddress,
         shippingMethod: testData.shippingMethod,
+        shippingCost: testData.shippingPrice,
+        shippingCostIsFree: testData.shippingFree,
+        shippingCarrierRates: testData.shippingCarrierRates,
         paymentMethod: testData.paymentMethod,
         notes: testData.orderNotes,
         emailjsServiceId: emailjsServiceId,

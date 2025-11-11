@@ -115,12 +115,45 @@ export const handler: Handler = async (event, context) => {
 
     const paymentMethod = payment?.method || "liqpay";
     const orderId = `${Date.now()}${Math.floor(Math.random() * 10000).toString().padStart(4, '0')}`;
+
+    let shippingPriceNumber: number | null = null;
+    if (typeof shipping?.price === "number") {
+      shippingPriceNumber = shipping.price;
+    } else if (typeof shipping?.price === "string" && shipping.price.trim() !== "") {
+      const parsed = Number(shipping.price);
+      if (!Number.isNaN(parsed)) {
+        shippingPriceNumber = parsed;
+      }
+    }
+    const shippingPriceForTotal = Number.isFinite(shippingPriceNumber ?? NaN)
+      ? Number(shippingPriceNumber as number)
+      : 0;
+
+    const shippingMethodRaw: string | null = shipping?.method || null;
+    const shippingMethodKey = (shippingMethodRaw || "").toLowerCase();
+    const shippingIsFreeFlag = Boolean(shipping?.free);
+    let shippingCarrierRatesFlag =
+      typeof shipping?.carrierRates === "boolean"
+        ? shipping.carrierRates
+        : false;
+    if (!shippingCarrierRatesFlag) {
+      shippingCarrierRatesFlag = [
+        "nova_department",
+        "nova_postomat",
+        "nova_courier",
+      ].includes(shippingMethodKey);
+    }
+    const shippingFreeFinal =
+      shippingIsFreeFlag ||
+      (shippingMethodKey === "own_courier" && shippingPriceNumber === 0 && shipping?.price !== undefined);
+
     const amount = Number(
       (
         items.reduce((sum: number, it: any) => sum + it.price * it.quantity, 0) +
-        (shipping?.price || 0)
+        shippingPriceForTotal
       ).toFixed(2)
     );
+    
 
     // Build shipping address string (for backward compatibility)
     let shippingAddress = "";
@@ -303,18 +336,7 @@ export const handler: Handler = async (event, context) => {
                   shippingAddress = orderData.shipping_address || orderData.shipping_street_address || 'Не вказано';
                 }
 
-                // Format shipping method display name
-                const shippingMethodText = (orderData.shipping_method || shipping?.method)
-                  ? (orderData.shipping_method === 'nova_department' || shipping?.method === 'nova_department'
-                      ? 'Нова Пошта (на відділення)' 
-                      : orderData.shipping_method === 'nova_postomat' || shipping?.method === 'nova_postomat'
-                      ? 'Нова Пошта (на поштомат)'
-                      : orderData.shipping_method === 'nova_courier' || shipping?.method === 'nova_courier'
-                      ? 'Нова Пошта (кур\'єром)'
-                      : orderData.shipping_method === 'own_courier' || shipping?.method === 'own_courier'
-                      ? 'Власна доставка (Київ)'
-                      : orderData.shipping_method || shipping?.method)
-                  : 'Не вказано';
+                const shippingMethodForEmail = shipping?.method || orderData.shipping_method || null;
 
                 // Format payment method
                 const paymentMethodText = (orderData.payment_method || "cash") === 'cash'
@@ -340,7 +362,10 @@ export const handler: Handler = async (event, context) => {
                   orderTotal: Number(orderData.total_price) || amount,
                   orderItems: emailItems,
                   shippingAddress: shippingAddress || "Не вказано",
-                  shippingMethod: shippingMethodText,
+                  shippingMethod: shippingMethodForEmail,
+                  shippingCost: shippingPriceNumber,
+                  shippingCostIsFree: shippingFreeFinal,
+                  shippingCarrierRates: shippingCarrierRatesFlag,
                   paymentMethod: paymentMethodText,
                   orderNotes: orderData.notes || notes || null,
                   emailjsServiceId,
@@ -383,7 +408,10 @@ export const handler: Handler = async (event, context) => {
                   shippingAddress: shippingAddress || "Не вказано",
                   shippingCity: orderData.shipping_city || shipping?.city || null,
                   shippingDepartment: orderData.shipping_department || shipping?.department || null,
-                  shippingMethod: shippingMethodText,
+                  shippingMethod: orderData.shipping_method || shipping?.method || null,
+                  shippingCost: shippingPriceNumber,
+                  shippingCostIsFree: shippingFreeFinal,
+                  shippingCarrierRates: shippingCarrierRatesFlag,
                   paymentMethod: paymentMethodText,
                   notes: orderNotes || '', // Pass notes as empty string if null
                   emailjsServiceId,

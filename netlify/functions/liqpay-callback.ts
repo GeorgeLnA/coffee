@@ -531,18 +531,24 @@ export const handler: Handler = async (event, context) => {
                     itemsCount: emailItems.length,
                   });
 
-                  // Format shipping method display name
-                  const shippingMethodText = orderDataResult.shipping_method 
-                    ? (orderDataResult.shipping_method === 'nova_department' 
-                        ? 'Нова Пошта (на відділення)' 
-                        : orderDataResult.shipping_method === 'nova_postomat'
-                        ? 'Нова Пошта (на поштомат)'
-                        : orderDataResult.shipping_method === 'nova_courier'
-                        ? 'Нова Пошта (кур\'єром)'
-                        : orderDataResult.shipping_method === 'own_courier'
-                        ? 'Власна доставка (Київ)'
-                        : orderDataResult.shipping_method)
-                    : 'Не вказано';
+                  const shippingMethodRaw = orderDataResult.shipping_method || null;
+                  const shippingMethodKey = (shippingMethodRaw || '').toLowerCase();
+
+                  let shippingPriceNumber: number | null = null;
+                  if (typeof (orderDataResult as any).shipping_price === 'number') {
+                    shippingPriceNumber = (orderDataResult as any).shipping_price;
+                  } else if (typeof (orderDataResult as any).shipping_price === 'string') {
+                    const parsed = Number((orderDataResult as any).shipping_price);
+                    if (!Number.isNaN(parsed)) {
+                      shippingPriceNumber = parsed;
+                    }
+                  }
+
+                  const shippingFreeFlag = Boolean((orderDataResult as any).shipping_free);
+                  const shippingCarrierRatesFlag =
+                    typeof (orderDataResult as any).shipping_carrier_rates === 'boolean'
+                      ? Boolean((orderDataResult as any).shipping_carrier_rates)
+                      : ['nova_department', 'nova_postomat', 'nova_courier'].includes(shippingMethodKey);
 
                   // Format payment method
                   const paymentMethodText = orderDataResult.payment_method === 'cash'
@@ -561,7 +567,10 @@ export const handler: Handler = async (event, context) => {
                     orderTotal: Number(orderDataResult.total_price) || 0,
                     orderItems: emailItems,
                     shippingAddress: shippingAddress || "Не вказано",
-                    shippingMethod: shippingMethodText,
+                    shippingMethod: shippingMethodRaw,
+                    shippingCost: shippingPriceNumber,
+                    shippingCostIsFree: shippingFreeFlag,
+                    shippingCarrierRates: shippingCarrierRatesFlag,
                     paymentMethod: paymentMethodText,
                     orderNotes: orderDataResult.notes || null,
                     emailjsServiceId,
@@ -601,7 +610,10 @@ export const handler: Handler = async (event, context) => {
                     shippingAddress: shippingAddress || "Не вказано",
                     shippingCity: orderDataResult.shipping_city || null,
                     shippingDepartment: orderDataResult.shipping_department || null,
-                    shippingMethod: shippingMethodText,
+                    shippingMethod: shippingMethodRaw,
+                    shippingCost: shippingPriceNumber,
+                    shippingCostIsFree: shippingFreeFlag,
+                    shippingCarrierRates: shippingCarrierRatesFlag,
                     paymentMethod: paymentMethodText,
                     notes: orderNotes || '', // Pass notes as empty string if null
                     emailjsServiceId,

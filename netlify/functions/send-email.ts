@@ -89,6 +89,47 @@ function formatShippingMethod(method?: string | null): string {
   }
 }
 
+function formatShippingCostDisplay(options: {
+  method?: string | null;
+  cost?: number | null;
+  isFree?: boolean;
+  carrierRates?: boolean;
+}): string {
+  const { method, cost, isFree, carrierRates } = options;
+
+  if (isFree) {
+    return "Безкоштовно";
+  }
+
+  if (typeof cost === "number" && Number.isFinite(cost)) {
+    if (cost > 0) {
+      return `₴${cost.toFixed(2)}`;
+    }
+    if (cost === 0) {
+      const key = (method || "").toLowerCase();
+      if (key.includes("own_courier") || key.includes("pickup") || key.includes("self_pick")) {
+        return "Безкоштовно";
+      }
+    }
+  }
+
+  const key = (method || "").toLowerCase();
+  const looksLikeNova =
+    carrierRates ||
+    key.includes("nova_department") ||
+    key.includes("nova_postomat") ||
+    key.includes("nova_courier") ||
+    key.includes("nova poshta") ||
+    key.includes("нова пош") ||
+    key.includes("новая почта");
+
+  if (looksLikeNova) {
+    return "Оплата за тарифами перевізника";
+  }
+
+  return "Не вказано";
+}
+
 export async function sendEmailViaEmailJS(params: {
   serviceId: string;
   templateId: string;
@@ -364,7 +405,7 @@ export async function sendOrderConfirmationEmail(params: {
   customerName: string;
   customerPhone: string;
   orderId: string;
-  orderDate: Date | string;
+  orderDate: string | Date;
   orderTotal: number;
   orderItems: Array<{ 
     name: string; 
@@ -375,6 +416,10 @@ export async function sendOrderConfirmationEmail(params: {
   }>;
   shippingAddress: string;
   shippingMethod?: string;
+  shippingCost?: number | null;
+  shippingCostIsFree?: boolean;
+  shippingCarrierRates?: boolean;
+  shippingCostLabel?: string;
   paymentMethod: string;
   orderNotes?: string | null;
   emailjsServiceId: string;
@@ -392,6 +437,10 @@ export async function sendOrderConfirmationEmail(params: {
     orderItems,
     shippingAddress,
     shippingMethod,
+    shippingCost,
+    shippingCostIsFree,
+    shippingCarrierRates,
+    shippingCostLabel,
     paymentMethod,
     orderNotes,
     emailjsServiceId,
@@ -478,6 +527,13 @@ export async function sendOrderConfirmationEmail(params: {
   // Format shipping method (handle both raw method codes and pre-formatted strings)
   const shippingMethodText = formatShippingMethod(shippingMethod);
 
+  const shippingCostDisplay = shippingCostLabel ?? formatShippingCostDisplay({
+    method: shippingMethod,
+    cost: shippingCost,
+    isFree: shippingCostIsFree,
+    carrierRates: shippingCarrierRates,
+  });
+
   // Format payment method (handle both raw codes and pre-formatted strings)
   const paymentMethodText =
     paymentMethod === "cash"
@@ -503,6 +559,7 @@ export async function sendOrderConfirmationEmail(params: {
     order_notes: orderNotes || '', // Leave empty if no notes
     order_total: `₴${orderTotal.toFixed(2)}`,
     shipping_method: shippingMethodText,
+    shipping_cost: shippingCostDisplay,
     payment_method: paymentMethodText,
   };
 
@@ -530,6 +587,10 @@ export async function sendOrderNotificationEmail(params: {
   shippingCity?: string;
   shippingDepartment?: string;
   shippingMethod?: string;
+  shippingCost?: number | null;
+  shippingCostIsFree?: boolean;
+  shippingCarrierRates?: boolean;
+  shippingCostLabel?: string;
   paymentMethod: string;
   notes?: string;
   emailjsServiceId: string;
@@ -549,6 +610,10 @@ export async function sendOrderNotificationEmail(params: {
     shippingCity,
     shippingDepartment,
     shippingMethod,
+    shippingCost,
+    shippingCostIsFree,
+    shippingCarrierRates,
+    shippingCostLabel,
     paymentMethod,
     notes,
     emailjsServiceId,
@@ -638,6 +703,12 @@ export async function sendOrderNotificationEmail(params: {
 
   // Format shipping method (handle both raw method codes and pre-formatted strings)
   const shippingMethodText = formatShippingMethod(shippingMethod);
+  const shippingCostDisplay = shippingCostLabel ?? formatShippingCostDisplay({
+    method: shippingMethod,
+    cost: shippingCost,
+    isFree: shippingCostIsFree,
+    carrierRates: shippingCarrierRates,
+  });
 
   // Format payment method (handle both raw codes and pre-formatted strings)
   const paymentMethodText =
@@ -700,8 +771,8 @@ export async function sendOrderNotificationEmail(params: {
         billing_address: shippingDetails,
         information: shippingDetails, // Alias for "Information" label
         shipping_address: shippingDetails,
-        shipping_method: shippingMethod || 'Не вказано',
-        shipping_cost: shippingMethod ? 'За тарифами перевізника' : '—',
+        shipping_method: shippingMethodText,
+        shipping_cost: shippingCostDisplay,
         order_total: `₴${orderTotal.toFixed(2)}`,
         payment_method: paymentMethodText,
         notes: notes || '', // Leave empty if no notes

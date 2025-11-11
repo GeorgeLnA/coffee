@@ -231,17 +231,33 @@ export const prepareOrder: RequestHandler = async (req, res) => {
                   emailShippingAddress = shippingAddress || shipping?.address || 'Не вказано';
                 }
 
-                // Format shipping method
-                const shippingMethodText = shipping?.method 
-                  ? (shipping.method === 'nova_department' 
-                      ? 'Нова Пошта (на відділення)' 
-                      : shipping.method === 'nova_postomat'
+                const shippingMethodRaw = shipping?.method || null;
+                const shippingMethodKey = (shippingMethodRaw || '').toLowerCase();
+                let shippingPriceNumber: number | null = null;
+                if (typeof shipping?.price === 'number') {
+                  shippingPriceNumber = shipping.price;
+                } else if (typeof shipping?.price === 'string' && shipping.price.trim() !== '') {
+                  const parsed = Number(shipping.price);
+                  if (!Number.isNaN(parsed)) {
+                    shippingPriceNumber = parsed;
+                  }
+                }
+                const shippingFreeFlag = Boolean(shipping?.free);
+                const shippingCarrierRatesFlag =
+                  typeof shipping?.carrierRates === 'boolean'
+                    ? Boolean(shipping.carrierRates)
+                    : ['nova_department', 'nova_postomat', 'nova_courier'].includes(shippingMethodKey);
+
+                const shippingMethodText = shippingMethodRaw 
+                  ? (shippingMethodKey === 'nova_department'
+                      ? 'Нова Пошта (на відділення)'
+                      : shippingMethodKey === 'nova_postomat'
                       ? 'Нова Пошта (на поштомат)'
-                      : shipping.method === 'nova_courier'
+                      : shippingMethodKey === 'nova_courier'
                       ? 'Нова Пошта (кур\'єром)'
-                      : shipping.method === 'own_courier'
+                      : shippingMethodKey === 'own_courier'
                       ? 'Власна доставка (Київ)'
-                      : shipping.method)
+                      : shippingMethodRaw)
                   : 'Не вказано';
 
                 // Format payment method
@@ -266,7 +282,10 @@ export const prepareOrder: RequestHandler = async (req, res) => {
                   orderTotal: amount,
                   orderItems: emailItems,
                   shippingAddress: emailShippingAddress || "Не вказано",
-                  shippingMethod: shippingMethodText,
+                  shippingMethod: shippingMethodRaw || shippingMethodText,
+                  shippingCost: shippingPriceNumber,
+                  shippingCostIsFree: shippingFreeFlag,
+                  shippingCarrierRates: shippingCarrierRatesFlag,
                   paymentMethod: paymentMethodText,
                   orderNotes: notes || null,
                   emailjsServiceId,
@@ -307,7 +326,10 @@ export const prepareOrder: RequestHandler = async (req, res) => {
                   shippingAddress: emailShippingAddress || "Не вказано",
                   shippingCity: shipping?.city || null,
                   shippingDepartment: shipping?.department || null,
-                  shippingMethod: shipping?.method || null,
+                  shippingMethod: shipping?.method || shippingMethodText || null,
+                  shippingCost: shippingPriceNumber,
+                  shippingCostIsFree: shippingFreeFlag,
+                  shippingCarrierRates: shippingCarrierRatesFlag,
                   paymentMethod: paymentMethodText,
                   notes: orderNotes || '', // Pass notes as empty string if null
                   emailjsServiceId,

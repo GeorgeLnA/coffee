@@ -165,8 +165,9 @@ export default function Checkout() {
         customer_email: customerEmail,
         shipping_address: formattedShippingAddress,
         order_notes: notes || '', // Leave empty if no notes
-        order_total: `₴${totalPrice.toFixed(2)}`,
+        order_total: `₴${(totalPrice + shippingPrice).toFixed(2)}`,
         shipping_method: formattedShippingMethod,
+        shipping_cost: shippingCostLabel,
         payment_method: paymentMethod === 'cash' ? t('checkout.email.paymentCash') : paymentMethod === 'liqpay' ? t('checkout.email.paymentLiqpay') : paymentMethod || t('checkout.notSpecified'),
         reply_to: customerEmail,
         shipping_city: city || null,
@@ -234,6 +235,39 @@ export default function Checkout() {
   const ownCourierPrice = useMemo(() => {
     return courierPrice;
   }, [courierPrice]);
+
+  const shippingIsFree = useMemo(() => {
+    if (qualifiesForFreeDelivery) {
+      return true;
+    }
+    if (shippingMethod === 'own_courier') {
+      return shippingPrice === 0;
+    }
+    return false;
+  }, [qualifiesForFreeDelivery, shippingMethod, shippingPrice]);
+
+  const shippingCarrierRates = useMemo(() => {
+    return isNovaPoshtaMethod && !shippingIsFree;
+  }, [isNovaPoshtaMethod, shippingIsFree]);
+
+  const shippingCostLabel = useMemo(() => {
+    if (shippingIsFree) {
+      return t('checkout.free');
+    }
+    if (shippingMethod === 'own_courier' && shippingPrice > 0) {
+      return `₴${shippingPrice.toFixed(2)}`;
+    }
+    if (shippingCarrierRates) {
+      return t('checkout.carrierRates');
+    }
+    if (shippingPrice > 0) {
+      return `₴${shippingPrice.toFixed(2)}`;
+    }
+    if (shippingPrice === 0) {
+      return t('checkout.free');
+    }
+    return t('checkout.notSpecified');
+  }, [shippingIsFree, shippingMethod, shippingPrice, shippingCarrierRates, t]);
 
   const makeWarehouseKey = (wh: any): string => {
     return (
@@ -556,7 +590,9 @@ export default function Checkout() {
           address, 
           warehouseRef: manualActive ? `manual::${manualWarehouseValue.trim()}` : selectedWarehouse,
           department: manualActive ? manualWarehouseValue.trim() : (department || null),
-          price: shippingPrice 
+          price: shippingPrice,
+          free: shippingIsFree,
+          carrierRates: shippingCarrierRates,
         },
         payment: { method: paymentMethod },
         notes,
