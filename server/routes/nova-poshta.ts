@@ -643,12 +643,12 @@ export const getWarehouses: RequestHandler = async (req, res) => {
       startIndex >= 0 && startIndex < totalResults
         ? finalData.slice(startIndex, endIndex)
         : [];
-
+ 
+    const hasMore = endIndex < totalResults;
     console.log(
       `Returning ${paginatedData.length} warehouses for page ${page}/${totalPages} (server route). hasMore=${hasMore}`
     );
-    const hasMore = endIndex < totalResults;
-
+ 
     return res.json({
       status: "200",
       success: true,

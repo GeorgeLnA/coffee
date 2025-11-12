@@ -150,3 +150,5 @@ curl "https://manifestcoffee.com.ua/.netlify/functions/api/settlements?cityName=
 6. Check build logs for errors
 
 
+
+
