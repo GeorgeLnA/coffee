@@ -47,10 +47,17 @@ export const prepareOrder: RequestHandler = async (req, res) => {
     if (shipping?.address) {
       // For courier options, just use address (no city)
       shippingAddress = shipping.address;
-    } else if (shipping?.city && shipping?.warehouseRef) {
-      // For Nova Poshta (postomat/department), use city + warehouse
+    } else if (shipping?.city) {
+      // For Nova Poshta (postomat/department), use city + department/postomat number
       const shippingMethod = shipping.method || "nova_department";
-      shippingAddress = `${shipping.city} (${shippingMethod === 'nova_department' ? 'Відділення' : 'Поштомат'})`;
+      if (shipping.department) {
+        const deptType = shippingMethod === 'nova_postomat' ? 'Поштомат' : 'Відділення';
+        shippingAddress = `${shipping.city}, ${deptType} №${shipping.department}`;
+      } else if (shipping?.warehouseRef) {
+        // Fallback to warehouse ref if no department number
+        const deptType = shippingMethod === 'nova_department' ? 'Відділення' : 'Поштомат';
+        shippingAddress = `${shipping.city} (${deptType})`;
+      }
     }
 
     // For cash payments, save order immediately (no payment gateway callback)
