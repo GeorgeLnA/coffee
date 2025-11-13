@@ -98,24 +98,6 @@ export default function Header() {
 
             {/* Right Side - Actions */}
             <div className="hidden lg:flex items-center space-x-8">
-              {/* Language Switcher - Clean */}
-              <div className="flex items-center space-x-1 p-1" style={{ backgroundColor: '#fcf4e4' + '20' }}>
-                <button 
-                  className="px-4 py-2 font-bold text-sm transition-all duration-300" 
-                  style={{ color: language === 'ua' ? '#361c0c' : '#fcf4e4', backgroundColor: language === 'ua' ? '#fcf4e4' : 'transparent' }}
-                  onClick={() => setLanguage('ua')}
-                >
-                  UA
-                </button>
-                <button 
-                  className="px-4 py-2 font-bold text-sm transition-all duration-300" 
-                  style={{ color: language === 'ru' ? '#361c0c' : '#fcf4e4', backgroundColor: language === 'ru' ? '#fcf4e4' : 'transparent' }}
-                  onClick={() => setLanguage('ru')}
-                >
-                  RU
-                </button>
-              </div>
-
               {/* Search - Clean Icon */}
 
               {/* Cart - Badge and hover preview */}
@@ -164,24 +146,6 @@ export default function Header() {
 
             {/* Mobile Header Actions */}
             <div className="lg:hidden flex items-center space-x-4">
-              {/* Mobile Language Switcher */}
-              <div className="flex items-center space-x-1 p-1" style={{ backgroundColor: '#fcf4e4' + '20' }}>
-                <button 
-                  className="px-3 py-2 font-bold text-sm transition-all duration-300" 
-                  style={{ color: language === 'ua' ? '#361c0c' : '#fcf4e4', backgroundColor: language === 'ua' ? '#fcf4e4' : 'transparent' }}
-                  onClick={() => setLanguage('ua')}
-                >
-                  UA
-                </button>
-                <button 
-                  className="px-3 py-2 font-bold text-sm transition-all duration-300" 
-                  style={{ color: language === 'ru' ? '#361c0c' : '#fcf4e4', backgroundColor: language === 'ru' ? '#fcf4e4' : 'transparent' }}
-                  onClick={() => setLanguage('ru')}
-                >
-                  RU
-                </button>
-              </div>
-              
               {/* Mobile Menu Button - Clean */}
               <button 
                 className="p-3 transition-all duration-300"
