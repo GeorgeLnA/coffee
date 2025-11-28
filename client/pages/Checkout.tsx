@@ -2,6 +2,7 @@ import Header from "../components/Header";
 import Footer from "../components/Footer";
 import { useCart } from "../contexts/CartContext";
 import { useState, useMemo, useEffect } from "react";
+import type { UIEvent } from "react";
 import emailjs from "@emailjs/browser";
 import { useDeliverySettings } from "../hooks/use-supabase";
 import { toast } from "@/components/ui/use-toast";
@@ -13,6 +14,23 @@ import { useLanguage } from "../contexts/LanguageContext";
 
 type ShippingMethod = "nova_department" | "nova_courier" | "own_courier" | "nova_postomat";
 type PaymentMethod = "liqpay" | "apple_pay" | "google_pay" | "cash";
+
+type WarehouseMeta = {
+  page: number;
+  pageSize: number;
+  total: number;
+  hasMore: boolean;
+  nextPage: number | null;
+};
+
+const WAREHOUSE_PAGE_SIZE = 100;
+const DEFAULT_WAREHOUSE_META: WarehouseMeta = {
+  page: 1,
+  pageSize: WAREHOUSE_PAGE_SIZE,
+  total: 0,
+  hasMore: false,
+  nextPage: null,
+};
 
 export default function Checkout() {
   const { items, totalPrice, clear } = useCart();
@@ -33,48 +51,52 @@ export default function Checkout() {
   const [department, setDepartment] = useState("");
   const [warehouses, setWarehouses] = useState<any[]>([]);
   const [selectedWarehouse, setSelectedWarehouse] = useState("");
+  const [manualWarehouseEnabled, setManualWarehouseEnabled] = useState(false);
+  const [manualWarehouseValue, setManualWarehouseValue] = useState("");
+  const [postomatNumber, setPostomatNumber] = useState("");
   const [loadingWarehouses, setLoadingWarehouses] = useState(false);
+  const [loadingMoreWarehouses, setLoadingMoreWarehouses] = useState(false);
+  const [warehouseMeta, setWarehouseMeta] =
+    useState<WarehouseMeta>({ ...DEFAULT_WAREHOUSE_META });
   const [settlements, setSettlements] = useState<any[]>([]);
   const [showCityDropdown, setShowCityDropdown] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Format shipping address based on shipping method
   const formatShippingAddress = (): string => {
-    if (shippingMethod === 'nova_department' || shippingMethod === 'nova_postomat') {
-      // Nova Poshta: city + department/postomat
-      let addr = city || '';
-      if (selectedWarehouse) {
-        const selectedWh = warehouses.find((wh: any) => wh.Ref === selectedWarehouse);
-        if (selectedWh) {
-          const whDesc = selectedWh.Description || selectedWh.ShortAddress || '';
-          if (shippingMethod === 'nova_department') {
-            // Extract department number from description
-            const deptMatch = whDesc.match(/№(\d+)/);
-            const deptNum = deptMatch ? deptMatch[1] : (department || '');
-            if (deptNum) {
-              addr += addr ? `, ${t('checkout.department')} №${deptNum}` : `${t('checkout.department')} №${deptNum}`;
-            } else {
-              addr += addr ? `, ${whDesc}` : whDesc;
-            }
-          } else {
-            // Postomat - use reference or description
-            addr += addr ? `, ${t('checkout.postomat')} ${selectedWarehouse.substring(0, 8)}...` : `${t('checkout.postomat')} ${selectedWarehouse.substring(0, 8)}...`;
-            if (whDesc) {
-              addr += ` (${whDesc})`;
-            }
-          }
-        } else if (department) {
-          addr += addr ? `, ${t('checkout.department')} №${department}` : `${t('checkout.department')} №${department}`;
+    let addr = city || '';
+    if (shippingMethod === 'nova_postomat') {
+      // For postomats, use the postomat number input
+      if (postomatNumber.trim()) {
+        addr = addr ? `${addr}, ${t('checkout.postomat')} ${postomatNumber.trim()}` : `${t('checkout.postomat')} ${postomatNumber.trim()}`;
+        return addr || t('checkout.notSpecified');
+      }
+    }
+    const manualActive = manualWarehouseEnabled && manualWarehouseValue.trim();
+    if (manualActive) {
+      const manualLabel = `${t('checkout.department')} №${manualWarehouseValue.trim()}`;
+      addr = addr ? `${addr}, ${manualLabel}` : manualLabel;
+      return addr || t('checkout.notSpecified');
+    }
+    if (selectedWarehouse) {
+      const selectedWh = warehouses.find((wh: any) => wh.Ref === selectedWarehouse);
+      if (selectedWh) {
+        const whDesc = selectedWh.Description || selectedWh.ShortAddress || '';
+        // Extract department number from description
+        const deptMatch = whDesc.match(/№(\d+)/);
+        const deptNum = deptMatch ? deptMatch[1] : (department || '');
+        if (deptNum) {
+          addr += addr ? `, ${t('checkout.department')} №${deptNum}` : `${t('checkout.department')} №${deptNum}`;
+        } else {
+          addr += addr ? `, ${whDesc}` : whDesc;
         }
       } else if (department) {
         addr += addr ? `, ${t('checkout.department')} №${department}` : `${t('checkout.department')} №${department}`;
       }
-      return addr || t('checkout.notSpecified');
-    } else if (shippingMethod === 'nova_courier' || shippingMethod === 'own_courier') {
-      // Courier: just address (no city)
-      return address || t('checkout.notSpecified');
+    } else if (department) {
+      addr += addr ? `, ${t('checkout.department')} №${department}` : `${t('checkout.department')} №${department}`;
     }
-    return t('checkout.notSpecified');
+    return addr || t('checkout.notSpecified');
   };
 
   // Format shipping method display name
@@ -140,12 +162,13 @@ export default function Checkout() {
         customer_email: customerEmail,
         shipping_address: formattedShippingAddress,
         order_notes: notes || '', // Leave empty if no notes
-        order_total: `₴${totalPrice.toFixed(2)}`,
+        order_total: `₴${(totalPrice + shippingPrice).toFixed(2)}`,
         shipping_method: formattedShippingMethod,
+        shipping_cost: shippingCostLabel,
         payment_method: paymentMethod === 'cash' ? t('checkout.email.paymentCash') : paymentMethod === 'liqpay' ? t('checkout.email.paymentLiqpay') : paymentMethod || t('checkout.notSpecified'),
         reply_to: customerEmail,
         shipping_city: city || null,
-        shipping_department: department || null,
+        shipping_department: shippingMethod === 'nova_postomat' ? (postomatNumber.trim() || null) : (department || null),
         shipping_warehouse_ref: selectedWarehouse || null,
       };
 
@@ -193,52 +216,252 @@ export default function Checkout() {
   const courierPrice = deliverySettings?.courier_price || 200;
   const freeDeliveryThreshold = deliverySettings?.free_delivery_threshold || 1500;
 
-  // Check if order qualifies for free delivery (for Nova Poshta methods)
-  const isFreeDelivery = totalPrice >= freeDeliveryThreshold;
-  const isNovaPoshtaMethod = shippingMethod === 'nova_department' || shippingMethod === 'nova_postomat' || shippingMethod === 'nova_courier';
+  const isNovaPoshtaMethod =
+    shippingMethod === 'nova_department' ||
+    shippingMethod === 'nova_postomat' ||
+    shippingMethod === 'nova_courier';
+  const qualifiesForFreeDelivery = isNovaPoshtaMethod && totalPrice >= freeDeliveryThreshold;
 
   const shippingPrice = useMemo(() => {
-    // Free delivery applies to all methods when over threshold
-    if (isFreeDelivery) return 0;
     if (shippingMethod === "own_courier") return courierPrice;
     // Nova Poshta pricing handled on delivery, but show 0 here when free delivery applies
     return 0;
-  }, [shippingMethod, totalPrice, freeDeliveryThreshold, courierPrice, isFreeDelivery]);
+  }, [shippingMethod, courierPrice]);
 
   // Calculate price specifically for own_courier button display
   const ownCourierPrice = useMemo(() => {
-    if (isFreeDelivery) return 0;
     return courierPrice;
-  }, [totalPrice, freeDeliveryThreshold, courierPrice, isFreeDelivery]);
+  }, [courierPrice]);
 
-  // Load warehouses when city is selected
-  const loadWarehouses = async () => {
-    if (!cityRef || (shippingMethod !== 'nova_department' && shippingMethod !== 'nova_postomat')) return;
-    setLoadingWarehouses(true);
+  const shippingIsFree = useMemo(() => {
+    if (qualifiesForFreeDelivery) {
+      return true;
+    }
+    if (shippingMethod === 'own_courier') {
+      return shippingPrice === 0;
+    }
+    return false;
+  }, [qualifiesForFreeDelivery, shippingMethod, shippingPrice]);
+
+  const shippingCarrierRates = useMemo(() => {
+    return isNovaPoshtaMethod && !shippingIsFree;
+  }, [isNovaPoshtaMethod, shippingIsFree]);
+
+  const shippingCostLabel = useMemo(() => {
+    if (shippingIsFree) {
+      return t('checkout.free');
+    }
+    if (shippingMethod === 'own_courier' && shippingPrice > 0) {
+      return `₴${shippingPrice.toFixed(2)}`;
+    }
+    if (shippingCarrierRates) {
+      return t('checkout.carrierRates');
+    }
+    if (shippingPrice > 0) {
+      return `₴${shippingPrice.toFixed(2)}`;
+    }
+    if (shippingPrice === 0) {
+      return t('checkout.free');
+    }
+    return t('checkout.notSpecified');
+  }, [shippingIsFree, shippingMethod, shippingPrice, shippingCarrierRates, t]);
+
+  const makeWarehouseKey = (wh: any): string => {
+    return (
+      wh?.Ref ||
+      wh?.SiteKey ||
+      wh?.Number ||
+      wh?.PostomatNumber ||
+      wh?.Description ||
+      wh?.ShortAddress ||
+      ""
+    );
+  };
+
+  const mergeWarehouseLists = (
+    existing: any[],
+    incoming: any[]
+  ): { list: any[]; added: number } => {
+    const result: any[] = [...existing];
+    const seen = new Set<string>();
+    for (const wh of existing) {
+      const key = makeWarehouseKey(wh);
+      if (key) {
+        seen.add(key);
+      }
+    }
+    let added = 0;
+    for (const wh of incoming) {
+      const key = makeWarehouseKey(wh);
+      if (key && seen.has(key)) {
+        continue;
+      }
+      if (key) {
+        seen.add(key);
+      }
+      result.push(wh);
+      added += 1;
+    }
+    return { list: result, added };
+  };
+
+  // Load warehouses when city is selected (only for departments, not postomats)
+  const loadWarehouses = async (page: number = 1, append = false) => {
+    const currentCityRef = cityRef;
+    const currentShippingMethod = shippingMethod;
+
+    // Only load warehouses for departments, not postomats
+    if (!currentCityRef || currentShippingMethod !== "nova_department") {
+      return;
+    }
+
+    const pageSize = warehouseMeta.pageSize || WAREHOUSE_PAGE_SIZE;
+
+    if (append) {
+      if (loadingMoreWarehouses || loadingWarehouses) {
+        return;
+      }
+      setLoadingMoreWarehouses(true);
+    } else {
+      setLoadingWarehouses(true);
+      setWarehouseMeta({ ...DEFAULT_WAREHOUSE_META, pageSize });
+    }
+
     try {
-      console.log('Loading warehouses for cityRef:', cityRef);
-      const typeParam = shippingMethod === 'nova_postomat' ? 'postomat' : 'department';
-      const res = await fetch(`/api/warehouses?cityRef=${cityRef}&type=${typeParam}`);
+      console.log(
+        "Loading warehouses for cityRef:",
+        currentCityRef,
+        "page:",
+        page,
+        "append:",
+        append
+      );
+
+      const params = new URLSearchParams();
+      params.append("cityRef", currentCityRef);
+      params.append("type", "department");
+      const cityNameParam = (city || cityQuery || "").trim();
+      if (cityNameParam) {
+        params.append("cityName", cityNameParam);
+      }
+      params.append("countryCode", "UA");
+      params.append("page", String(page));
+      params.append("pageSize", String(pageSize));
+
+      const res = await fetch(`/api/warehouses?${params.toString()}`, {
+        headers: {
+          "Accept-Language": language === "ru" ? "ru" : "uk",
+        },
+      });
       const data = await res.json();
-      console.log('Warehouses API response:', data);
-      
-      if (data?.success && Array.isArray(data.data)) {
-        setWarehouses(data.data);
-      } else if (data.status === '200' && Array.isArray(data.data)) {
-        setWarehouses(data.data);
+      console.log("Warehouses API response:", data);
+
+      if (cityRef !== currentCityRef || shippingMethod !== currentShippingMethod) {
+        return;
+      }
+
+      const items = Array.isArray(data?.data) ? data.data : [];
+      const existingList = append ? warehouses : [];
+      const { list: mergedList } = mergeWarehouseLists(existingList, items);
+      setWarehouses(mergedList);
+
+      const meta = data?.meta || {};
+      const metaPage =
+        typeof meta.page === "number" && meta.page > 0 ? meta.page : page;
+      const metaPageSize =
+        typeof meta.pageSize === "number" && meta.pageSize > 0
+          ? meta.pageSize
+          : pageSize;
+      const totalFromMeta =
+        typeof meta.total === "number" && meta.total >= 0
+          ? meta.total
+          : mergedList.length;
+      const hasMoreFromMeta =
+        typeof meta.hasMore === "boolean"
+          ? meta.hasMore
+          : mergedList.length < totalFromMeta;
+      const nextPageFromMeta =
+        typeof meta.nextPage === "number" && meta.nextPage > metaPage
+          ? meta.nextPage
+          : hasMoreFromMeta
+          ? metaPage + 1
+          : null;
+
+      setWarehouseMeta({
+        page: metaPage,
+        pageSize: metaPageSize,
+        total: totalFromMeta,
+        hasMore: hasMoreFromMeta,
+        nextPage: nextPageFromMeta,
+      });
+
+      // No auto-fetch fallback; rely on explicit user scroll or button to load more
+
+      if (!data?.success && data?.status !== "200") {
+        console.warn("Warehouses API returned unexpected response shape:", data);
       }
     } catch (err) {
-      console.error('Failed to load warehouses:', err);
+      console.error("Failed to load warehouses:", err);
+      if (!append) {
+        setWarehouses([]);
+        setWarehouseMeta({ ...DEFAULT_WAREHOUSE_META });
+      }
     } finally {
-      setLoadingWarehouses(false);
+      if (append) {
+        setLoadingMoreWarehouses(false);
+      } else {
+        setLoadingWarehouses(false);
+      }
     }
   };
 
-  // Load warehouses when cityRef changes
+  const loadMoreWarehouses = async () => {
+    if (
+      !warehouseMeta.hasMore ||
+      loadingMoreWarehouses ||
+      loadingWarehouses
+    ) {
+      return;
+    }
+    const nextPage =
+      warehouseMeta.nextPage ?? warehouseMeta.page + 1;
+    await loadWarehouses(nextPage, true);
+  };
+
+  const handleWarehouseScroll = (event: UIEvent<HTMLDivElement>) => {
+    if (
+      !warehouseMeta.hasMore ||
+      loadingMoreWarehouses ||
+      loadingWarehouses
+    ) {
+      return;
+    }
+    const target = event.currentTarget;
+    const threshold = 24;
+    if (target.scrollTop + target.clientHeight >= target.scrollHeight - threshold) {
+      loadMoreWarehouses();
+    }
+  };
+
+  // Load warehouses when cityRef changes (only for departments, not postomats)
   useEffect(() => {
-    if (cityRef && (shippingMethod === 'nova_department' || shippingMethod === 'nova_postomat')) {
-      setSelectedWarehouse(""); // Clear selection when switching between postomat/department
-      loadWarehouses();
+    if (cityRef && shippingMethod === 'nova_department') {
+      setSelectedWarehouse(""); // Clear selection when switching
+      setManualWarehouseEnabled(false);
+      setManualWarehouseValue("");
+      loadWarehouses(1, false);
+    } else if (shippingMethod === 'nova_postomat') {
+      // For postomats, clear warehouse-related state but don't load from API
+      setSelectedWarehouse("");
+      setWarehouses([]);
+      setManualWarehouseEnabled(false);
+      setManualWarehouseValue("");
+      setWarehouseMeta({ ...DEFAULT_WAREHOUSE_META });
+      setLoadingWarehouses(false);
+      setLoadingMoreWarehouses(false);
+    } else {
+      setWarehouseMeta({ ...DEFAULT_WAREHOUSE_META });
+      setLoadingMoreWarehouses(false);
     }
   }, [cityRef, shippingMethod]);
 
@@ -247,6 +470,22 @@ export default function Checkout() {
     if (shippingMethod !== 'nova_department' && shippingMethod !== 'nova_postomat') {
       setSelectedWarehouse("");
       setWarehouses([]);
+      setManualWarehouseEnabled(false);
+      setManualWarehouseValue("");
+      setPostomatNumber("");
+      setWarehouseMeta({ ...DEFAULT_WAREHOUSE_META });
+      setLoadingWarehouses(false);
+      setLoadingMoreWarehouses(false);
+    } else if (shippingMethod === 'nova_postomat') {
+      // Clear department-related state when switching to postomat
+      setSelectedWarehouse("");
+      setWarehouses([]);
+      setManualWarehouseEnabled(false);
+      setManualWarehouseValue("");
+      setDepartment("");
+      setWarehouseMeta({ ...DEFAULT_WAREHOUSE_META });
+      setLoadingWarehouses(false);
+      setLoadingMoreWarehouses(false);
     }
   }, [shippingMethod]);
 
@@ -315,17 +554,17 @@ export default function Checkout() {
     const phoneValid = phone.trim().length >= 7;
     let valid = !!fullName && phoneValid && emailValid;
     
-    if (hasWaterItems) {
-      // For water orders, only own_courier is allowed, need address
-      valid = valid && !!address;
+    const hasWarehouses = (shippingMethod === 'nova_department' || shippingMethod === 'nova_postomat');
+    const hasWaterRestriction = hasWaterItems && shippingMethod !== 'own_courier';
+    const manualActive = manualWarehouseEnabled && manualWarehouseValue.trim().length > 0;
+    if (shippingMethod === 'nova_postomat') {
+      // For postomats, require city and postomat number
+      valid = valid && !!cityRef && !!postomatNumber.trim();
+    } else if (shippingMethod === 'nova_department') {
+      const hasWarehouseSelection = manualActive || !!selectedWarehouse;
+      valid = valid && !!cityRef && hasWarehouseSelection;
     } else {
-      // For non-water orders, check based on shipping method
-      if (shippingMethod === 'nova_department' || shippingMethod === 'nova_postomat') {
-        valid = valid && !!cityRef && !!selectedWarehouse;
-      } else {
-        // For courier options, only address is required (no city)
-        valid = valid && !!address;
-      }
+      valid = valid && !!address;
     }
     if (!valid) {
       toast({ title: t('checkout.error.general'), description: t('checkout.error.fillFields'), variant: "destructive" as any });
@@ -353,8 +592,8 @@ export default function Checkout() {
         city,
         cityRef,
         address,
-        warehouseRef: selectedWarehouse,
-        department: department || null,
+        warehouseRef: manualActive ? `manual::${manualWarehouseValue.trim()}` : selectedWarehouse,
+        department: manualActive ? manualWarehouseValue.trim() : (department || null),
       });
       console.log('Payment method:', paymentMethod);
       
@@ -365,9 +604,15 @@ export default function Checkout() {
           city, 
           cityRef, 
           address, 
-          warehouseRef: selectedWarehouse, 
-          department: department || null,
-          price: shippingPrice 
+          warehouseRef: shippingMethod === 'nova_postomat' 
+            ? `postomat::${postomatNumber.trim()}` 
+            : (manualActive ? `manual::${manualWarehouseValue.trim()}` : selectedWarehouse),
+          department: shippingMethod === 'nova_postomat' 
+            ? postomatNumber.trim() 
+            : (manualActive ? manualWarehouseValue.trim() : (department || null)),
+          price: shippingPrice,
+          free: shippingIsFree,
+          carrierRates: shippingCarrierRates,
         },
         payment: { method: paymentMethod },
         notes,
@@ -408,11 +653,20 @@ export default function Checkout() {
           if (data.emailStatus) {
             const attempted = !!data.emailStatus.attempted;
             const configured = !!data.emailStatus.configured;
-            const details = (data.emailStatus as any).details;
-            const failedDetail = details && ((details.customer && details.customer.success === false) || (details.admin && details.admin.success === false));
-            shouldFallback = !attempted || !configured || !!failedDetail;
+            // Only fallback when server email wasn't attempted or not configured.
+            // Do NOT fallback on individual send failures to avoid client 422 due to domain restrictions.
+            shouldFallback = !attempted || !configured;
           } else {
             shouldFallback = true; // no status info, attempt fallback
+          }
+          // Never run fallback outside local dev. Only allow on localhost.
+          const isLocalhost = typeof window !== 'undefined' && (
+            window.location.hostname === 'localhost' ||
+            window.location.hostname === '127.0.0.1'
+          );
+          if (!isLocalhost) {
+            console.warn('[Email Fallback] Disabled outside localhost; relying on server-side email.');
+            shouldFallback = false;
           }
           if (shouldFallback) {
             console.log('[Email Fallback] Trying client-side EmailJS send...');
@@ -535,8 +789,21 @@ export default function Checkout() {
                       {t('checkout.selectCityFromList')} {shippingMethod === 'nova_postomat' ? t('checkout.postomats') : t('checkout.departments')}
                     </div>
                   )}
-                    <div className="mb-3">
-                        <Select value={selectedWarehouse} onValueChange={(value) => {
+                    {shippingMethod === 'nova_postomat' ? (
+                      /* Postomat: Simple input field for locker number */
+                      <div className="mb-3">
+                        <Input 
+                          placeholder={t('checkout.postomatNumber')} 
+                          value={postomatNumber} 
+                          onChange={e => setPostomatNumber(e.target.value)} 
+                        />
+                      </div>
+                    ) : (
+                      /* Department: Select dropdown with manual entry option */
+                      <div className="mb-3">
+                        <Select value={manualWarehouseEnabled ? '' : selectedWarehouse} onValueChange={(value) => {
+                          setManualWarehouseEnabled(false);
+                          setManualWarehouseValue("");
                           setSelectedWarehouse(value);
                           // Extract department number from selected warehouse
                           const selectedWh = warehouses.find((wh: any) => wh.Ref === value);
@@ -554,23 +821,90 @@ export default function Checkout() {
                           }
                         }}>
                         <SelectTrigger>
-                          <SelectValue placeholder={loadingWarehouses ? t('checkout.loading') : shippingMethod === 'nova_postomat' ? t('checkout.selectPostomat') : t('checkout.selectDepartment')} />
+                          <SelectValue placeholder={loadingWarehouses ? t('checkout.loading') : t('checkout.selectDepartment')} />
                         </SelectTrigger>
-                        <SelectContent>
+                        <SelectContent onViewportScroll={handleWarehouseScroll}>
                           {warehouses.length > 0 ? (
-                            warehouses.map((wh: any) => (
-                              <SelectItem key={wh.Ref} value={wh.Ref}>
-                                {wh.Description} - {wh.ShortAddress}
-                              </SelectItem>
-                            ))
+                            <>
+                              {warehouses.map((wh: any) => (
+                                <SelectItem key={wh.Ref} value={wh.Ref}>
+                                  {wh.Description} - {wh.ShortAddress}
+                                </SelectItem>
+                              ))}
+                              {warehouseMeta.hasMore && (
+                                <div className="px-2 pb-2 pt-1">
+                                  <button
+                                    type="button"
+                                    onClick={(event) => {
+                                      event.preventDefault();
+                                      event.stopPropagation();
+                                      loadMoreWarehouses();
+                                    }}
+                                    className="w-full rounded-md border border-dashed border-[#361c0c] bg-white px-3 py-2 text-sm font-semibold text-[#361c0c] transition hover:bg-[#fcf4e4] disabled:cursor-not-allowed disabled:opacity-60"
+                                    disabled={loadingMoreWarehouses}
+                                  >
+                                    {loadingMoreWarehouses
+                                      ? t('checkout.loadingMoreWarehouses')
+                                      : t('checkout.loadMoreWarehouses')}
+                                  </button>
+                                </div>
+                              )}
+                              {!warehouseMeta.hasMore && warehouses.length > 0 && (
+                                <div className="px-3 pb-2 pt-1 text-xs text-gray-500">
+                                  {t('checkout.noMoreWarehouses')}
+                                </div>
+                              )}
+                            </>
                           ) : (
                             <SelectItem value="no-data" disabled>
-                              {cityRef ? (loadingWarehouses ? t('checkout.loading') : shippingMethod === 'nova_postomat' ? t('checkout.noPostomats') : t('checkout.noDepartments')) : t('checkout.selectCityFirst')}
+                              {cityRef ? (loadingWarehouses ? t('checkout.loading') : t('checkout.noDepartments')) : t('checkout.selectCityFirst')}
                             </SelectItem>
                           )}
                         </SelectContent>
                       </Select>
+                      {shippingMethod === 'nova_department' && (
+                        <div className="mt-2">
+                          {!manualWarehouseEnabled ? (
+                            <button
+                              type="button"
+                              className="text-sm text-[#361c0c] underline hover:no-underline"
+                              onClick={() => {
+                                setManualWarehouseEnabled(true);
+                                setManualWarehouseValue("");
+                                setSelectedWarehouse("");
+                                setDepartment("");
+                              }}
+                            >
+                              {t('checkout.manualPromptDepartment')}
+                            </button>
+                          ) : (
+                            <div className="space-y-2">
+                              <Input
+                                placeholder={t('checkout.manualEntryPlaceholder')}
+                                value={manualWarehouseValue}
+                                onChange={(e) => {
+                                  const value = e.target.value;
+                                  setManualWarehouseValue(value);
+                                  setDepartment(value.trim());
+                                }}
+                              />
+                              <button
+                                type="button"
+                                className="text-sm text-[#361c0c] underline hover:no-underline"
+                                onClick={() => {
+                                  setManualWarehouseEnabled(false);
+                                  setManualWarehouseValue("");
+                                  setDepartment("");
+                                }}
+                              >
+                                {t('checkout.cancelManualEntry')}
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
+                    )}
                     </>
                   )}
                   {/* Address field for courier options (no city field) */}
@@ -583,14 +917,9 @@ export default function Checkout() {
                 <Input placeholder={t('checkout.deliveryAddress')} value={address} onChange={e => setAddress(e.target.value)} className="mb-3" />
               )}
               
-              {!isFreeDelivery && (
-                <div className="text-sm text-gray-700 mb-4">
-                  {isNovaPoshtaMethod 
-                    ? t('checkout.addItemsForFreeDeliveryNova').replace('{amount}', (freeDeliveryThreshold - totalPrice).toFixed(2))
-                    : shippingMethod === 'own_courier' && ownCourierPrice > 0
-                    ? t('checkout.addItemsForFreeDelivery').replace('{amount}', (freeDeliveryThreshold - totalPrice).toFixed(2))
-                    : null
-                  }
+              {isNovaPoshtaMethod && !qualifiesForFreeDelivery && (
+                <div className="text-sm text-gray-700 mb-4 font-bold">
+                  {t('checkout.addItemsForFreeDeliveryNova').replace('{amount}', (freeDeliveryThreshold - totalPrice).toFixed(2))}
                 </div>
               )}
               
@@ -672,7 +1001,7 @@ export default function Checkout() {
                   <div className="flex justify-between items-start">
                     <span className="pr-2">{t('checkout.shipping')}</span>
                     <span className="text-right">
-                      {isFreeDelivery && isNovaPoshtaMethod
+                      {qualifiesForFreeDelivery
                         ? t('checkout.free')
                         : shippingMethod === 'own_courier' 
                         ? (shippingPrice === 0 ? t('checkout.free') : `₴${shippingPrice.toFixed(2)}`)

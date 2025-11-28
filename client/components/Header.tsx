@@ -98,24 +98,6 @@ export default function Header() {
 
             {/* Right Side - Actions */}
             <div className="hidden lg:flex items-center space-x-8">
-              {/* Language Switcher - Clean */}
-              <div className="flex items-center space-x-1 p-1" style={{ backgroundColor: '#fcf4e4' + '20' }}>
-                <button 
-                  className="px-4 py-2 font-bold text-sm transition-all duration-300" 
-                  style={{ color: language === 'ua' ? '#361c0c' : '#fcf4e4', backgroundColor: language === 'ua' ? '#fcf4e4' : 'transparent' }}
-                  onClick={() => setLanguage('ua')}
-                >
-                  UA
-                </button>
-                <button 
-                  className="px-4 py-2 font-bold text-sm transition-all duration-300" 
-                  style={{ color: language === 'ru' ? '#361c0c' : '#fcf4e4', backgroundColor: language === 'ru' ? '#fcf4e4' : 'transparent' }}
-                  onClick={() => setLanguage('ru')}
-                >
-                  RU
-                </button>
-              </div>
-
               {/* Search - Clean Icon */}
 
               {/* Cart - Badge and hover preview */}
@@ -164,24 +146,6 @@ export default function Header() {
 
             {/* Mobile Header Actions */}
             <div className="lg:hidden flex items-center space-x-4">
-              {/* Mobile Language Switcher */}
-              <div className="flex items-center space-x-1 p-1" style={{ backgroundColor: '#fcf4e4' + '20' }}>
-                <button 
-                  className="px-3 py-2 font-bold text-sm transition-all duration-300" 
-                  style={{ color: language === 'ua' ? '#361c0c' : '#fcf4e4', backgroundColor: language === 'ua' ? '#fcf4e4' : 'transparent' }}
-                  onClick={() => setLanguage('ua')}
-                >
-                  UA
-                </button>
-                <button 
-                  className="px-3 py-2 font-bold text-sm transition-all duration-300" 
-                  style={{ color: language === 'ru' ? '#361c0c' : '#fcf4e4', backgroundColor: language === 'ru' ? '#fcf4e4' : 'transparent' }}
-                  onClick={() => setLanguage('ru')}
-                >
-                  RU
-                </button>
-              </div>
-              
               {/* Mobile Menu Button - Clean */}
               <button 
                 className="p-3 transition-all duration-300"
@@ -207,6 +171,22 @@ export default function Header() {
           ></div>
           {/* Mobile menu slides from right full screen */}
           <div className={`fixed top-0 right-0 h-full w-full transform transition-transform duration-[1500ms] ease-[cubic-bezier(0.16,1,0.3,1)] ${isMobileMenuOpen ? 'translate-x-0' : 'translate-x-full'}`} style={{ backgroundColor: '#361c0c' }}>
+              <Link
+                to="/basket"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className={`absolute top-6 right-20 w-12 h-12 flex items-center justify-center transition-all duration-300 ${isMobileMenuOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+                style={{ backgroundColor: '#fcf4e4' + '20' }}
+              >
+                <ShoppingCart className="w-6 h-6" style={{ color: '#fcf4e4' }} />
+                {totalQuantity > 0 && (
+                  <span
+                    className="absolute -top-1 -right-1 flex items-center justify-center rounded-full text-xs font-black leading-none"
+                    style={{ backgroundColor: '#fcf4e4', color: '#361c0c', width: '1rem', height: '1rem' }}
+                  >
+                    {totalQuantity}
+                  </span>
+                )}
+              </Link>
               <div className="px-6 pt-24 pb-8 space-y-8">
               <nav className="space-y-6">
                 <Link to="/coffee" className="block text-white font-bold text-2xl hover:text-white/80 transition-colors">
@@ -238,21 +218,6 @@ export default function Header() {
                 </Link>
               </nav>
                 
-                <div className="pt-8 border-t border-white/20">
-                  {/* Basket Button */}
-                  <div className="mb-6">
-                    <Link to="/basket" className="relative w-full flex items-center justify-center space-x-2 py-4 font-bold hover:bg-[#fcf4e4] hover:text-[#361c0c] transition-all duration-300" style={{ backgroundColor: '#fcf4e4' + '20', color: '#fcf4e4' }}>
-                      <ShoppingCart className="w-5 h-5" />
-                      <span>{t('mobile.cart')}</span>
-                      {totalQuantity > 0 && (
-                        <div className="absolute -top-1 -right-1 w-5 h-5 flex items-center justify-center" style={{ backgroundColor: '#fcf4e4' }}>
-                          <span className="font-bold text-xs" style={{ color: '#361c0c' }}>{totalQuantity}</span>
-                        </div>
-                      )}
-                    </Link>
-                  </div>
-                  
-                </div>
               </div>
             </div>
             

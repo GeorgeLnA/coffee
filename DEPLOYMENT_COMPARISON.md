@@ -216,3 +216,6 @@ Use this to compare Domain A vs Domain B:
 - ✅ Returns JSON, not HTML
 - ✅ No 404 errors
 
+
+
+

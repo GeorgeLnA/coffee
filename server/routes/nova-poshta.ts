@@ -3,6 +3,10 @@ import type { RequestHandler } from "express";
 // Nova Poshta API
 const NP_API_URL = "https://api.novaposhta.ua/v2.0/json/";
 
+const NOVAPOST_API_BASE_URL =
+  process.env.NOVAPOST_API_BASE_URL ||
+  "https://api-stage.novapost.pl/v.1.0/divisions";
+
 // Search settlements (cities) with fallback to getCities
 export const searchSettlements: RequestHandler = async (req, res) => {
   try {
@@ -86,91 +90,584 @@ export const searchSettlements: RequestHandler = async (req, res) => {
 // Get warehouses for a city
 export const getWarehouses: RequestHandler = async (req, res) => {
   try {
-    // Try multiple environment variable names for compatibility
-    const apiKey = process.env.NOVA_POSHTA_API_KEY || process.env.VITE_NOVA_POSHTA_API_KEY || "";
+    const apiKey =
+      process.env.NOVA_POSHTA_API_KEY ||
+      process.env.VITE_NOVA_POSHTA_API_KEY ||
+      "";
     const cityRef = String(req.query.cityRef || "").trim();
-    
-    // Debug logging for API key access
-    console.log('Nova Poshta Warehouses API Key check:', {
-      hasEnvVar: !!process.env.NOVA_POSHTA_API_KEY,
-      hasViteVar: !!process.env.VITE_NOVA_POSHTA_API_KEY,
-      keyLength: apiKey.length,
-      keyPreview: apiKey ? `${apiKey.substring(0, 4)}...` : 'missing',
-      env: process.env.NODE_ENV || 'unknown'
-    });
-    const type = String(req.query.type || "").trim(); // "postomat" or "department" or empty for all
-    
-    if (!cityRef) {
-      return res.json({ data: [] });
+    const type = String(req.query.type || "").trim();
+    const warehouseNumberParam =
+      (req.query.number ||
+        req.query.warehouseNumber ||
+        req.query.postomatNumber ||
+        "")?.toString().trim() || "";
+
+    const pageParamRawInput =
+      req.query.pageNumber ?? req.query.page ?? req.query.p ?? "1";
+    const pageParamRaw = Array.isArray(pageParamRawInput)
+      ? pageParamRawInput[0]
+      : pageParamRawInput;
+    let requestedPage = parseInt(String(pageParamRaw || "1"), 10);
+    if (!Number.isFinite(requestedPage) || requestedPage < 1) {
+      requestedPage = 1;
     }
 
-    const body = {
-      apiKey: apiKey || "",
-      modelName: "AddressGeneral",
-      calledMethod: "getWarehouses",
-      methodProperties: {
-        SettlementRef: cityRef,
-        Limit: 500,
-        Page: 1
-      }
-    };
+    const pageSizeParamRawInput =
+      req.query.pageSize ?? req.query.perPage ?? req.query.limit ?? "100";
+    const pageSizeParamRaw = Array.isArray(pageSizeParamRawInput)
+      ? pageSizeParamRawInput[0]
+      : pageSizeParamRawInput;
+    let requestedPageSize = parseInt(String(pageSizeParamRaw || "100"), 10);
+    if (!Number.isFinite(requestedPageSize) || requestedPageSize <= 0) {
+      requestedPageSize = 100;
+    }
+    requestedPageSize = Math.min(Math.max(requestedPageSize, 25), 500);
 
-    const resp = await fetch(NP_API_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body)
+    console.log('getWarehouses request debug:', {
+      cityRef,
+      type,
+      requestedPage,
+      requestedPageSize,
     });
 
-    const json = await resp.json();
-    
-    if (json.success && json.data) {
-      let filteredData = json.data;
-      
-      console.log(`Filtering warehouses: type=${type}, total=${json.data.length}`);
-      
-      // Filter by type if specified
-      if (type === "postomat") {
-        // Postomats typically have TypeOfWarehouse = "9" or contain "Поштомат" in description
-        filteredData = json.data.filter((wh: any) => {
-          const typeOfWarehouse = String(wh.TypeOfWarehouse || "");
-          const desc = String(wh.Description || "").toLowerCase();
-          const addr = String(wh.ShortAddress || "").toLowerCase();
-          return (
-            typeOfWarehouse === "9" ||
-            desc.includes("поштомат") ||
-            addr.includes("поштомат")
-          );
-        });
-        console.log(`Postomats filtered: ${filteredData.length}`);
-      } else if (type === "department") {
-        // Departments are everything that is NOT a postomat
-        filteredData = json.data.filter((wh: any) => {
-          const typeOfWarehouse = String(wh.TypeOfWarehouse || "");
-          const desc = String(wh.Description || "").toLowerCase();
-          const addr = String(wh.ShortAddress || "").toLowerCase();
-          // Exclude postomats (TypeOfWarehouse "9" or contains "поштомат")
-          return (
-            typeOfWarehouse !== "9" &&
-            !desc.includes("поштомат") &&
-            !addr.includes("поштомат")
-          );
-        });
-        console.log(`Departments filtered: ${filteredData.length}`);
-      }
-      
-      return res.json({ status: "200", data: filteredData });
-    } else {
-      console.error("Nova Poshta API error:", json);
-      // Fallback to mock data if API fails
+    if (!cityRef) {
       return res.json({
         status: "200",
-        data: [
-          { Ref: "mock1", Description: "Відділення 1 - Київ", ShortAddress: "вул. Хрещатик, 1" },
-          { Ref: "mock2", Description: "Відділення 2 - Львів", ShortAddress: "пр. Свободи, 5" },
-          { Ref: "mock3", Description: "Відділення 3 - Одеса", ShortAddress: "Дерибасівська, 3" },
-        ]
+        success: true,
+        data: [],
+        meta: {
+          total: 0,
+          returned: 0,
+          page: requestedPage,
+          pageSize: requestedPageSize,
+          totalPages: 1,
+          hasMore: false,
+          nextPage: null,
+          prevPage: null,
+          rawCount: 0,
+          uniqueCount: 0,
+          sources: [],
+          fallbackToAllWarehouses: false,
+        },
       });
     }
+
+    const limit = 500;
+    const maxPages = 20;
+    const allWarehouses: any[] = [];
+    const fetchedSources: string[] = [];
+
+    if (apiKey) {
+      try {
+        const fetchPage = async (page: number) => {
+          const body = {
+            apiKey: apiKey || "",
+            modelName: "AddressGeneral",
+            calledMethod: "getWarehouses",
+            methodProperties: {
+              SettlementRef: cityRef,
+              Limit: limit,
+              Page: page,
+            },
+          };
+
+          const resp = await fetch(NP_API_URL, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(body),
+          });
+
+          if (!resp.ok) {
+            throw new Error(`Nova Poshta responded with status ${resp.status}`);
+          }
+
+          const json = await resp.json();
+
+          if (!json?.success || !Array.isArray(json?.data)) {
+            throw new Error(json?.errors?.[0] || "Failed to fetch warehouses");
+          }
+
+          allWarehouses.push(...json.data);
+          return json;
+        };
+
+        const firstPage = await fetchPage(1);
+        console.log('Nova Poshta page 1 count (server route):', Array.isArray(firstPage?.data) ? firstPage.data.length : 0);
+
+        let totalCount = 0;
+        const info = firstPage.info || firstPage.Info || {};
+        const totalCountRaw =
+          info?.totalCount ??
+          info?.TotalCount ??
+          info?.count ??
+          info?.Count ??
+          info?.total_count;
+        if (typeof totalCountRaw === "string") {
+          totalCount = parseInt(totalCountRaw, 10);
+        } else if (typeof totalCountRaw === "number") {
+          totalCount = totalCountRaw;
+        }
+
+        let fetchedCount = allWarehouses.length;
+        let page = 2;
+
+        while (
+          page <= maxPages &&
+          ((Number.isFinite(totalCount) && totalCount > fetchedCount) ||
+            (!Number.isFinite(totalCount) &&
+              fetchedCount === (page - 1) * limit))
+        ) {
+          const nextPage = await fetchPage(page);
+          fetchedCount = allWarehouses.length;
+          console.log(
+            `Nova Poshta page ${page} count (server route): ${Array.isArray(nextPage?.data) ? nextPage.data.length : 0}, total accumulated: ${fetchedCount}`
+          );
+
+          if (!Number.isFinite(totalCount) && nextPage.data.length < limit) {
+            break;
+          }
+
+          page += 1;
+        }
+
+        if (
+          Number.isFinite(totalCount) &&
+          totalCount > 0 &&
+          allWarehouses.length < totalCount
+        ) {
+          console.warn(
+            `Expected ${totalCount} warehouses but fetched ${allWarehouses.length} (cityRef: ${cityRef})`
+          );
+        }
+
+        fetchedSources.push("nova-poshta");
+      } catch (npErr) {
+        console.error("Failed to fetch Nova Poshta warehouses:", npErr);
+      }
+    } else {
+      console.warn(
+        "NOVA_POSHTA_API_KEY not configured; skipping legacy warehouses fetch."
+      );
+    }
+
+    const warehouseMap = new Map<string, any>();
+    const normalizeNumber = (value: any) =>
+      String(value || "")
+        .replace(/[^\d]/g, "")
+        .trim();
+
+    for (const wh of allWarehouses) {
+      const ref =
+        String(wh.Ref || "").trim() ||
+        String(wh.Number || "").trim() ||
+        String(wh.SiteKey || "").trim() ||
+        `${String(wh.Description || "").trim()}-${String(
+          wh.ShortAddress || ""
+        ).trim()}`;
+      warehouseMap.set(ref, wh);
+    }
+
+    const novapostResults: any[] = [];
+    const shouldFetchNovapost =
+      type === "postomat" || type === "" || !type || !req.query.type;
+
+    if (shouldFetchNovapost) {
+      const novapostApiKey =
+        process.env.NOVAPOST_API_KEY || process.env.NOVAPOST_API_TOKEN || "";
+      if (!novapostApiKey) {
+        console.warn(
+          "NOVAPOST_API_KEY not configured; skipping Novapost divisions fetch."
+        );
+      } else {
+        const countryCodesRaw =
+          (req.query.countryCode || req.query.countryCodes || "UA")
+            .toString()
+            .trim() || "UA";
+        const countryCodes = countryCodesRaw
+          .split(",")
+          .map((c) => c.trim().toUpperCase())
+          .filter(Boolean);
+
+        const cityNameParam =
+          (req.query.cityName || req.query.city || "")?.toString().trim() || "";
+
+        const divisionCategoriesParam =
+          (req.query.divisionCategory || req.query.divisionCategories || "")
+            ?.toString()
+            .trim() || "";
+
+        const pageLimit = 200;
+        let pageDiv = 1;
+        let hasMoreDivisions = true;
+
+        const acceptLanguageHeader =
+          req.headers["accept-language"] ||
+          req.headers["Accept-Language"] ||
+          "uk";
+
+        const fetchDivisionsPage = async (page: number) => {
+          const params = new URLSearchParams();
+          (countryCodes.length ? countryCodes : ["UA"]).forEach((code) =>
+            params.append("countryCodes[]", code)
+          );
+          const categories =
+            divisionCategoriesParam !== ""
+              ? divisionCategoriesParam.split(",").map((v) => v.trim())
+              : ["Postomat"];
+          categories
+            .filter(Boolean)
+            .forEach((category) =>
+              params.append("divisionCategories[]", category)
+            );
+
+          params.append("limit", String(pageLimit));
+          params.append("page", String(page));
+
+          if (cityNameParam) {
+            const normalizedCity =
+              cityNameParam.includes("*") || cityNameParam.includes("%")
+                ? cityNameParam
+                : `*${cityNameParam}*`;
+            params.append("name", normalizedCity);
+          }
+
+          const response = await fetch(
+            `${NOVAPOST_API_BASE_URL}?${params.toString()}`,
+            {
+              method: "GET",
+              headers: {
+                Authorization: `Bearer ${novapostApiKey}`,
+                "Accept-Language": Array.isArray(acceptLanguageHeader)
+                  ? acceptLanguageHeader[0]
+                  : acceptLanguageHeader,
+              },
+            }
+          );
+
+          if (!response.ok) {
+            throw new Error(
+              `Novapost divisions responded with status ${response.status}`
+            );
+          }
+
+          const json = await response.json();
+
+          const divisions = Array.isArray(json?.data)
+            ? json.data
+            : Array.isArray(json?.items)
+            ? json.items
+            : Array.isArray(json)
+            ? json
+            : [];
+
+          if (!Array.isArray(divisions)) {
+            console.warn(
+              "Novapost divisions response is not an array. Payload:",
+              json
+            );
+            return [];
+          }
+
+          return divisions;
+        };
+
+        try {
+          while (hasMoreDivisions && pageDiv <= 100) {
+            const divisionsPage = await fetchDivisionsPage(pageDiv);
+            if (divisionsPage.length === 0) {
+              hasMoreDivisions = false;
+            } else {
+              novapostResults.push(
+                ...divisionsPage.map((division: any) => ({
+                  _source: "novapost",
+                  division,
+                }))
+              );
+              if (divisionsPage.length < pageLimit) {
+                hasMoreDivisions = false;
+              } else {
+                pageDiv += 1;
+              }
+            }
+          }
+          if (novapostResults.length > 0) {
+            fetchedSources.push("novapost");
+          }
+        } catch (err) {
+          console.error("Failed to fetch Novapost divisions:", err);
+        }
+      }
+    }
+
+    const mapDivisionToWarehouse = (division: any) => {
+      const divisionId = division?.id ?? division?.Id ?? division?.divisionId;
+      const number =
+        division?.number ||
+        division?.Number ||
+        division?.DivisionNumber ||
+        division?.terminalNumber ||
+        division?.terminal_code ||
+        null;
+
+      const baseRef =
+        division?.ref ||
+        division?.Ref ||
+        divisionId ||
+        number ||
+        division?.guid ||
+        division?.uuid ||
+        `${division?.countryCode || "XX"}-${division?.name || Date.now()}`;
+      const safeRef = String(baseRef)
+        .toLowerCase()
+        .replace(/[^a-z0-9_-]+/g, "-")
+        .replace(/-{2,}/g, "-")
+        .replace(/^-|-$/g, "");
+      const ref = `novapost-${safeRef || Math.random().toString(36).slice(2)}`;
+
+      return {
+        Ref: ref,
+        Number: number,
+        SiteKey: ref,
+        Description:
+          division?.name || division?.shortName || `Postomat ${number || ""}`.trim(),
+        DescriptionUk:
+          division?.nameUk || division?.name_uk || division?.name || "",
+        DescriptionRu:
+          division?.nameRu || division?.name_ru || division?.name || "",
+        ShortAddress:
+          division?.address ||
+          division?.shortAddress ||
+          division?.settlement?.name ||
+          "",
+        Address: division?.address || "",
+        AddressDescription: division?.address || "",
+        CityDescription: division?.settlement?.name || "",
+        SettlementDescription: division?.settlement?.name || "",
+        WarehouseType: division?.divisionCategory || "Postomat",
+        CategoryOfWarehouse: division?.divisionCategory || "Postomat",
+        Longitude: division?.longitude || null,
+        Latitude: division?.latitude || null,
+        WarehouseStatus: division?.status || "",
+        IsLimitedAccess:
+          division?.prohibitedIssuance || division?.prohibitedSending || false,
+        ReceivingLimitationsOnDimensions:
+          division?.receivingLimitationsOnDimensions || null,
+        ReceivingLimitationsOnDimensionsString:
+          division?.receivingLimitationsOnDimensions
+            ? JSON.stringify(division?.receivingLimitationsOnDimensions)
+            : null,
+        Schedule: division?.workSchedule || [],
+        Source: "novapost",
+      };
+    };
+
+    if (novapostResults.length > 0) {
+      for (const record of novapostResults) {
+        const division = record?.division || record;
+        if (!division) continue;
+        const mapped = mapDivisionToWarehouse(division);
+        if (!mapped?.Ref) continue;
+        warehouseMap.set(mapped.Ref, mapped);
+      }
+    }
+
+    const uniqueWarehouses = Array.from(warehouseMap.values());
+    const rawCount = allWarehouses.length + novapostResults.length;
+    const uniqueCount = uniqueWarehouses.length;
+
+    console.log(
+      `Fetched ${uniqueCount} unique warehouses (raw ${rawCount}) across city ${cityRef} (server route, type: ${type || "all"})`
+    );
+ 
+    const isPostomatWarehouse = (wh: any) => {
+      const typeOfWarehouse = String(wh.TypeOfWarehouse || "").trim();
+      if (typeOfWarehouse === "9") {
+        return true;
+      }
+
+      const warehouseIndex = String(wh.Number || wh.SiteKey || "")
+        .trim()
+        .toLowerCase();
+      if (warehouseIndex.startsWith("9") && warehouseIndex.length >= 3) {
+        return true;
+      }
+
+      const branchAddress = [wh.CityDescription, wh.SettlementDescription]
+        .map((v: any) => String(v || "").toLowerCase())
+        .filter(Boolean)
+        .join(" ");
+
+      const textParts = [
+        branchAddress,
+        wh.CategoryOfWarehouse,
+        wh.CategoryOfWarehouseDescription,
+        wh.CategoryOfWarehouseDescriptionRu,
+        wh.CategoryOfWarehouseDescriptionUk,
+        wh.CategoryOfWarehouseDescriptionUa,
+        wh.WarehouseType,
+        wh.WarehouseTypeDescription,
+        wh.WarehouseTypeDescriptionRu,
+        wh.WarehouseTypeDescriptionUk,
+        wh.WarehouseTypeDescriptionUa,
+        wh.PostomatDescription,
+        wh.Description,
+        wh.DescriptionRu,
+        wh.DescriptionUk,
+        wh.ShortAddress,
+        wh.ShortAddressRu,
+        wh.ShortAddressUk,
+        wh.Address,
+        wh.AddressDescription,
+        wh.PhysicalAddress,
+      ]
+        .map((v: any) => String(v || "").toLowerCase())
+        .filter(Boolean);
+
+      const keywords = [
+        "поштомат",
+        "почтомат",
+        "постомат",
+        "пошт",
+        "poshtomat",
+        "postomat",
+        "parcel locker",
+        "locker",
+        "automated parcel terminal",
+        "parcel terminal",
+      ];
+
+      const containsKeyword = textParts.some((part) =>
+        keywords.some((keyword) => part.includes(keyword))
+      );
+
+      return containsKeyword;
+    };
+
+    const filteredData = (() => {
+       if (type === "postomat") {
+         return uniqueWarehouses.filter(isPostomatWarehouse);
+       }
+       if (type === "department") {
+         return uniqueWarehouses.filter((wh: any) => !isPostomatWarehouse(wh));
+       }
+       return uniqueWarehouses;
+     })();
+    console.log(`Filtered data count for type "${type || "all"}" (server route):`, filteredData.length);
+ 
+    let usedPostomatFallback = false;
+
+    const sortedData = filteredData.sort((a: any, b: any) => {
+      const descA = String(a.Description || "");
+      const descB = String(b.Description || "");
+      return descA.localeCompare(descB, "uk", {
+        numeric: true,
+        sensitivity: "base",
+      });
+    });
+
+    let finalData = sortedData;
+
+    if (warehouseNumberParam) {
+      const normalizedQuery = normalizeNumber(warehouseNumberParam);
+
+      const matchesNumber = (wh: any) => {
+        const candidates = [
+          wh.Number,
+          wh.PostomatNumber,
+          wh.PostomatIndex,
+          wh.SiteKey,
+          wh.WarehouseIndex,
+          wh.Ref,
+          wh.PostomatDescription,
+          wh.Description,
+          wh.ShortAddress,
+          wh.Address,
+        ]
+          .map(normalizeNumber)
+          .filter(Boolean);
+
+        if (candidates.includes(normalizedQuery)) {
+          return true;
+        }
+
+        const textFields = [
+          wh.Description,
+          wh.PostomatDescription,
+          wh.ShortAddress,
+          wh.Address,
+          wh.DescriptionRu,
+          wh.DescriptionUk,
+          wh.ShortAddressRu,
+          wh.ShortAddressUk,
+        ]
+          .map((v: any) => String(v || "").toLowerCase())
+          .filter(Boolean);
+
+        return textFields.some((text) =>
+          text.includes(warehouseNumberParam.toLowerCase())
+        );
+      };
+
+      const matched = sortedData.filter(matchesNumber);
+
+      if (matched.length === 0) {
+        console.warn(
+          `No warehouses found for number ${warehouseNumberParam} (cityRef: ${cityRef})`
+        );
+      } else {
+        console.log(
+          `Filtered ${matched.length} warehouse(s) for number ${warehouseNumberParam}`
+        );
+        finalData = matched;
+      }
+    }
+
+    console.log(
+      `Final data count before pagination (server route): ${finalData.length} (cityRef: ${cityRef}, type: ${type || "all"})`
+    );
+
+    const totalResults = finalData.length;
+
+    let page = requestedPage;
+    let pageSize = requestedPageSize;
+
+    const totalPages =
+      totalResults > 0 ? Math.ceil(totalResults / pageSize) : 1;
+    if (page > totalPages) {
+      page = totalPages;
+    }
+
+    const startIndex = (page - 1) * pageSize;
+    const endIndex = Math.min(startIndex + pageSize, totalResults);
+    const paginatedData =
+      startIndex >= 0 && startIndex < totalResults
+        ? finalData.slice(startIndex, endIndex)
+        : [];
+ 
+    const hasMore = endIndex < totalResults;
+    console.log(
+      `Returning ${paginatedData.length} warehouses for page ${page}/${totalPages} (server route). hasMore=${hasMore}`
+    );
+ 
+    return res.json({
+      status: "200",
+      success: true,
+      data: paginatedData,
+      meta: {
+        total: totalResults,
+        returned: paginatedData.length,
+        page,
+        pageSize,
+        totalPages,
+        hasMore,
+        nextPage: hasMore ? page + 1 : null,
+        prevPage: page > 1 ? page - 1 : null,
+        rawCount,
+        uniqueCount,
+        sources: fetchedSources,
+        fallbackToAllWarehouses: usedPostomatFallback,
+      },
+    });
   } catch (e: any) {
     console.error("getWarehouses error", e);
     return res.status(500).json({ error: e?.message || "Failed to fetch warehouses" });

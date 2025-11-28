@@ -331,20 +331,20 @@ export function WaterProductsManager() {
 
               {/* Features */}
               <div>
-                <Label>Особливості (UA) - через кому</Label>
+                <Label>Особливості (UA) - через крапку з комою (;)</Label>
                 <Input 
-                  value={(p.features_ua || []).join(', ')} 
-                  onChange={(e) => updateProductField(pIdx, 'features_ua', e.target.value.split(',').map(f => f.trim()).filter(f => f))} 
-                  placeholder="Природна вода, Без хімічних добавок"
+                  value={(p.features_ua || []).join('; ')} 
+                  onChange={(e) => updateProductField(pIdx, 'features_ua', e.target.value.split(';').map(f => f.trim()).filter(f => f))} 
+                  placeholder="Природна вода; Без хімічних добавок; Висока якість"
                 />
               </div>
 
               <div>
-                <Label>Особливості (RU) - через кому</Label>
+                <Label>Особливості (RU) - через крапку з комою (;)</Label>
                 <Input 
-                  value={(p.features_ru || []).join(', ')} 
-                  onChange={(e) => updateProductField(pIdx, 'features_ru', e.target.value.split(',').map(f => f.trim()).filter(f => f))} 
-                  placeholder="Природная вода, Без химических добавок"
+                  value={(p.features_ru || []).join('; ')} 
+                  onChange={(e) => updateProductField(pIdx, 'features_ru', e.target.value.split(';').map(f => f.trim()).filter(f => f))} 
+                  placeholder="Природная вода; Без химических добавок; Высокое качество"
                 />
               </div>
 

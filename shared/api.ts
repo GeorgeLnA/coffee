@@ -47,7 +47,16 @@ export interface CoffeeProduct {
   flavorNotes: string[];
   acidity: 'low' | 'medium' | 'high';
   body: 'light' | 'medium' | 'full';
-  process: 'washed' | 'natural' | 'honey' | 'semi-washed';
+  process: string;
+  /**
+   * Human-readable process label adjusted for the active language.
+   * Falls back to the raw process when no mapping is found.
+   */
+  processDisplay?: string;
+  /**
+   * Original process string as stored in the database (can be UA/RU/EN).
+   */
+  processRaw?: string;
   elevation: number; // in meters
   inStock: boolean;
   active?: boolean;

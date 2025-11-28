@@ -76,6 +76,9 @@ export function CoffeeProductsManager() {
   // Store raw keyword strings for better typing experience
   const [rawKeywordsUA, setRawKeywordsUA] = useState<Record<number, string>>({});
   const [rawKeywordsRU, setRawKeywordsRU] = useState<Record<number, string>>({});
+  // Store raw aftertaste strings for better typing experience
+  const [rawAftertasteUA, setRawAftertasteUA] = useState<Record<number, string>>({});
+  const [rawAftertasteRU, setRawAftertasteRU] = useState<Record<number, string>>({});
   const queryClient = useQueryClient();
 
   const load = async () => {
@@ -111,6 +114,19 @@ export function CoffeeProductsManager() {
       };
     });
     setProducts(mapped);
+    // Initialize raw aftertaste strings from arrays
+    const rawAftertasteUA: Record<number, string> = {};
+    const rawAftertasteRU: Record<number, string> = {};
+    mapped.forEach((p, idx) => {
+      if (Array.isArray(p.aftertaste_ua) && p.aftertaste_ua.length > 0) {
+        rawAftertasteUA[idx] = p.aftertaste_ua.join(', ');
+      }
+      if (Array.isArray(p.aftertaste_ru) && p.aftertaste_ru.length > 0) {
+        rawAftertasteRU[idx] = p.aftertaste_ru.join(', ');
+      }
+    });
+    setRawAftertasteUA(rawAftertasteUA);
+    setRawAftertasteRU(rawAftertasteRU);
     setLoading(false);
   };
 
@@ -525,16 +541,27 @@ export function CoffeeProductsManager() {
                 <Label>Післясмак (UA, через кому)</Label>
                 <Input
                   placeholder="шоколад, карамель, горіхи"
-                  value={(p.aftertaste_ua || []).join(', ')}
+                  value={rawAftertasteUA[pIdx] !== undefined ? rawAftertasteUA[pIdx] : (p.aftertaste_ua || []).join(', ')}
                   onChange={(e) => {
-                    const raw = e.target.value || '';
-                    const arr = raw
+                    const rawValue = e.target.value;
+                    // Store raw string for free typing
+                    setRawAftertasteUA(prev => ({ ...prev, [pIdx]: rawValue }));
+                    // Also update the array immediately for saving
+                    const aftertaste = rawValue
                       .split(',')
                       .map(s => s.trim())
-                      .filter(Boolean);
-                    const next = [...products];
-                    next[pIdx].aftertaste_ua = arr;
-                    setProducts(next);
+                      .filter(s => s.length > 0);
+                    updateProductField(pIdx, 'aftertaste_ua', aftertaste);
+                  }}
+                  onBlur={(e) => {
+                    // Clean up raw string on blur to match final array format
+                    const currentRaw = e.target.value || '';
+                    const formatted = currentRaw
+                      .split(',')
+                      .map(s => s.trim())
+                      .filter(s => s.length > 0)
+                      .join(', ');
+                    setRawAftertasteUA(prev => ({ ...prev, [pIdx]: formatted }));
                   }}
                 />
               </div>
@@ -543,16 +570,27 @@ export function CoffeeProductsManager() {
                 <Label>Послевкусие (RU, через запятую)</Label>
                 <Input
                   placeholder="шоколад, карамель, орехи"
-                  value={(p.aftertaste_ru || []).join(', ')}
+                  value={rawAftertasteRU[pIdx] !== undefined ? rawAftertasteRU[pIdx] : (p.aftertaste_ru || []).join(', ')}
                   onChange={(e) => {
-                    const raw = e.target.value || '';
-                    const arr = raw
+                    const rawValue = e.target.value;
+                    // Store raw string for free typing
+                    setRawAftertasteRU(prev => ({ ...prev, [pIdx]: rawValue }));
+                    // Also update the array immediately for saving
+                    const aftertaste = rawValue
                       .split(',')
                       .map(s => s.trim())
-                      .filter(Boolean);
-                    const next = [...products];
-                    next[pIdx].aftertaste_ru = arr;
-                    setProducts(next);
+                      .filter(s => s.length > 0);
+                    updateProductField(pIdx, 'aftertaste_ru', aftertaste);
+                  }}
+                  onBlur={(e) => {
+                    // Clean up raw string on blur to match final array format
+                    const currentRaw = e.target.value || '';
+                    const formatted = currentRaw
+                      .split(',')
+                      .map(s => s.trim())
+                      .filter(s => s.length > 0)
+                      .join(', ');
+                    setRawAftertasteRU(prev => ({ ...prev, [pIdx]: formatted }));
                   }}
                 />
               </div>

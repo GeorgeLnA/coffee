@@ -3,6 +3,74 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useEffect } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 
+const processDictionary: Array<{ synonyms: string[]; ua: string; ru: string }> = [
+  {
+    synonyms: ['washed', 'митий', 'мита', 'мытый', 'мытая', 'washed process', 'мытый процесс', 'мытая обработка'],
+    ua: 'Мита',
+    ru: 'Мытый',
+  },
+  {
+    synonyms: ['semi-washed', 'semi washed', 'semiwashed', 'напівмита', 'напівмитий', 'полумытая', 'полумытый', 'semi-washed process'],
+    ua: 'Напівмита',
+    ru: 'Полумытой',
+  },
+  {
+    synonyms: ['natural', 'натуральна', 'натуральний', 'натуральная', 'натуральный', 'natural process'],
+    ua: 'Натуральна',
+    ru: 'Натуральный',
+  },
+  {
+    synonyms: ['honey', 'хані', 'хані-процес', 'медова', 'медовий', 'медовый', 'honey process'],
+    ua: 'Хані',
+    ru: 'Хани',
+  },
+  {
+    synonyms: ['anaerobic', 'анаеробна', 'анаеробний', 'анаэробная', 'анаэробный', 'anaerobic process'],
+    ua: 'Анаеробна',
+    ru: 'Анаэробный',
+  },
+  {
+    synonyms: ['carbonic maceration', 'carbonic', 'карбонік', 'карбонік мацерація', 'карбоник', 'карбоник мацерация', 'carbonic process'],
+    ua: 'Карбонік мацерація',
+    ru: 'Карбоник мацерация',
+  },
+  {
+    synonyms: ['experimental', 'експериментальна', 'експериментальний', 'экспериментальная', 'экспериментальный'],
+    ua: 'Експериментальна',
+    ru: 'Экспериментальный',
+  },
+];
+
+const normalizeProcessValue = (value: string) =>
+  value
+    .toLowerCase()
+    .replace(/[‐‑‒–—―]/g, '-') // normalize various dash characters
+    .replace(/[_\-]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+export const translateProcessValue = (value: string | null | undefined, target: 'ua' | 'ru'): string => {
+  if (!value) return '';
+  const normalized = normalizeProcessValue(value);
+  const dictionaryEntry = processDictionary.find(({ synonyms }) =>
+    synonyms.some((synonym) => {
+      const normalizedSynonym = normalizeProcessValue(synonym);
+      return normalized === normalizedSynonym || normalized.includes(normalizedSynonym) || normalizedSynonym.includes(normalized);
+    }),
+  );
+
+  if (dictionaryEntry) {
+    return target === 'ru' ? dictionaryEntry.ru : dictionaryEntry.ua;
+  }
+
+  // Explicit fallback for the most common mismatch
+  if (target === 'ru' && /^мита$/i.test(value.trim())) {
+    return 'Мытый';
+  }
+
+  return value;
+};
+
 export interface HomepageSettings {
   id: number;
   // Legacy fields (keep for backward compatibility)
@@ -656,7 +724,7 @@ export function useCoffeeProducts() {
   }, [queryClient]);
 
   return useQuery({
-    queryKey: ['coffee-products'],
+    queryKey: ['coffee-products', language], // Include language to refetch when locale changes
     queryFn: async () => {
       const { data, error } = await supabase
         .from('coffee_products')
@@ -675,6 +743,8 @@ export function useCoffeeProducts() {
           : (Array.isArray(p.aftertaste_ua) ? p.aftertaste_ua : (Array.isArray(p.flavor_notes_array) ? p.flavor_notes_array : []));
         const acidity = mapLevelToString(p.acidity_level, 'low', 'medium', 'high');
         const body = mapLevelToString(p.body_level, 'light', 'medium', 'full');
+        const rawProcess = (p.process || '').trim();
+        const processDisplay = translateProcessValue(rawProcess, language === 'ru' ? 'ru' : 'ua') || rawProcess;
         const mappedProduct = {
           id: String(p.id),
           slug: p.slug || String(p.id),
@@ -688,7 +758,9 @@ export function useCoffeeProducts() {
           flavorNotes,
           acidity,
           body,
-          process: p.process || '',
+          process: processDisplay,
+          processDisplay,
+          processRaw: rawProcess,
           elevation: 0,
           inStock: !!p.in_stock,
           active: p.active !== false, // Default to true if not explicitly set to false
@@ -714,7 +786,6 @@ export function useCoffeeProducts() {
     refetchOnWindowFocus: true,
     refetchOnReconnect: true,
     staleTime: 0,
-    queryKey: ['coffee-products', language], // Add language to query key so it refetches when language changes
   });
 }
 
@@ -740,7 +811,7 @@ export function useCoffeeProduct(id: string | number) {
   }, [id, queryClient]);
 
   return useQuery({
-    queryKey: ['coffee-product', id],
+    queryKey: ['coffee-product', id, language], // Include language to refetch when locale changes
     queryFn: async () => {
       const idNum = Number(id);
       let p: DBCoffeeProduct | null = null;
@@ -763,6 +834,8 @@ export function useCoffeeProduct(id: string | number) {
       if (!p) return null as any;
       const sizes = (p.coffee_sizes || []).filter(s => s.price != null);
       const minPrice = sizes.length ? Math.min(...sizes.map(s => s.price || 0)) : 0;
+      const rawProcess = (p.process || '').trim();
+      const processDisplay = translateProcessValue(rawProcess, language === 'ru' ? 'ru' : 'ua') || rawProcess;
       return {
         id: String(p.id),
         slug: p.slug || String(p.id),
@@ -779,7 +852,9 @@ export function useCoffeeProduct(id: string | number) {
           : (Array.isArray(p.aftertaste_ua) ? p.aftertaste_ua : (Array.isArray(p.flavor_notes_array) ? p.flavor_notes_array : [])),
         acidity: mapLevelToString(p.acidity_level, 'low', 'medium', 'high'),
         body: mapLevelToString(p.body_level, 'light', 'medium', 'full'),
-        process: p.process || '',
+        process: processDisplay,
+        processDisplay,
+        processRaw: rawProcess,
         elevation: 0,
         inStock: !!p.in_stock,
         active: p.active !== false,
@@ -801,7 +876,6 @@ export function useCoffeeProduct(id: string | number) {
     refetchOnWindowFocus: true,
     refetchOnReconnect: true,
     staleTime: 0,
-    queryKey: ['coffee-product', id, language], // Add language to query key so it refetches when language changes
   });
 }
 
@@ -1017,13 +1091,26 @@ export function useFilterOptions(language: string = 'ua') {
         .filter(f => f.filter_type === 'roast')
         .map(f => ({ ua: f.value, ru: f.value_ru || f.value }));
 
-      const processes = all
-        .filter(f => f.filter_type === 'process')
-        .map(f => language === 'ru' ? (f.value_ru || f.value) : f.value);
+      const processOptions = all.filter(f => f.filter_type === 'process');
 
-      const processPairs = all
-        .filter(f => f.filter_type === 'process')
-        .map(f => ({ ua: f.value, ru: f.value_ru || f.value }));
+      const processes = processOptions
+        .map((f) => {
+          const base = (f.value || '').trim();
+          const fallbackUa = translateProcessValue(base, 'ua') || base;
+          const fallbackRu = translateProcessValue(base, 'ru') || base;
+          if (language === 'ru') {
+            return (f.value_ru && f.value_ru.trim()) ? f.value_ru : fallbackRu;
+          }
+          return fallbackUa;
+        })
+        .filter((val, idx, arr) => val !== '' && arr.indexOf(val) === idx);
+
+      const processPairs = processOptions.map((f) => {
+        const base = (f.value || '').trim();
+        const uaValue = translateProcessValue(base, 'ua') || base;
+        const ruValue = (f.value_ru && f.value_ru.trim()) ? f.value_ru : (translateProcessValue(base, 'ru') || base);
+        return { ua: uaValue, ru: ruValue };
+      });
 
       return { origins, roasts, originPairs, roastPairs, processes, processPairs };
     },

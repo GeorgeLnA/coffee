@@ -25,7 +25,8 @@ import { cn } from "../lib/utils";
 import { useLanguage } from "../contexts/LanguageContext";
 import { useCart } from "../contexts/CartContext";
 import { useToast } from "../hooks/use-toast";
-import { useCoffeeProduct, useFilterOptions } from "../hooks/use-supabase";
+import { useCoffeeProduct, useFilterOptions, translateProcessValue } from "../hooks/use-supabase";
+import { getWeightString } from "../lib/weight";
 
 // Helper function to get translated description
 const getCoffeeDescription = (coffeeId: string, language: string) => {
@@ -434,6 +435,23 @@ export default function Product() {
     return product?.image || "/250-g_Original.PNG";
   }, [sizesOptions, selectedSizeIdx, product]);
 
+  const variantLabel = useMemo(() => {
+    const grindText = (selectedGrind || 'beans') === 'beans' ? t('product.grindBeans') : t('product.grindGround');
+
+    const fallbackWeight = getWeightString(selectedWeight, '') || selectedWeight || '250g';
+
+    if (!sizesOptions.length) {
+      return `${fallbackWeight} - ${grindText}`;
+    }
+
+    const current = sizesOptions[selectedSizeIdx] || sizesOptions[0];
+    const weightFromSize = getWeightString(current?.weight, '');
+    const weightFromLabel = getWeightString(current?.label, '');
+    const baseWeight = weightFromSize || weightFromLabel || fallbackWeight;
+
+    return `${baseWeight} - ${grindText}`;
+  }, [selectedGrind, selectedSizeIdx, selectedWeight, sizesOptions, t]);
+
   const [selectedImage, setSelectedImage] = useState(0);
 
   return (
@@ -490,17 +508,49 @@ export default function Product() {
                   {product?.name || 'Product not found'}
                 </h1>
                 {!notFound && (
-                  <p className="text-lg text-gray-600">
-                    {translateOrigin(product!.origin, language)} • {
-                      (() => {
-                        const { roasts = [] } = filterOptions || {};
-                        const roastCode = product!.roast && typeof product!.roast === 'string' ? product!.roast.toLowerCase() : '';
-                        // Try to find human-friendly label in filter options
-                        const label = roasts.find(r => r.toLowerCase().includes(roastCode)) || roasts.find(r => roastCode.includes(r.toLowerCase()));
-                        return label || product!.roast || '-';
-                      })()
-                    }
-                  </p>
+                  <>
+                    {(() => {
+                      const { processPairs = [] } = filterOptions || {};
+                      const rawProcess = (product!.processRaw || product!.process || '').trim();
+                      const normalize = (s: string) => (s || '').trim().toLowerCase();
+                      const pair = processPairs.find(
+                        (p: { ua: string; ru: string }) =>
+                          normalize(p.ua) === normalize(rawProcess) ||
+                          normalize(p.ru) === normalize(rawProcess)
+                      );
+                      return (
+                        <p className="text-lg text-gray-600">
+                          {translateOrigin(product!.origin, language)}
+                          {pair
+                            ? ` ${language === 'ru' ? pair.ru : pair.ua}`
+                            : ''}
+                        </p>
+                      );
+                    })()}
+                    {(() => {
+                      const { processPairs = [] } = filterOptions || {};
+                      const rawProcess = (product!.processRaw || product!.process || '').trim();
+                      if (!rawProcess) return null;
+                      const normalize = (s: string) => (s || '').trim().toLowerCase();
+                      const pair = processPairs.find(
+                        (p: { ua: string; ru: string }) =>
+                          normalize(p.ua) === normalize(rawProcess) ||
+                          normalize(p.ru) === normalize(rawProcess)
+                      );
+                      const resolved =
+                        pair
+                          ? language === 'ru'
+                            ? pair.ru
+                            : pair.ua
+                          : translateProcessValue(rawProcess, language === 'ru' ? 'ru' : 'ua') || rawProcess;
+                      return (
+                        <p className="text-sm text-gray-500 mt-1">
+                          <span className="font-medium">{t('product.process')}:</span>{" "}
+                          {resolved}
+                        </p>
+                      );
+                    })()}
+                  </>
                 )}
               </div>
 
@@ -520,8 +570,7 @@ export default function Product() {
                   </span>
                 )}
               </div>
-
-              {/* Description */}
+              
               <div>
                 <h3 className="text-lg font-bold mb-3" style={{ color: '#361c0c' }}>
                   {t('product.description')}
@@ -558,7 +607,7 @@ export default function Product() {
                 
                 {/* metric rows */}
                 <div className="space-y-4">
-                  {[{label: t('coffee.strength'), value: product.strength_level ?? 3}, {label: t('coffee.acidity'), value: product.acidity_level ?? 3}, {label: t('coffee.roastLevel'), value: product.roast_level ?? 3}, {label: t('coffee.body'), value: product.body_level ?? 3}].map((metric, idx) => (
+                  {[{label: t('coffee.strength'), value: product.strength_level ?? 3}, {label: t('coffee.acidity'), value: product.acidity_level ?? 3}, {label: t('product.roastLevel'), value: product.roast_level ?? 3}, {label: t('coffee.body'), value: product.body_level ?? 3}].map((metric, idx) => (
                     <div key={idx} className={`flex items-center justify-between py-2 ${idx < 3 ? 'border-b border-gray-100' : ''}`}>
                       <span className="text-gray-700 font-medium">{metric.label}:</span>
                       <div className="flex space-x-2">
@@ -602,7 +651,7 @@ export default function Product() {
                             <div className="text-sm text-gray-500 mb-2">₴{(opt.price).toFixed(2)}</div>
                             {opt.special && (
                               <div className="inline-flex items-center space-x-1 text-xs font-bold text-amber-700 bg-amber-100 px-2 py-1 rounded-full">
-                                <span>🎁 Подарункове пакування</span>
+                                <span>🎁 {language === 'ru' ? 'Подарочная упаковка' : 'Подарункове пакування'}</span>
                               </div>
                             )}
                           </div>
@@ -724,7 +773,7 @@ export default function Product() {
                       image: product!.image,
                       price: finalPrice / quantity, // unit price
                       quantity: quantity,
-                      variant: `${sizesOptions.length ? (sizesOptions[selectedSizeIdx]?.label || '') : selectedWeight} ${(selectedGrind || 'beans') === 'beans' ? t('product.grindBeans') : t('product.grindGround')}`,
+                      variant: variantLabel,
                       type: 'coffee'
                     });
                     

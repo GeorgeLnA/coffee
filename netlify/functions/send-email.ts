@@ -5,6 +5,131 @@ import type { Handler } from "@netlify/functions";
  * This is called from other Netlify functions (server-side)
  * Uses private key for server-side REST API calls
  */
+function sanitizeEmail(email: string | null | undefined): string | null {
+  if (!email) return null;
+  const trimmed = String(email).trim();
+  if (!trimmed) return null;
+  return trimmed;
+}
+
+function isValidEmail(email: string | null | undefined): boolean {
+  if (!email) return false;
+  const trimmed = sanitizeEmail(email);
+  if (!trimmed) return false;
+  // Simple validation (same as many front-end checks)
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(trimmed);
+}
+
+const DEFAULT_EMAILJS_ORIGIN =
+  process.env.EMAILJS_ALLOWED_ORIGIN ||
+  process.env.PUBLIC_SITE_URL ||
+  "https://manifestcoffee.com.ua";
+
+function normalizeImageSource(value: unknown): string | null {
+  if (value == null) return null;
+
+  const raw =
+    typeof value === "string"
+      ? value
+      : typeof value === "number"
+      ? String(value)
+      : "";
+  const trimmed = raw.trim();
+  if (!trimmed) return null;
+
+  if (/^https?:\/\//i.test(trimmed) || trimmed.startsWith("data:")) {
+    return trimmed;
+  }
+
+  if (trimmed.startsWith("//")) {
+    return `https:${trimmed}`;
+  }
+
+  const supabaseUrl =
+    (process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || "").replace(
+      /\/+$/,
+      ""
+    );
+
+  if (supabaseUrl) {
+    if (trimmed.startsWith("storage/v1/")) {
+      return `${supabaseUrl}/${trimmed}`;
+    }
+    const path = trimmed.replace(/^\/+/, "");
+    return `${supabaseUrl}/storage/v1/object/public/${path}`;
+  }
+
+  return trimmed;
+}
+
+function formatShippingMethod(method?: string | null): string {
+  const key = String(method || "").toLowerCase().trim();
+  switch (key) {
+    case "nova_department":
+    case "nova poshta department":
+      return "Нова Пошта (відділення)";
+    case "nova_postomat":
+    case "nova poshta postomat":
+      return "Нова Пошта (поштомат)";
+    case "nova_courier":
+    case "nova poshta courier":
+      return "Нова Пошта (кур'єр)";
+    case "own_courier":
+    case "own courier":
+      return "Власна доставка (Київ)";
+    case "pickup":
+    case "self_pickup":
+    case "self pickup":
+      return "Самовивіз";
+    case "ukrposhta":
+      return "Укрпошта";
+    default:
+      return method && method.length > 0 ? method : "Не вказано";
+  }
+}
+
+function formatShippingCostDisplay(options: {
+  method?: string | null;
+  cost?: number | null;
+  isFree?: boolean;
+  carrierRates?: boolean;
+}): string {
+  const { method, cost, isFree, carrierRates } = options;
+
+  if (isFree) {
+    return "Безкоштовно";
+  }
+
+  if (typeof cost === "number" && Number.isFinite(cost)) {
+    if (cost > 0) {
+      return `₴${cost.toFixed(2)}`;
+    }
+    if (cost === 0) {
+      const key = (method || "").toLowerCase();
+      if (key.includes("own_courier") || key.includes("pickup") || key.includes("self_pick")) {
+        return "Безкоштовно";
+      }
+    }
+  }
+
+  const key = (method || "").toLowerCase();
+  const looksLikeNova =
+    carrierRates ||
+    key.includes("nova_department") ||
+    key.includes("nova_postomat") ||
+    key.includes("nova_courier") ||
+    key.includes("nova poshta") ||
+    key.includes("нова пош") ||
+    key.includes("новая почта");
+
+  if (looksLikeNova) {
+    return "Оплата за тарифами перевізника";
+  }
+
+  return "Не вказано";
+}
+
 export async function sendEmailViaEmailJS(params: {
   serviceId: string;
   templateId: string;
@@ -14,6 +139,14 @@ export async function sendEmailViaEmailJS(params: {
 }): Promise<{ success: boolean; error?: string }> {
   try {
     const { serviceId, templateId, publicKey, privateKey, templateParams } = params;
+    const toEmailRaw = templateParams?.to_email;
+    const toEmailSanitized = sanitizeEmail(toEmailRaw);
+    if (!isValidEmail(toEmailSanitized)) {
+      const errMsg = `Invalid recipient email: "${toEmailRaw ?? ""}"`;
+      console.error(errMsg);
+      return { success: false, error: errMsg };
+    }
+    templateParams.to_email = toEmailSanitized;
 
     // For server-side REST API, EmailJS expects public key in user_id and private key in accessToken
     const keyType = privateKey ? "PRIVATE+PUBLIC" : "PUBLIC_ONLY";
@@ -54,10 +187,14 @@ export async function sendEmailViaEmailJS(params: {
       template_params_keys: Object.keys(templateParams),
     });
 
+    const originHeader = DEFAULT_EMAILJS_ORIGIN;
+
     const response = await fetch(emailjsUrl, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        Origin: originHeader,
+        Referer: originHeader,
       },
       body: JSON.stringify(requestBody),
     });
@@ -108,67 +245,156 @@ export async function sendEmailViaEmailJS(params: {
   }
 }
 
-/**
- * Helper function to get product image based on variant/weight
- * Uses Supabase-hosted images for each weight
- * Shared between customer and admin email functions
- */
-function getPlaceholderImageByWeight(variant: string | null | undefined): string {
-  console.log('getPlaceholderImageByWeight called with variant:', variant);
-  
-  // Image URLs from Supabase storage
-  const imageUrls = {
-    250: 'https://umynzgzlqdphgrzixhsc.supabase.co/storage/v1/object/public/media/coffee/1761665796405-250gr.png',
-    500: 'https://umynzgzlqdphgrzixhsc.supabase.co/storage/v1/object/public/media/coffee/sizes/1761665813027-500gr.png',
-    1000: 'https://umynzgzlqdphgrzixhsc.supabase.co/storage/v1/object/public/media/coffee/sizes/1761665827913-1000gr.png',
-  };
-  
-  if (!variant) {
-    console.log('No variant, using default 250g image');
-    return imageUrls[250]; // Default to 250g
-  }
-  
-  // Extract weight from variant (e.g., "250g Зерна", "1kg", "1000g" -> weight in grams)
-  // Try multiple patterns to catch different formats
-  const kgMatch = variant.match(/(\d+)\s*kg/i);
-  const gMatch = variant.match(/(\d+)\s*g/i);
-  const numberMatch = variant.match(/(\d+)/); // Fallback: just get any number
-  
-  let weightInGrams = 0;
+const WEIGHT_IMAGE_SOURCES: Record<number, string[]> = {
+  250: [
+    'https://umynzgzlqdphgrzixhsc.supabase.co/storage/v1/object/public/media/coffee/1761665796405-250gr.png',
+    'https://manifestcoffee.com.ua/1761665796405-250gr.png',
+    'https://manifestcoffee.com.ua/manifest-site-logo.png',
+  ],
+  500: [
+    'https://umynzgzlqdphgrzixhsc.supabase.co/storage/v1/object/public/media/coffee/sizes/1761665813027-500gr.png',
+    'https://manifestcoffee.com.ua/1761665813027-500gr.png',
+    'https://manifestcoffee.com.ua/manifest-site-logo.png',
+  ],
+  1000: [
+    'https://umynzgzlqdphgrzixhsc.supabase.co/storage/v1/object/public/media/coffee/sizes/1761665827913-1000gr.png',
+    'https://manifestcoffee.com.ua/1761665827913-1000gr.png',
+    'https://manifestcoffee.com.ua/manifest-site-logo.png',
+  ],
+};
+
+const DEFAULT_WEIGHT_GRAMS = 250;
+
+function normalizeNumber(value: number): number {
+  if (value <= 0 || Number.isNaN(value)) return DEFAULT_WEIGHT_GRAMS;
+  if (value < 300) return 250;
+  if (value < 800) return 500;
+  return 1000;
+}
+
+function normalizeWeightToken(token: string): string {
+  return token
+    .toLowerCase()
+    .replace(/[‐‑‒–—―]/g, '-') // normalize dashes
+    .replace(/кг|к\.г\.?|кілограм(и|ів)?|килограмм(ы)?/g, 'kg')
+    .replace(/грам(и|ів|мів|м|мів)?|гр\.?|г\b|г\./g, 'g')
+    .replace(/,/g, '.')
+    .replace(/\u00a0/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function parseWeightFromText(source: string | null | undefined): number | null {
+  if (!source) return null;
+  const normalized = normalizeWeightToken(source);
+
+  const kgMatch = normalized.match(/(\d+(?:\.\d+)?)\s*kg/);
   if (kgMatch) {
-    weightInGrams = parseInt(kgMatch[1], 10) * 1000; // Convert kg to grams
-    console.log('Found kg match:', kgMatch[1], '->', weightInGrams, 'grams');
-  } else if (gMatch) {
-    weightInGrams = parseInt(gMatch[1], 10);
-    console.log('Found g match:', gMatch[1], '->', weightInGrams, 'grams');
-  } else if (numberMatch) {
-    // Fallback: if we find a number, assume it's grams
-    const num = parseInt(numberMatch[1], 10);
-    if (num >= 1000) {
-      weightInGrams = num;
-    } else if (num === 1 && variant.toLowerCase().includes('kg')) {
-      weightInGrams = 1000;
-    } else {
-      weightInGrams = num;
+    const kgValue = parseFloat(kgMatch[1]);
+    if (!Number.isNaN(kgValue)) {
+      return Math.round(kgValue * 1000);
     }
-    console.log('Found number match:', numberMatch[1], '->', weightInGrams, 'grams (fallback)');
   }
-  
-  let imageUrl = '';
-  if (weightInGrams === 250) {
-    imageUrl = imageUrls[250];
-  } else if (weightInGrams === 500) {
-    imageUrl = imageUrls[500];
-  } else if (weightInGrams === 1000) {
-    imageUrl = imageUrls[1000];
-  } else {
-    // Default to 250g if weight not found or doesn't match
-    imageUrl = imageUrls[250];
-    console.log('Weight not matched, using default 250g. Weight was:', weightInGrams);
+
+  const gMatch = normalized.match(/(\d+(?:\.\d+)?)\s*g\b/);
+  if (gMatch) {
+    const gValue = parseFloat(gMatch[1]);
+    if (!Number.isNaN(gValue)) {
+      return Math.round(gValue);
+    }
   }
-  
-  console.log('Final image URL:', imageUrl);
+
+  const standaloneNumber = normalized.match(/(\d+(?:\.\d+)?)/);
+  if (standaloneNumber) {
+    const numericValue = parseFloat(standaloneNumber[1]);
+    if (!Number.isNaN(numericValue)) {
+      if (normalized.includes('kg')) {
+        return Math.round(numericValue * 1000);
+      }
+      if (numericValue <= 5 && normalized.includes('0.') && normalized.includes('kg')) {
+        return Math.round(numericValue * 1000);
+      }
+      if (numericValue > 10 && numericValue < 2000) {
+        return Math.round(numericValue);
+      }
+      if (numericValue === 1 && normalized.includes('kg')) {
+        return 1000;
+      }
+    }
+  }
+
+  return null;
+}
+
+function resolveWeightInGrams(item: { variant?: string | null; name?: string | null; product_name?: string | null; weight?: number | null; size?: string | null }): number {
+  const directWeight = Number((item as any)?.weight);
+  if (!Number.isNaN(directWeight) && directWeight > 0) {
+    return normalizeNumber(directWeight);
+  }
+
+  const sources = [
+    item.variant,
+    item.name,
+    (item as any)?.product_name,
+    (item as any)?.option,
+    (item as any)?.title,
+    item.size,
+  ];
+
+  for (const source of sources) {
+    const parsed = parseWeightFromText(source as string | undefined);
+    if (parsed) {
+      return normalizeNumber(parsed);
+    }
+  }
+
+  return DEFAULT_WEIGHT_GRAMS;
+}
+
+function getWeightBasedImageUrl(item: { variant?: string | null; name?: string | null; product_name?: string | null; weight?: number | null; size?: string | null }): string {
+  const weight = resolveWeightInGrams(item);
+  const candidates = WEIGHT_IMAGE_SOURCES[weight] || [];
+  const fallbackPool = WEIGHT_IMAGE_SOURCES[DEFAULT_WEIGHT_GRAMS] || [];
+  const imageUrl = [...candidates, ...fallbackPool].find((url) => typeof url === 'string' && url.length > 0) 
+    || 'https://manifestcoffee.com.ua/manifest-site-logo.png';
+  console.log('Resolved weight image', {
+    weight,
+    variant: item.variant,
+    name: item.name,
+    product_name: (item as any)?.product_name,
+    selectedImage: imageUrl,
+  });
   return imageUrl;
+}
+
+function resolveItemImageUrl(item: any): string {
+  const directSources: Array<[string, unknown]> = [
+    ["image", item?.image],
+    ["product_image", item?.product_image],
+    ["image_url", item?.image_url],
+    ["imageUrl", item?.imageUrl],
+    ["selectedImage", item?.selectedImage],
+    ["coverImage", item?.coverImage],
+    ["variantImage", item?.variantImage],
+    ["product.image_url", item?.product?.image_url],
+  ];
+
+  for (const [key, candidate] of directSources) {
+    const normalized = normalizeImageSource(candidate);
+    if (normalized) {
+      console.log("Resolved item image from order data", {
+        sourceKey: key,
+        urlSample: normalized.substring(0, 120),
+      });
+      return normalized;
+    }
+  }
+
+  console.log("Falling back to weight-based image for item", {
+    name: item?.name || item?.product_name,
+    variant: item?.variant,
+  });
+  return getWeightBasedImageUrl(item);
 }
 
 /**
@@ -179,7 +405,7 @@ export async function sendOrderConfirmationEmail(params: {
   customerName: string;
   customerPhone: string;
   orderId: string;
-  orderDate: Date | string;
+  orderDate: string | Date;
   orderTotal: number;
   orderItems: Array<{ 
     name: string; 
@@ -190,6 +416,10 @@ export async function sendOrderConfirmationEmail(params: {
   }>;
   shippingAddress: string;
   shippingMethod?: string;
+  shippingCost?: number | null;
+  shippingCostIsFree?: boolean;
+  shippingCarrierRates?: boolean;
+  shippingCostLabel?: string;
   paymentMethod: string;
   orderNotes?: string | null;
   emailjsServiceId: string;
@@ -207,6 +437,10 @@ export async function sendOrderConfirmationEmail(params: {
     orderItems,
     shippingAddress,
     shippingMethod,
+    shippingCost,
+    shippingCostIsFree,
+    shippingCarrierRates,
+    shippingCostLabel,
     paymentMethod,
     orderNotes,
     emailjsServiceId,
@@ -238,8 +472,7 @@ export async function sendOrderConfirmationEmail(params: {
       const itemTotal = (itemPrice * itemQuantity).toFixed(2);
       const variantText = item.variant ? ` (${item.variant})` : '';
       
-      // Always use placeholder image based on variant/weight
-      const itemImage = getPlaceholderImageByWeight(item.variant);
+      const itemImage = resolveItemImageUrl(item);
       
       // Debug logging
       console.log('Email image generation:', {
@@ -272,18 +505,34 @@ export async function sendOrderConfirmationEmail(params: {
     }).join('');
   };
 
+  const generateOrderItemsText = (items: typeof orderItems): string => {
+    if (!items || items.length === 0) {
+      return "Товари не знайдено";
+    }
+
+    return items
+      .map((item) => {
+        const name = item.name || "Невідомий товар";
+        const variant = item.variant ? ` (${item.variant})` : "";
+        const quantity = item.quantity || 1;
+        const price = item.price || 0;
+        const total = (price * quantity).toFixed(2);
+        return `• ${name}${variant}: ${quantity} шт × ${price.toFixed(
+          2,
+        )} грн = ${total} грн`;
+      })
+      .join("\n");
+  };
+
   // Format shipping method (handle both raw method codes and pre-formatted strings)
-  const shippingMethodText = shippingMethod 
-    ? (shippingMethod === 'nova_department' 
-        ? 'Нова Пошта (на відділення)' 
-        : shippingMethod === 'nova_postomat'
-        ? 'Нова Пошта (на поштомат)'
-        : shippingMethod === 'nova_courier'
-        ? 'Нова Пошта (кур\'єром)'
-        : shippingMethod === 'own_courier'
-        ? 'Власна доставка (Київ)'
-        : shippingMethod) // Use as-is if already formatted
-    : 'Не вказано';
+  const shippingMethodText = formatShippingMethod(shippingMethod);
+
+  const shippingCostDisplay = shippingCostLabel ?? formatShippingCostDisplay({
+    method: shippingMethod,
+    cost: shippingCost,
+    isFree: shippingCostIsFree,
+    carrierRates: shippingCarrierRates,
+  });
 
   // Format payment method (handle both raw codes and pre-formatted strings)
   const paymentMethodText =
@@ -293,12 +542,14 @@ export async function sendOrderConfirmationEmail(params: {
       ? "Онлайн оплата (LiqPay)"
       : paymentMethod || "Онлайн оплата";
 
+  const sanitizedCustomerEmail = sanitizeEmail(customerEmail);
   const templateParams = {
-    to_email: customerEmail,
+    to_email: sanitizedCustomerEmail,
     to_name: customerName,
     order_id: orderId,
     order_date: formatDate(orderDate),
     order_items_html: generateOrderItemsHTML(orderItems),
+    order_items_text: generateOrderItemsText(orderItems),
     customer_name: customerName,
     billing_address: shippingAddress, // For billing, we use shipping address (displayed as "Information")
     information: shippingAddress, // Alias for "Information" label
@@ -308,6 +559,7 @@ export async function sendOrderConfirmationEmail(params: {
     order_notes: orderNotes || '', // Leave empty if no notes
     order_total: `₴${orderTotal.toFixed(2)}`,
     shipping_method: shippingMethodText,
+    shipping_cost: shippingCostDisplay,
     payment_method: paymentMethodText,
   };
 
@@ -324,7 +576,7 @@ export async function sendOrderConfirmationEmail(params: {
  * Send order notification email to admin
  */
 export async function sendOrderNotificationEmail(params: {
-  adminEmails: string[]; // Can be multiple emails (comma-separated or array)
+  adminEmails: string[] | string; // Can be multiple emails (comma-separated or array)
   customerName: string;
   customerEmail: string;
   customerPhone: string;
@@ -335,6 +587,10 @@ export async function sendOrderNotificationEmail(params: {
   shippingCity?: string;
   shippingDepartment?: string;
   shippingMethod?: string;
+  shippingCost?: number | null;
+  shippingCostIsFree?: boolean;
+  shippingCarrierRates?: boolean;
+  shippingCostLabel?: string;
   paymentMethod: string;
   notes?: string;
   emailjsServiceId: string;
@@ -354,6 +610,10 @@ export async function sendOrderNotificationEmail(params: {
     shippingCity,
     shippingDepartment,
     shippingMethod,
+    shippingCost,
+    shippingCostIsFree,
+    shippingCarrierRates,
+    shippingCostLabel,
     paymentMethod,
     notes,
     emailjsServiceId,
@@ -376,8 +636,7 @@ export async function sendOrderNotificationEmail(params: {
       const itemTotal = (itemPrice * itemQuantity).toFixed(2);
       const variantText = item.variant ? ` (${item.variant})` : '';
       
-      // Always use placeholder image based on variant/weight
-      const itemImage = getPlaceholderImageByWeight(item.variant);
+      const itemImage = resolveItemImageUrl(item);
       
       // Debug logging
       console.log('Admin email image generation:', {
@@ -411,12 +670,20 @@ export async function sendOrderNotificationEmail(params: {
   };
 
   // Format order items for email (text version for simple templates)
-  const itemsList = orderItems
-    .map((item) => {
-      const variantText = item.variant ? ` (${item.variant})` : "";
-      return `${item.name}${variantText} x${item.quantity} - ₴${(item.price * item.quantity).toFixed(2)}`;
-    })
-    .join("\n");
+  const itemsList =
+    orderItems && orderItems.length > 0
+      ? orderItems
+          .map((item) => {
+            const variantText = item.variant ? ` (${item.variant})` : "";
+            const qty = item.quantity || 1;
+            const price = Number(item.price) || 0;
+            const total = (price * qty).toFixed(2);
+            return `• ${item.name}${variantText}: ${qty} шт × ${price.toFixed(
+              2,
+            )} грн = ${total} грн`;
+          })
+          .join("\n")
+      : "Товари не знайдено";
 
   // Use shipping address directly (already formatted by caller)
   // Only rebuild if shippingAddress is empty but we have city/department
@@ -435,17 +702,13 @@ export async function sendOrderNotificationEmail(params: {
   }
 
   // Format shipping method (handle both raw method codes and pre-formatted strings)
-  const shippingMethodText = shippingMethod 
-    ? (shippingMethod === 'nova_department' 
-        ? 'Нова Пошта (на відділення)' 
-        : shippingMethod === 'nova_postomat'
-        ? 'Нова Пошта (на поштомат)'
-        : shippingMethod === 'nova_courier'
-        ? 'Нова Пошта (кур\'єром)'
-        : shippingMethod === 'own_courier'
-        ? 'Власна доставка (Київ)'
-        : shippingMethod) // Use as-is if already formatted
-    : 'Не вказано';
+  const shippingMethodText = formatShippingMethod(shippingMethod);
+  const shippingCostDisplay = shippingCostLabel ?? formatShippingCostDisplay({
+    method: shippingMethod,
+    cost: shippingCost,
+    isFree: shippingCostIsFree,
+    carrierRates: shippingCarrierRates,
+  });
 
   // Format payment method (handle both raw codes and pre-formatted strings)
   const paymentMethodText =
@@ -479,9 +742,11 @@ export async function sendOrderNotificationEmail(params: {
   };
 
   // Handle multiple admin emails (comma-separated string or array)
-  const emailArray = Array.isArray(adminEmails)
+  const emailArray = (Array.isArray(adminEmails)
     ? adminEmails
-    : adminEmails.split(",").map((e) => e.trim()).filter(Boolean);
+    : adminEmails.split(","))
+    .map((e) => sanitizeEmail(e))
+    .filter((e): e is string => !!e && isValidEmail(e));
 
   // Debug logging for notes
   console.log("=== ADMIN EMAIL NOTES DEBUG (sendOrderNotificationEmail) ===");
@@ -494,19 +759,20 @@ export async function sendOrderNotificationEmail(params: {
   const results = await Promise.all(
     emailArray.map((adminEmail) => {
       const templateParams = {
-        to_email: adminEmail,
+        to_email: sanitizeEmail(adminEmail),
         customer_name: customerName,
         customer_email: customerEmail,
         customer_phone: customerPhone,
         order_id: orderId,
         order_date: formatDate(orderId),
         order_items_html: generateAdminOrderItemsHTML(orderItems),
-        order_items: itemsList, // Text version for simple templates
+        order_items: itemsList, // Legacy text field
+        order_items_text: itemsList,
         billing_address: shippingDetails,
         information: shippingDetails, // Alias for "Information" label
         shipping_address: shippingDetails,
-        shipping_method: shippingMethod || 'Не вказано',
-        shipping_cost: shippingMethod ? 'За тарифами перевізника' : '—',
+        shipping_method: shippingMethodText,
+        shipping_cost: shippingCostDisplay,
         order_total: `₴${orderTotal.toFixed(2)}`,
         payment_method: paymentMethodText,
         notes: notes || '', // Leave empty if no notes

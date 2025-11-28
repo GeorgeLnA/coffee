@@ -3,6 +3,7 @@ import crypto from "crypto";
 import { createClient } from "@supabase/supabase-js";
 import { sendOrderConfirmationEmail, sendOrderNotificationEmail } from "../../netlify/functions/send-email";
 import { sendDevOrderEmails } from "../lib/dev-mailer";
+import { resolveEmailJSConfig, maskForLogs } from "../../shared/emailjs-config";
 
 function getSupabaseClient() {
   const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || "https://umynzgzlqdphgrzixhsc.supabase.co";
@@ -46,10 +47,17 @@ export const prepareOrder: RequestHandler = async (req, res) => {
     if (shipping?.address) {
       // For courier options, just use address (no city)
       shippingAddress = shipping.address;
-    } else if (shipping?.city && shipping?.warehouseRef) {
-      // For Nova Poshta (postomat/department), use city + warehouse
+    } else if (shipping?.city) {
+      // For Nova Poshta (postomat/department), use city + department/postomat number
       const shippingMethod = shipping.method || "nova_department";
-      shippingAddress = `${shipping.city} (${shippingMethod === 'nova_department' ? 'Відділення' : 'Поштомат'})`;
+      if (shipping.department) {
+        const deptType = shippingMethod === 'nova_postomat' ? 'Поштомат' : 'Відділення';
+        shippingAddress = `${shipping.city}, ${deptType} №${shipping.department}`;
+      } else if (shipping?.warehouseRef) {
+        // Fallback to warehouse ref if no department number
+        const deptType = shippingMethod === 'nova_department' ? 'Відділення' : 'Поштомат';
+        shippingAddress = `${shipping.city} (${deptType})`;
+      }
     }
 
     // For cash payments, save order immediately (no payment gateway callback)
@@ -165,28 +173,31 @@ export const prepareOrder: RequestHandler = async (req, res) => {
             console.log("✓ Conditions met, attempting to send emails...");
             try {
               console.log("=== EMAIL SENDING DEBUG (CASH ORDER - EXPRESS ROUTE) ===");
-              const emailjsServiceId = process.env.EMAILJS_SERVICE_ID;
-              const emailjsTemplateIdCustomer = process.env.EMAILJS_TEMPLATE_ID_CUSTOMER;
-              const emailjsTemplateIdAdmin = process.env.EMAILJS_TEMPLATE_ID_ADMIN;
-              const emailjsPublicKey = process.env.EMAILJS_PUBLIC_KEY;
-              const emailjsPrivateKey = process.env.EMAILJS_PRIVATE_KEY; // Private key for server-side REST API
-              const adminEmails = process.env.ADMIN_EMAILS || "dovedem2014@gmail.com,manifestcava@gmail.com";
+              const emailConfig = resolveEmailJSConfig();
+              const emailjsServiceId = emailConfig.serviceId;
+              const emailjsTemplateIdCustomer = emailConfig.templateIdCustomer;
+              const emailjsTemplateIdAdmin = emailConfig.templateIdAdmin;
+              const emailjsPublicKey = emailConfig.publicKey;
+              const emailjsPrivateKey = emailConfig.privateKey; // Private key for server-side REST API
+              const adminEmails = emailConfig.adminEmails || "dovedem2014@gmail.com,manifestcava@gmail.com";
 
               console.log("Environment check:", {
                 hasServiceId: !!emailjsServiceId,
                 hasCustomerTemplate: !!emailjsTemplateIdCustomer,
                 hasAdminTemplate: !!emailjsTemplateIdAdmin,
                 hasPublicKey: !!emailjsPublicKey,
-                serviceId: emailjsServiceId || "NOT SET",
-                customerTemplate: emailjsTemplateIdCustomer || "NOT SET",
-                adminTemplate: emailjsTemplateIdAdmin || "NOT SET",
-                publicKey: emailjsPublicKey ? `${emailjsPublicKey.substring(0, 4)}...` : "NOT SET",
+                serviceId: maskForLogs(emailjsServiceId),
+                customerTemplate: maskForLogs(emailjsTemplateIdCustomer),
+                adminTemplate: maskForLogs(emailjsTemplateIdAdmin),
+                publicKey: maskForLogs(emailjsPublicKey),
+                privateKeySource: emailConfig.sources.privateKey || "NOT SET",
                 adminEmails: adminEmails,
+                adminEmailsSource: emailConfig.sources.adminEmails || "NOT SET",
               });
 
               // Only send via EmailJS if configured; otherwise use dev mailer (Ethereal)
               // Check if we have private key too (required for server-side)
-              const hasEmailJSConfig = emailjsServiceId && emailjsTemplateIdCustomer && emailjsTemplateIdAdmin && emailjsPublicKey;
+              const hasEmailJSConfig = emailConfig.configured;
               if (hasEmailJSConfig) {
                 console.log("EmailJS configured, proceeding to send emails...");
                 if (!emailjsPrivateKey) {
@@ -227,17 +238,33 @@ export const prepareOrder: RequestHandler = async (req, res) => {
                   emailShippingAddress = shippingAddress || shipping?.address || 'Не вказано';
                 }
 
-                // Format shipping method
-                const shippingMethodText = shipping?.method 
-                  ? (shipping.method === 'nova_department' 
-                      ? 'Нова Пошта (на відділення)' 
-                      : shipping.method === 'nova_postomat'
+                const shippingMethodRaw = shipping?.method || null;
+                const shippingMethodKey = (shippingMethodRaw || '').toLowerCase();
+                let shippingPriceNumber: number | null = null;
+                if (typeof shipping?.price === 'number') {
+                  shippingPriceNumber = shipping.price;
+                } else if (typeof shipping?.price === 'string' && shipping.price.trim() !== '') {
+                  const parsed = Number(shipping.price);
+                  if (!Number.isNaN(parsed)) {
+                    shippingPriceNumber = parsed;
+                  }
+                }
+                const shippingFreeFlag = Boolean(shipping?.free);
+                const shippingCarrierRatesFlag =
+                  typeof shipping?.carrierRates === 'boolean'
+                    ? Boolean(shipping.carrierRates)
+                    : ['nova_department', 'nova_postomat', 'nova_courier'].includes(shippingMethodKey);
+
+                const shippingMethodText = shippingMethodRaw 
+                  ? (shippingMethodKey === 'nova_department'
+                      ? 'Нова Пошта (на відділення)'
+                      : shippingMethodKey === 'nova_postomat'
                       ? 'Нова Пошта (на поштомат)'
-                      : shipping.method === 'nova_courier'
+                      : shippingMethodKey === 'nova_courier'
                       ? 'Нова Пошта (кур\'єром)'
-                      : shipping.method === 'own_courier'
+                      : shippingMethodKey === 'own_courier'
                       ? 'Власна доставка (Київ)'
-                      : shipping.method)
+                      : shippingMethodRaw)
                   : 'Не вказано';
 
                 // Format payment method
@@ -262,7 +289,10 @@ export const prepareOrder: RequestHandler = async (req, res) => {
                   orderTotal: amount,
                   orderItems: emailItems,
                   shippingAddress: emailShippingAddress || "Не вказано",
-                  shippingMethod: shippingMethodText,
+                  shippingMethod: shippingMethodRaw || shippingMethodText,
+                  shippingCost: shippingPriceNumber,
+                  shippingCostIsFree: shippingFreeFlag,
+                  shippingCarrierRates: shippingCarrierRatesFlag,
                   paymentMethod: paymentMethodText,
                   orderNotes: notes || null,
                   emailjsServiceId,
@@ -303,7 +333,10 @@ export const prepareOrder: RequestHandler = async (req, res) => {
                   shippingAddress: emailShippingAddress || "Не вказано",
                   shippingCity: shipping?.city || null,
                   shippingDepartment: shipping?.department || null,
-                  shippingMethod: shipping?.method || null,
+                  shippingMethod: shipping?.method || shippingMethodText || null,
+                  shippingCost: shippingPriceNumber,
+                  shippingCostIsFree: shippingFreeFlag,
+                  shippingCarrierRates: shippingCarrierRatesFlag,
                   paymentMethod: paymentMethodText,
                   notes: orderNotes || '', // Pass notes as empty string if null
                   emailjsServiceId,
@@ -361,7 +394,7 @@ export const prepareOrder: RequestHandler = async (req, res) => {
       const emailStatus = insertedItems && insertedItems.length > 0 && customer?.email
         ? {
             attempted: true,
-            configured: !!(process.env.EMAILJS_SERVICE_ID && process.env.EMAILJS_TEMPLATE_ID_CUSTOMER && process.env.EMAILJS_TEMPLATE_ID_ADMIN && process.env.EMAILJS_PUBLIC_KEY),
+            configured: resolveEmailJSConfig().configured,
           }
         : {
             attempted: false,

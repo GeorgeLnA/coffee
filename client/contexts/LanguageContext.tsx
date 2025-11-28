@@ -120,6 +120,7 @@ const translations = {
     'product.elevation': 'Висота',
     'product.acidity': 'Кислотність',
     'product.body': 'Насиченість',
+    'product.roastLevel': 'Рівень обсмаження',
     'product.description': 'Опис',
     'product.flavorNotes': 'Смакові ноти',
     'product.aftertaste': 'Післясмак',
@@ -336,12 +337,20 @@ const translations = {
     'checkout.city': 'Місто',
     'checkout.selectCityFromList': 'Оберіть місто зі списку, щоб побачити',
     'checkout.postomats': 'поштомати',
+    'checkout.postomatNumber': 'Номер поштомату',
     'checkout.departments': 'відділення',
     'checkout.selectPostomat': 'Оберіть поштомат',
     'checkout.selectDepartment': 'Оберіть відділення',
     'checkout.loading': 'Завантаження...',
     'checkout.noPostomats': 'Немає доступних поштоматів',
     'checkout.noDepartments': 'Немає доступних відділень',
+    'checkout.manualPromptDepartment': 'Не знайшли відділення? Вкажіть номер вручну.',
+    'checkout.manualPromptPostomat': 'Не знайшли поштомат? Вкажіть номер вручну.',
+    'checkout.manualEntryPlaceholder': 'Введіть номер',
+    'checkout.cancelManualEntry': 'Повернутись до списку',
+    'checkout.loadMoreWarehouses': 'Завантажити ще відділення',
+    'checkout.loadingMoreWarehouses': 'Завантаження...',
+    'checkout.noMoreWarehouses': 'Більше відділень не знайдено',
     'checkout.selectCityFirst': 'Спочатку оберіть місто',
     'checkout.deliveryAddress': 'Адреса доставки',
     'checkout.addItemsForFreeDelivery': 'Додайте товарів на ₴{amount} для безкоштовної доставки',
@@ -363,7 +372,7 @@ const translations = {
     'checkout.error.createOrder': 'Не вдалося створити замовлення',
     'checkout.error.general': 'Сталася помилка',
     'checkout.success.title': 'Замовлення оформлено!',
-    'checkout.success.desc': 'Ваше замовлення прийнято. З вами зв\'яжуться для підтвердження.',
+    'checkout.success.desc': 'Дякуємо за замовлення! Воно прийнято до обробки.',
     'checkout.department': 'Відділення',
     'checkout.postomat': 'Поштомат',
     'checkout.notSpecified': 'Не вказано',
@@ -493,6 +502,7 @@ const translations = {
     'product.elevation': 'Высота',
     'product.acidity': 'Кислотность',
     'product.body': 'Насыщенность',
+    'product.roastLevel': 'Степень обжарки',
     'product.description': 'Описание',
     'product.flavorNotes': 'Вкусовые ноты',
     'product.aftertaste': 'Послевкусие',
@@ -709,12 +719,20 @@ const translations = {
     'checkout.city': 'Город',
     'checkout.selectCityFromList': 'Выберите город из списка, чтобы увидеть',
     'checkout.postomats': 'почтоматы',
+    'checkout.postomatNumber': 'Номер почтомата',
     'checkout.departments': 'отделения',
     'checkout.selectPostomat': 'Выберите почтомат',
     'checkout.selectDepartment': 'Выберите отделение',
     'checkout.loading': 'Загрузка...',
     'checkout.noPostomats': 'Нет доступных почтоматов',
     'checkout.noDepartments': 'Нет доступных отделений',
+    'checkout.manualPromptDepartment': 'Не нашли отделение? Укажите номер вручную.',
+    'checkout.manualPromptPostomat': 'Не нашли почтомат? Укажите номер вручную.',
+    'checkout.manualEntryPlaceholder': 'Введите номер',
+    'checkout.cancelManualEntry': 'Вернуться к списку',
+    'checkout.loadMoreWarehouses': 'Загрузить ещё отделения',
+    'checkout.loadingMoreWarehouses': 'Загрузка...',
+    'checkout.noMoreWarehouses': 'Больше отделений не найдено',
     'checkout.selectCityFirst': 'Сначала выберите город',
     'checkout.deliveryAddress': 'Адрес доставки',
     'checkout.addItemsForFreeDelivery': 'Добавьте товаров на ₴{amount} для бесплатной доставки',
@@ -736,7 +754,7 @@ const translations = {
     'checkout.error.createOrder': 'Не удалось создать заказ',
     'checkout.error.general': 'Произошла ошибка',
     'checkout.success.title': 'Заказ оформлен!',
-    'checkout.success.desc': 'Ваш заказ принят. С вами свяжутся для подтверждения.',
+    'checkout.success.desc': 'Спасибо за заказ! Он принят в обработку.',
     'checkout.department': 'Отделение',
     'checkout.postomat': 'Почтомат',
     'checkout.notSpecified': 'Не указано',
@@ -757,7 +775,15 @@ const translations = {
   }
 };
 
-const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
+const defaultLanguageContext: LanguageContextType = {
+  language: 'ua',
+  setLanguage: () => {
+    console.warn('Calling setLanguage without LanguageProvider');
+  },
+  t: (key: string) => translations.ua[key as keyof typeof translations.ua] || key,
+};
+
+const LanguageContext = createContext<LanguageContextType>(defaultLanguageContext);
 
 export const LanguageProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [language, setLanguage] = useState<Language>('ua');
@@ -775,8 +801,5 @@ export const LanguageProvider: React.FC<{ children: ReactNode }> = ({ children }
 
 export const useLanguage = () => {
   const context = useContext(LanguageContext);
-  if (context === undefined) {
-    throw new Error('useLanguage must be used within a LanguageProvider');
-  }
   return context;
 };

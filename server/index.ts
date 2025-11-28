@@ -1,16 +1,21 @@
 import dotenv from "dotenv";
+import { resolveEmailJSConfig, maskForLogs } from "../shared/emailjs-config";
 
 // Load .env.local explicitly (higher priority), then .env
 dotenv.config({ path: ".env.local" });
 dotenv.config(); // Load .env as fallback
 
+const startupEmailConfig = resolveEmailJSConfig();
+
 // Debug: Check if EmailJS env vars are loaded
 console.log("=== SERVER STARTUP - EMAILJS ENV CHECK ===");
-console.log("EMAILJS_SERVICE_ID:", process.env.EMAILJS_SERVICE_ID ? `${process.env.EMAILJS_SERVICE_ID.substring(0, 8)}...` : "NOT SET");
-console.log("EMAILJS_TEMPLATE_ID_CUSTOMER:", process.env.EMAILJS_TEMPLATE_ID_CUSTOMER || "NOT SET");
-console.log("EMAILJS_TEMPLATE_ID_ADMIN:", process.env.EMAILJS_TEMPLATE_ID_ADMIN || "NOT SET");
-console.log("EMAILJS_PUBLIC_KEY:", process.env.EMAILJS_PUBLIC_KEY ? `${process.env.EMAILJS_PUBLIC_KEY.substring(0, 4)}...` : "NOT SET");
-console.log("ADMIN_EMAILS:", process.env.ADMIN_EMAILS || "NOT SET");
+console.log("EMAILJS_SERVICE_ID:", maskForLogs(startupEmailConfig.serviceId));
+console.log("EMAILJS_TEMPLATE_ID_CUSTOMER:", maskForLogs(startupEmailConfig.templateIdCustomer));
+console.log("EMAILJS_TEMPLATE_ID_ADMIN:", maskForLogs(startupEmailConfig.templateIdAdmin));
+console.log("EMAILJS_PUBLIC_KEY:", maskForLogs(startupEmailConfig.publicKey));
+console.log("EMAILJS_PRIVATE_KEY_SOURCE:", startupEmailConfig.sources.privateKey || "NOT SET");
+console.log("ADMIN_EMAILS:", startupEmailConfig.adminEmails || process.env.ADMIN_EMAILS || "NOT SET");
+console.log("ADMIN_EMAILS_SOURCE:", startupEmailConfig.sources.adminEmails || "NOT SET");
 console.log("=== END ENV CHECK ===");
 
 import express from "express";
@@ -36,6 +41,10 @@ export function createServer() {
   });
 
   app.get("/api/env-check", (_req, res) => {
+    const emailConfig = resolveEmailJSConfig();
+    const adminEmailsValue =
+      emailConfig.adminEmails || process.env.ADMIN_EMAILS || "NOT SET";
+
     res.json({
       hasLiqPayPublic: !!process.env.LIQPAY_PUBLIC_KEY,
       hasLiqPayPrivate: !!process.env.LIQPAY_PRIVATE_KEY,
@@ -45,18 +54,20 @@ export function createServer() {
       privateKeyLength: process.env.LIQPAY_PRIVATE_KEY?.length || 0,
       // EmailJS
       hasEmailJS: {
-        serviceId: !!process.env.EMAILJS_SERVICE_ID,
-        customerTemplate: !!process.env.EMAILJS_TEMPLATE_ID_CUSTOMER,
-        adminTemplate: !!process.env.EMAILJS_TEMPLATE_ID_ADMIN,
-        publicKey: !!process.env.EMAILJS_PUBLIC_KEY,
-        adminEmails: !!process.env.ADMIN_EMAILS,
+        serviceId: !emailConfig.missing.serviceId,
+        customerTemplate: !emailConfig.missing.templateIdCustomer,
+        adminTemplate: !emailConfig.missing.templateIdAdmin,
+        publicKey: !emailConfig.missing.publicKey,
+        adminEmails: !!emailConfig.adminEmails,
+        configured: emailConfig.configured,
       },
       emailJSValues: {
-        serviceId: process.env.EMAILJS_SERVICE_ID || "NOT SET",
-        customerTemplate: process.env.EMAILJS_TEMPLATE_ID_CUSTOMER || "NOT SET",
-        adminTemplate: process.env.EMAILJS_TEMPLATE_ID_ADMIN || "NOT SET",
-        publicKey: process.env.EMAILJS_PUBLIC_KEY ? `${process.env.EMAILJS_PUBLIC_KEY.substring(0, 4)}...` : "NOT SET",
-        adminEmails: process.env.ADMIN_EMAILS || "NOT SET",
+        serviceId: maskForLogs(emailConfig.serviceId),
+        customerTemplate: maskForLogs(emailConfig.templateIdCustomer),
+        adminTemplate: maskForLogs(emailConfig.templateIdAdmin),
+        publicKey: maskForLogs(emailConfig.publicKey),
+        adminEmails: adminEmailsValue,
+        sources: emailConfig.sources,
       },
     });
   });

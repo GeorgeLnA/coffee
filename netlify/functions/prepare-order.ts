@@ -2,6 +2,7 @@ import type { Handler } from "@netlify/functions";
 import crypto from "crypto";
 import { createClient } from "@supabase/supabase-js";
 import { sendOrderConfirmationEmail, sendOrderNotificationEmail } from "./send-email";
+import { resolveEmailJSConfig, maskForLogs } from "../../shared/emailjs-config";
 
 /**
  * Helper function to base64 encode
@@ -114,12 +115,45 @@ export const handler: Handler = async (event, context) => {
 
     const paymentMethod = payment?.method || "liqpay";
     const orderId = `${Date.now()}${Math.floor(Math.random() * 10000).toString().padStart(4, '0')}`;
+
+    let shippingPriceNumber: number | null = null;
+    if (typeof shipping?.price === "number") {
+      shippingPriceNumber = shipping.price;
+    } else if (typeof shipping?.price === "string" && shipping.price.trim() !== "") {
+      const parsed = Number(shipping.price);
+      if (!Number.isNaN(parsed)) {
+        shippingPriceNumber = parsed;
+      }
+    }
+    const shippingPriceForTotal = Number.isFinite(shippingPriceNumber ?? NaN)
+      ? Number(shippingPriceNumber as number)
+      : 0;
+
+    const shippingMethodRaw: string | null = shipping?.method || null;
+    const shippingMethodKey = (shippingMethodRaw || "").toLowerCase();
+    const shippingIsFreeFlag = Boolean(shipping?.free);
+    let shippingCarrierRatesFlag =
+      typeof shipping?.carrierRates === "boolean"
+        ? shipping.carrierRates
+        : false;
+    if (!shippingCarrierRatesFlag) {
+      shippingCarrierRatesFlag = [
+        "nova_department",
+        "nova_postomat",
+        "nova_courier",
+      ].includes(shippingMethodKey);
+    }
+    const shippingFreeFinal =
+      shippingIsFreeFlag ||
+      (shippingMethodKey === "own_courier" && shippingPriceNumber === 0 && shipping?.price !== undefined);
+
     const amount = Number(
       (
         items.reduce((sum: number, it: any) => sum + it.price * it.quantity, 0) +
-        (shipping?.price || 0)
+        shippingPriceForTotal
       ).toFixed(2)
     );
+    
 
     // Build shipping address string (for backward compatibility)
     let shippingAddress = "";
@@ -236,37 +270,43 @@ export const handler: Handler = async (event, context) => {
           console.log("insertedItems exists:", !!insertedItems);
           console.log("insertedItems length:", insertedItems?.length);
           
-          if (orderData && orderData.customer_email && insertedItems && insertedItems.length > 0) {
+          if (orderData && orderData.customer_email) {
             try {
               console.log("=== EMAIL SENDING DEBUG (CASH ORDER) ===");
-              const emailjsServiceId = process.env.EMAILJS_SERVICE_ID;
-              const emailjsTemplateIdCustomer = process.env.EMAILJS_TEMPLATE_ID_CUSTOMER;
-              const emailjsTemplateIdAdmin = process.env.EMAILJS_TEMPLATE_ID_ADMIN;
-              const emailjsPublicKey = process.env.EMAILJS_PUBLIC_KEY;
-              const emailjsPrivateKey = process.env.EMAILJS_PRIVATE_KEY; // Private key for server-side REST API
-              const adminEmails = process.env.ADMIN_EMAILS || "davidnuk877@gmail.com";
+              const emailConfig = resolveEmailJSConfig();
+              const emailjsServiceId = emailConfig.serviceId;
+              const emailjsTemplateIdCustomer = emailConfig.templateIdCustomer;
+              const emailjsTemplateIdAdmin = emailConfig.templateIdAdmin;
+              const emailjsPublicKey = emailConfig.publicKey;
+              const emailjsPrivateKey = emailConfig.privateKey; // Private key for server-side REST API
+              const adminEmails = emailConfig.adminEmails || "davidnuk877@gmail.com";
 
               console.log("Environment check:", {
                 hasServiceId: !!emailjsServiceId,
                 hasCustomerTemplate: !!emailjsTemplateIdCustomer,
                 hasAdminTemplate: !!emailjsTemplateIdAdmin,
                 hasPublicKey: !!emailjsPublicKey,
-                serviceId: emailjsServiceId || "NOT SET",
-                customerTemplate: emailjsTemplateIdCustomer || "NOT SET",
-                adminTemplate: emailjsTemplateIdAdmin || "NOT SET",
-                publicKey: emailjsPublicKey ? `${emailjsPublicKey.substring(0, 4)}...` : "NOT SET",
+                serviceId: maskForLogs(emailjsServiceId),
+                customerTemplate: maskForLogs(emailjsTemplateIdCustomer),
+                adminTemplate: maskForLogs(emailjsTemplateIdAdmin),
+                publicKey: maskForLogs(emailjsPublicKey),
+                privateKeySource: emailConfig.sources.privateKey || "NOT SET",
                 adminEmails: adminEmails,
+                adminEmailsSource: emailConfig.sources.adminEmails || "NOT SET",
               });
 
               // Only send if EmailJS is configured
               if (emailjsServiceId && emailjsTemplateIdCustomer && emailjsTemplateIdAdmin && emailjsPublicKey) {
                 console.log("EmailJS configured, proceeding to send emails...");
                 // Prepare order items for email (only use data we have)
-                const emailItems = insertedItems.map((item: any) => ({
-                  name: item.product_name || "Невідомий товар",
-                  quantity: item.quantity || 1,
+                const sourceItems = (insertedItems && insertedItems.length > 0)
+                  ? insertedItems
+                  : (Array.isArray(orderData.items) ? orderData.items : (Array.isArray(items) ? items : []));
+                const emailItems = sourceItems.map((item: any) => ({
+                  name: item.product_name || item.name || "Невідомий товар",
+                  quantity: Number(item.quantity) || 1,
                   price: Number(item.price) || 0,
-                  image: item.product_image || null,
+                  image: item.product_image || item.image || item.image_url || null,
                   variant: item.variant || null,
                 }));
 
@@ -296,18 +336,7 @@ export const handler: Handler = async (event, context) => {
                   shippingAddress = orderData.shipping_address || orderData.shipping_street_address || 'Не вказано';
                 }
 
-                // Format shipping method display name
-                const shippingMethodText = (orderData.shipping_method || shipping?.method)
-                  ? (orderData.shipping_method === 'nova_department' || shipping?.method === 'nova_department'
-                      ? 'Нова Пошта (на відділення)' 
-                      : orderData.shipping_method === 'nova_postomat' || shipping?.method === 'nova_postomat'
-                      ? 'Нова Пошта (на поштомат)'
-                      : orderData.shipping_method === 'nova_courier' || shipping?.method === 'nova_courier'
-                      ? 'Нова Пошта (кур\'єром)'
-                      : orderData.shipping_method === 'own_courier' || shipping?.method === 'own_courier'
-                      ? 'Власна доставка (Київ)'
-                      : orderData.shipping_method || shipping?.method)
-                  : 'Не вказано';
+                const shippingMethodForEmail = shipping?.method || orderData.shipping_method || null;
 
                 // Format payment method
                 const paymentMethodText = (orderData.payment_method || "cash") === 'cash'
@@ -333,7 +362,10 @@ export const handler: Handler = async (event, context) => {
                   orderTotal: Number(orderData.total_price) || amount,
                   orderItems: emailItems,
                   shippingAddress: shippingAddress || "Не вказано",
-                  shippingMethod: shippingMethodText,
+                  shippingMethod: shippingMethodForEmail,
+                  shippingCost: shippingPriceNumber,
+                  shippingCostIsFree: shippingFreeFinal,
+                  shippingCarrierRates: shippingCarrierRatesFlag,
                   paymentMethod: paymentMethodText,
                   orderNotes: orderData.notes || notes || null,
                   emailjsServiceId,
@@ -376,7 +408,10 @@ export const handler: Handler = async (event, context) => {
                   shippingAddress: shippingAddress || "Не вказано",
                   shippingCity: orderData.shipping_city || shipping?.city || null,
                   shippingDepartment: orderData.shipping_department || shipping?.department || null,
-                  shippingMethod: shippingMethodText,
+                  shippingMethod: orderData.shipping_method || shipping?.method || null,
+                  shippingCost: shippingPriceNumber,
+                  shippingCostIsFree: shippingFreeFinal,
+                  shippingCarrierRates: shippingCarrierRatesFlag,
                   paymentMethod: paymentMethodText,
                   notes: orderNotes || '', // Pass notes as empty string if null
                   emailjsServiceId,
@@ -429,21 +464,22 @@ export const handler: Handler = async (event, context) => {
       let emailStatus: any = { attempted: false, reason: "orderData or items not saved" };
       if (orderData && orderData.customer_email) {
         // Check if EmailJS is configured and if email sending was attempted
-        const emailjsServiceId = process.env.EMAILJS_SERVICE_ID;
-        const emailjsTemplateIdCustomer = process.env.EMAILJS_TEMPLATE_ID_CUSTOMER;
-        const emailjsTemplateIdAdmin = process.env.EMAILJS_TEMPLATE_ID_ADMIN;
-        const emailjsPublicKey = process.env.EMAILJS_PUBLIC_KEY;
-        const isConfigured = !!(emailjsServiceId && emailjsTemplateIdCustomer && emailjsTemplateIdAdmin && emailjsPublicKey);
+        const emailConfig = resolveEmailJSConfig();
+        const emailjsServiceId = emailConfig.serviceId;
+        const emailjsTemplateIdCustomer = emailConfig.templateIdCustomer;
+        const emailjsTemplateIdAdmin = emailConfig.templateIdAdmin;
+        const emailjsPublicKey = emailConfig.publicKey;
+        const isConfigured = emailConfig.configured;
         
         emailStatus = {
           attempted: true,
           configured: isConfigured,
           // Include which variables are missing for debugging
           missingVars: {
-            serviceId: !emailjsServiceId,
-            customerTemplate: !emailjsTemplateIdCustomer,
-            adminTemplate: !emailjsTemplateIdAdmin,
-            publicKey: !emailjsPublicKey,
+            serviceId: emailConfig.missing.serviceId,
+            customerTemplate: emailConfig.missing.templateIdCustomer,
+            adminTemplate: emailConfig.missing.templateIdAdmin,
+            publicKey: emailConfig.missing.publicKey,
           },
           details: emailResults,
         };
